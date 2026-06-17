@@ -1,20 +1,19 @@
 import React, { Fragment, useState, useEffect, useCallback, useRef, useMemo, memo, lazy, Suspense } from 'react'
 import { createPortal } from 'react-dom'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+
 import {
-    faLock, faCalendarAlt, faChevronLeft, faChevronRight,
-    faPrint, faCheck, faSpinner, faFloppyDisk,
-    faChartPie, faTableList, faMagnifyingGlass, faArrowLeft, faArrowRight, faEye, faDownload,
-    faCircleCheck, faCircleExclamation, faTriangleExclamation,
-    faBolt, faXmark, faSchool, faClipboardList, faUsers,
-    faMosque, faBookOpen, faBroom, faLanguage, faStar,
-    faWeightScale, faRulerVertical, faBandage, faDoorOpen,
-    faCloudArrowUp, faFileLines, faFilePdf, faFileZipper, faBoxArchive,
-    faSearch, faSliders, faPlus, faFilter, faFillDrip, faArrowTrendUp, faArrowTrendDown, faFileExport,
-    faQuestion, faCircleInfo, faSortAmountDown, faWifi, faKeyboard, faLightbulb,
-    faMoon, faSun, faExpand, faCompress, faChevronDown, faFileImport
-} from '@fortawesome/free-solid-svg-icons'
-import { faWhatsapp } from '@fortawesome/free-brands-svg-icons'
+    Lock, Calendar, ChevronLeft, ChevronRight, Printer, Check, Loader2, Save, PieChart,
+    Table, Search, ArrowLeft, ArrowRight, Eye, Download, CheckCircle2, AlertCircle, AlertTriangle,
+    Zap, X, School, ClipboardList, Users, MoonStar, BookOpen, Brush, Languages, Star,
+    Scale, Ruler, HeartPulse, DoorOpen, UploadCloud, FileText, FileSpreadsheet, FileArchive,
+    Archive, Sliders, Plus, Filter, Sparkles, TrendingUp, TrendingDown, HelpCircle, Info,
+    SortAsc, Wifi, Keyboard, Lightbulb, Moon, Sun, Maximize2, Minimize2, ChevronDown, Upload, ChevronUp
+} from 'lucide-react'
+const WhatsAppIcon = (props) => (
+    <svg viewBox="0 0 448 512" fill="currentColor" {...props}>
+        <path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7 .9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/>
+    </svg>
+)
 import DashboardLayout from '@core/layouts/DashboardLayout'
 import PageHeader from '@shared/components/PageHeader'
 import { StatCard, EmptyState } from '@shared/components/DataDisplay'
@@ -947,12 +946,12 @@ export default function RaportPage() {
                     Siswa <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">{student.name}</span> akan direset. Nilai akademik, hafalan, fisik, dan catatan santri ini akan dihapus secara permanen dari database.
                 </>
             ),
-            icon: faTriangleExclamation,
+            icon: AlertTriangle,
             iconBg: 'bg-red-500/10',
             iconColor: 'text-red-500',
             variant: 'red',
             confirmLabel: 'Ya, Reset Semua',
-            confirmIcon: faTriangleExclamation,
+            confirmIcon: AlertTriangle,
             onConfirm: () => { setConfirmModal(null); resetStudent(student.id) }
         })
     }, [resetStudent])
@@ -966,12 +965,12 @@ export default function RaportPage() {
                     Semua data nilai untuk kelas <span className="text-red-500 font-black px-1.5 py-0.5 bg-red-500/10 rounded-md border border-red-500/20">{selectedClass?.name || ''}</span> akan dikosongkan. Nilai akademik, hafalan, fisik, dan catatan seluruh santri di kelas ini akan dihapus secara permanen dari database.
                 </>
             ),
-            icon: faTriangleExclamation,
+            icon: AlertTriangle,
             iconBg: 'bg-red-500/10',
             iconColor: 'text-red-500',
             variant: 'red',
             confirmLabel: 'Ya, Reset Kelas',
-            confirmIcon: faTriangleExclamation,
+            confirmIcon: AlertTriangle,
             onConfirm: () => { setConfirmModal(null); resetClass() }
         })
     }, [resetClass, selectedClass])
@@ -1387,7 +1386,7 @@ export default function RaportPage() {
             {newMonthBanner && (
                 <div className="p-4 rounded-2xl border border-amber-500/30 bg-amber-500/8 flex items-start gap-3 overflow-hidden">
                     <div className="w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center shrink-0 mt-0.5">
-                        <FontAwesomeIcon icon={faTriangleExclamation} className="text-amber-500 text-sm" />
+                        <AlertTriangle className="text-amber-500 w-3.5 h-3.5" />
                     </div>
                     <div className="flex-1 min-w-0">
                         <p className="text-[11px] font-black text-[var(--color-text)] mb-0.5">Raport {newMonthBanner.prevMonthStr} {newMonthBanner.prevYear} belum lengkap!</p>
@@ -1453,7 +1452,7 @@ export default function RaportPage() {
             {lastSession && classesList.find(c => c.id === lastSession.classId) && (
                 <div className="flex items-center gap-3 p-3 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 shadow-sm">
                     <div className="w-9 h-9 rounded-xl bg-indigo-500/10 flex items-center justify-center shrink-0">
-                        <FontAwesomeIcon icon={faBolt} className="text-indigo-500 text-sm" />
+                        <Zap className="text-indigo-500 w-3.5 h-3.5" />
                     </div>
                     <div className="flex-1 min-w-0">
                         <p className="text-[11px] font-black text-[var(--color-text)] leading-tight">Lanjutkan yang tadi?</p>
@@ -1476,7 +1475,7 @@ export default function RaportPage() {
                             onClick={() => { localStorage.removeItem('raport_last_session'); setLastSession(null) }}
                             className="w-8 h-8 rounded-xl flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-50 transition-all"
                         >
-                            <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
+                            <X className="w-2.5 h-2.5" />
                         </button>
                     </div>
                 </div>
@@ -1487,7 +1486,7 @@ export default function RaportPage() {
                 <div className="flex items-center justify-between px-1">
                     <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
-                            <FontAwesomeIcon icon={faSchool} className="text-indigo-500 text-sm" />
+                            <School className="text-indigo-500 w-3.5 h-3.5" />
                         </div>
                         <label className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--color-text-muted)]">Pilih Kelas</label>
                     </div>
@@ -1496,7 +1495,7 @@ export default function RaportPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                     {/* Search Row */}
                     <div className="relative flex-1 group">
-                        <FontAwesomeIcon icon={faSearch} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-[11px] opacity-40 group-focus-within:text-indigo-500 group-focus-within:opacity-100 transition-all" />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] w-3 h-3 opacity-40 group-focus-within:text-indigo-500 group-focus-within:opacity-100 transition-all" />
                         <input
                             ref={searchInputRef}
                             type="text"
@@ -1507,7 +1506,7 @@ export default function RaportPage() {
                         />
                         {searchQuery && (
                             <button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg hover:bg-red-50 flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-500 transition-all">
-                                <FontAwesomeIcon icon={faXmark} className="text-[10px]" />
+                                <X className="w-2.5 h-2.5" />
                             </button>
                         )}
                     </div>
@@ -1515,16 +1514,16 @@ export default function RaportPage() {
                     {/* Filter Row (Fixed grid on mobile to avoid 'offside') */}
                     <div className="grid grid-cols-3 sm:flex sm:items-center gap-1.5 p-1 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-2xl w-full sm:w-auto overflow-hidden shrink-0 shadow-inner">
                         {[
-                            { id: 'all', label: 'Semua', icon: faSchool },
-                            { id: 'boarding', label: 'Boarding', icon: faMoon },
-                            { id: 'regular', label: 'Reguler', icon: faSun }
+                            { id: 'all', label: 'Semua', icon: School },
+                            { id: 'boarding', label: 'Boarding', icon: Moon },
+                            { id: 'regular', label: 'Reguler', icon: Sun }
                         ].map(opt => (
                             <button
                                 key={opt.id}
                                 onClick={() => setFilterType(opt.id)}
                                 className={`h-9 sm:px-5 rounded-xl text-[10px] font-black transition-all flex items-center justify-center gap-1.5 sm:gap-2 ${filterType === opt.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-white dark:hover:bg-slate-800'}`}
                             >
-                                <FontAwesomeIcon icon={opt.icon} className="text-[9px] shrink-0" />
+                                {(() => { const Icon = opt.icon; return <Icon className="w-2.5 h-2.5 shrink-0" /> })()}
                                 <span className="whitespace-nowrap">{opt.label}</span>
                             </button>
                         ))}
@@ -1538,12 +1537,12 @@ export default function RaportPage() {
                     <EmptyState
                         variant="dashed"
                         color={searchQuery ? 'indigo' : 'slate'}
-                        icon={searchQuery ? faMagnifyingGlass : faSchool}
+                        icon={searchQuery ? Search : School}
                         title={searchQuery ? `"${searchQuery}" tidak ditemukan` : 'Belum ada kelas'}
                         description={searchQuery ? 'Coba kata kunci lain atau hapus filter.' : 'Tambahkan kelas di menu Master Terlebih dahulu.'}
                         action={searchQuery && (
                             <button onClick={() => setSearchQuery('')} className="h-10 px-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[10px] font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:shadow-lg transition-all flex items-center gap-2 mx-auto">
-                                <FontAwesomeIcon icon={faXmark} /> Reset Filter
+                                <X className="w-3.5 h-3.5 mr-1" /> Reset Filter
                             </button>
                         )}
                     />
@@ -1604,7 +1603,7 @@ export default function RaportPage() {
                                             title="Mulai Input"
                                             className="w-8 h-8 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-lg transition-all flex items-center justify-center shrink-0"
                                         >
-                                            <FontAwesomeIcon icon={faChevronRight} className="text-[10px]" />
+                                            <ChevronRight className="w-3 h-3" />
                                         </button>
                                         <button
                                             onClick={(e) => { e.stopPropagation(); setSelectedClassId(cls.id); setStep(4); loadArchive() }}
@@ -1612,7 +1611,7 @@ export default function RaportPage() {
                                             title="Lihat Arsip"
                                             className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 transition-all ${lastLabel ? 'border-[var(--color-border)] bg-[var(--color-surface-alt)] hover:border-indigo-500/30 hover:text-indigo-600 text-[var(--color-text-muted)]' : 'opacity-20 cursor-not-allowed border-dashed'}`}
                                         >
-                                            <FontAwesomeIcon icon={faBoxArchive} className="text-[10px]" />
+                                            <Archive className="w-3 h-3" />
                                         </button>
                                     </div>
                                 </div>
@@ -1631,7 +1630,7 @@ export default function RaportPage() {
                     <div className="p-5 rounded-3xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 flex items-center justify-center shrink-0">
-                                <FontAwesomeIcon icon={faSchool} className="text-indigo-500 text-xl" />
+                                <School className="text-indigo-500 w-5 h-5" />
                             </div>
                             <div>
                                 <h3 className="text-sm font-black text-[var(--color-text)]">Pilih Kelas</h3>
@@ -1644,7 +1643,7 @@ export default function RaportPage() {
                         {/* Search and Category Filter Row */}
                         <div className="flex flex-col md:flex-row gap-3">
                             <div className="relative flex-1">
-                                <FontAwesomeIcon icon={faSearch} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-xs" />
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] w-3.5 h-3.5" />
                                 <input
                                     type="text"
                                     placeholder="Cari nama kelas..."
@@ -1657,9 +1656,9 @@ export default function RaportPage() {
                             {/* Class Type Segmented Switch */}
                             <div className="flex items-center gap-1 p-1 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-2xl shadow-inner shrink-0 overflow-hidden">
                                 {[
-                                    { id: 'all', label: 'Semua Kategori', icon: faSchool },
-                                    { id: 'boarding', label: 'Boarding', icon: faMosque },
-                                    { id: 'regular', label: 'Reguler', icon: faSchool }
+                                    { id: 'all', label: 'Semua Kategori', icon: School },
+                                    { id: 'boarding', label: 'Boarding', icon: MoonStar },
+                                    { id: 'regular', label: 'Reguler', icon: School }
                                 ].map(opt => (
                                     <button
                                         key={opt.id}
@@ -1667,7 +1666,7 @@ export default function RaportPage() {
                                         onClick={() => setClassSelectionType(opt.id)}
                                         className={`h-10 px-4 rounded-xl text-[10px] font-black transition-all flex items-center justify-center gap-2 ${classSelectionType === opt.id ? 'bg-indigo-600 text-white shadow-md' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-white dark:hover:bg-slate-800'}`}
                                     >
-                                        <FontAwesomeIcon icon={opt.icon} className="text-[9px] shrink-0" />
+                                        {(() => { const Icon = opt.icon; return <Icon className="w-2.5 h-2.5 shrink-0" /> })()}
                                         <span className="whitespace-nowrap">{opt.label}</span>
                                     </button>
                                 ))}
@@ -1698,7 +1697,7 @@ export default function RaportPage() {
                         {/* Card Grid */}
                         {pickerFilteredClasses.length === 0 ? (
                             <EmptyState
-                                icon={faMagnifyingGlass}
+                                icon={Search}
                                 title="Kelas tidak ditemukan"
                                 subtitle="Coba kata kunci pencarian lain atau pastikan kelas memiliki siswa terdaftar."
                                 variant="dashed"
@@ -1740,7 +1739,7 @@ export default function RaportPage() {
                                                             : 'bg-indigo-500/10 text-indigo-600 group-hover:bg-indigo-500 group-hover:text-white'
                                                 }`}
                                             >
-                                                {isSelected ? <FontAwesomeIcon icon={faCheck} className="text-xs animate-bounce" /> : cls.name?.charAt(0)}
+                                                {isSelected ? <Check className="w-3.5 h-3.5 text-white animate-bounce" /> : cls.name?.charAt(0)}
                                             </div>
 
                                             {/* Core Info */}
@@ -1772,7 +1771,7 @@ export default function RaportPage() {
 
                     <div className="flex gap-2 sm:gap-4 pt-4 border-t border-[var(--color-border)]">
                         <button onClick={() => setStep(0)} className="h-12 px-4 rounded-2xl border border-[var(--color-border)] text-xs sm:text-sm font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all flex items-center gap-2 shrink-0">
-                            <FontAwesomeIcon icon={faArrowLeft} /> <span className="hidden sm:inline">Kembali</span>
+                            <ArrowLeft className="w-3.5 h-3.5 mr-1.5" /> <span className="hidden sm:inline">Kembali</span>
                         </button>
 
                         <button
@@ -1792,7 +1791,7 @@ export default function RaportPage() {
                                 }`}
                         >
                             <span className="whitespace-nowrap">Lanjut ke Setup Periode</span>
-                            <FontAwesomeIcon icon={faArrowRight} className="text-[10px] opacity-70" />
+                            <ArrowRight className="w-3 h-3 opacity-70" />
                         </button>
                     </div>
                 </div>
@@ -1804,7 +1803,7 @@ export default function RaportPage() {
                 <div className="p-5 rounded-3xl bg-gradient-to-br from-emerald-500/10 to-indigo-500/10 border border-emerald-500/20">
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center shrink-0">
-                            <FontAwesomeIcon icon={faClipboardList} className="text-emerald-500 text-xl" />
+                            <ClipboardList className="text-emerald-500 w-5 h-5" />
                         </div>
                         <div>
                             <h3 className="text-sm font-black text-[var(--color-text)]">Setup Raport Bulanan</h3>
@@ -1817,7 +1816,7 @@ export default function RaportPage() {
                     <div className="space-y-4">
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-2">
-                                <FontAwesomeIcon icon={faSchool} className="opacity-60" /> Kelas Terpilih
+                                <School className="w-3.5 h-3.5 opacity-60 mr-1" /> Kelas Terpilih
                             </label>
                             <div className="p-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 flex items-center justify-between gap-4">
                                 <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -1883,18 +1882,18 @@ export default function RaportPage() {
                                     onClick={() => setShowTemplatePreviewModal(true)}
                                     className="text-[9px] font-black text-indigo-500 hover:underline flex items-center gap-1"
                                 >
-                                    <FontAwesomeIcon icon={faEye} /> Lihat Perbedaan Template
+                                    <Eye className="w-3.5 h-3.5 mr-1.5" /> Lihat Perbedaan Template
                                 </button>
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 {[
-                                    { v: 'ar', label: 'العربية', sub: 'Pondok / Boarding', icon: faMosque, color: 'text-emerald-500' },
-                                    { v: 'id', label: 'Indonesia', sub: 'Sekolah / Reguler', icon: faSchool, color: 'text-indigo-500' }
+                                    { v: 'ar', label: 'العربية', sub: 'Pondok / Boarding', icon: MoonStar, color: 'text-emerald-500' },
+                                    { v: 'id', label: 'Indonesia', sub: 'Sekolah / Reguler', icon: School, color: 'text-indigo-500' }
                                 ].map(opt => (
                                     <button key={opt.v} onClick={() => setLang(opt.v)} className={`p-4 rounded-2xl border text-left transition-all ${lang === opt.v ? 'bg-indigo-500/10 border-indigo-500/50 shadow-sm' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] hover:border-indigo-500/20'}`}>
                                         <div className="flex items-center justify-between mb-1">
                                             <span className={`text-base font-black ${lang === opt.v ? 'text-indigo-600' : 'text-[var(--color-text)]'}`}>{opt.label}</span>
-                                            <FontAwesomeIcon icon={opt.icon} className={`text-base transition-colors ${lang === opt.v ? opt.color : 'text-[var(--color-text-muted)] opacity-60'}`} />
+                                            {(() => { const Icon = opt.icon; return <Icon className={`w-4 h-4 transition-colors ${lang === opt.v ? opt.color : 'text-[var(--color-text-muted)] opacity-60'}`} /> })()}
                                         </div>
                                         <p className="text-[10px] text-[var(--color-text-muted)] font-medium leading-tight">{opt.sub}</p>
                                     </button>
@@ -1906,13 +1905,13 @@ export default function RaportPage() {
 
                 <div className="flex gap-2 sm:gap-4 pt-4 border-t border-[var(--color-border)]">
                     <button onClick={() => { setSelectedClassId(''); setMusyrif('') }} className="h-12 px-4 rounded-2xl border border-[var(--color-border)] text-xs sm:text-sm font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all flex items-center gap-2 shrink-0">
-                        <FontAwesomeIcon icon={faArrowLeft} /> <span className="hidden sm:inline">Kembali</span>
+                        <ArrowLeft className="w-3.5 h-3.5 mr-1.5" /> <span className="hidden sm:inline">Kembali</span>
                     </button>
                     <button onClick={async () => { if (!selectedClassId) return; const ok = await loadStudents(); if (ok) setStep(2) }} disabled={!selectedClassId || loading} className="flex-1 h-12 rounded-2xl bg-emerald-500 text-white text-xs sm:text-sm font-black shadow-lg shadow-emerald-500/20 hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 overflow-hidden px-2">
                         {loading ? (
-                            <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
                         ) : (
-                            <FontAwesomeIcon icon={faChevronRight} className="text-[10px] opacity-70" />
+                            <ChevronRight className="w-3 h-3 opacity-70" />
                         )}
                         <span className="whitespace-nowrap">
                             {loading ? 'Memuat Santri...' : 'Mulai Input Nilai'}
@@ -2012,10 +2011,10 @@ export default function RaportPage() {
             <div className="space-y-6">
                 {/* Header Stats */}
                 <StatsCarousel count={4} cols={4}>
-                    <StatCard key="total" label="Total Santri" value={totalCount} icon={faUsers} color="sky" />
-                    <StatCard key="progress" label="Progress Lengkap" value={completeCount} icon={faCircleCheck} color="emerald" />
-                    <StatCard key="pct" label="Persentase" value={pct} suffix="%" icon={faChartPie} color="indigo" />
-                    <StatCard key="periode" label="Periode" value={`${BULAN.find(b => b.id === selectedMonth)?.id_str} ${selectedYear}`} icon={faCalendarAlt} color="amber" />
+                    <StatCard key="total" label="Total Santri" value={totalCount} icon={Users} color="sky" />
+                    <StatCard key="progress" label="Progress Lengkap" value={completeCount} icon={CheckCircle2} color="emerald" />
+                    <StatCard key="pct" label="Persentase" value={pct} suffix="%" icon={PieChart} color="indigo" />
+                    <StatCard key="periode" label="Periode" value={`${BULAN.find(b => b.id === selectedMonth)?.id_str} ${selectedYear}`} icon={Calendar} color="amber" />
                 </StatsCarousel>
 
                 <div className="flex flex-col lg:flex-row gap-6">
@@ -2036,7 +2035,7 @@ export default function RaportPage() {
                                     }}
                                     className="w-10 h-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-indigo-500 flex items-center justify-center active:scale-95 transition-all"
                                 >
-                                    <FontAwesomeIcon icon={faChevronLeft} />
+                                    <ChevronLeft className="w-3.5 h-3.5" />
                                 </button>
 
                                 <button
@@ -2044,15 +2043,16 @@ export default function RaportPage() {
                                     className="flex-1 h-10 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-between gap-2 overflow-hidden"
                                 >
                                     <div className="flex items-center gap-2 truncate min-w-0">
-                                        <FontAwesomeIcon
-                                            icon={isComplete(scores[previewStudentId || students[0]?.id] || {}) ? faCircleCheck : faCircleExclamation}
-                                            className={`text-[10px] shrink-0 ${isComplete(scores[previewStudentId || students[0]?.id] || {}) ? 'text-emerald-500' : 'text-amber-500'}`}
-                                        />
+                                        {isComplete(scores[previewStudentId || students[0]?.id] || {}) ? (
+                                            <CheckCircle2 className="w-3 h-3 shrink-0 text-emerald-500" />
+                                        ) : (
+                                            <AlertCircle className="w-3 h-3 shrink-0 text-amber-500" />
+                                        )}
                                         <span className="text-[11px] font-bold text-[var(--color-text)] truncate">
                                             {students.find(s => s.id === (previewStudentId || students[0]?.id))?.name || 'Pilih Santri'}
                                         </span>
                                     </div>
-                                    <FontAwesomeIcon icon={faChevronDown} className="text-[10px] text-[var(--color-text-muted)] shrink-0" />
+                                    <ChevronDown className="w-3 h-3 text-[var(--color-text-muted)] shrink-0" />
                                 </button>
 
                                 <button
@@ -2062,7 +2062,7 @@ export default function RaportPage() {
                                     }}
                                     className="w-10 h-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-indigo-500 flex items-center justify-center active:scale-95 transition-all"
                                 >
-                                    <FontAwesomeIcon icon={faChevronRight} />
+                                    <ChevronRight className="w-3.5 h-3.5" />
                                 </button>
                             </div>
 
@@ -2092,9 +2092,6 @@ export default function RaportPage() {
                                                     </div>
                                                     <span className="text-xs font-bold truncate">{s.name}</span>
                                                 </div>
-                                                <FontAwesomeIcon
-                                                    icon={complete ? faCircleCheck : faCircleExclamation}
-                                                    className={`text-xs ${active ? 'text-white/80' : complete ? 'text-emerald-500' : 'text-amber-500'}`}
                                                 />
                                             </button>
                                         )
@@ -2118,7 +2115,7 @@ export default function RaportPage() {
                                                     <span className={`text-[9px] font-black ${active ? 'text-white' : 'text-indigo-500'}`}>{s.name.charAt(0)}</span>
                                                 </div>
                                                 <span className="text-[11px] font-bold truncate flex-1">{s.name}</span>
-                                                {complete && <FontAwesomeIcon icon={faCircleCheck} className={`text-[10px] ${active ? 'text-white' : 'text-emerald-500'}`} />}
+                                                {complete && <CheckCircle2 className={`w-3 h-3 ${active ? 'text-white' : 'text-emerald-500'}`} />}
                                             </div>
                                         </button>
                                     )
@@ -2128,10 +2125,10 @@ export default function RaportPage() {
 
                         <div className="space-y-2">
                             <button onClick={() => openPrintWindow(students)} className="w-full h-11 rounded-2xl bg-indigo-500 text-white text-xs font-black shadow-lg shadow-indigo-500/20 hover:bg-indigo-600 transition-all flex items-center justify-center gap-2">
-                                <FontAwesomeIcon icon={faPrint} /> Cetak Semua ({totalCount})
+                                <Printer className="w-3.5 h-3.5 mr-1.5" /> Cetak Semua ({totalCount})
                             </button>
                             <button onClick={() => setStep(2)} className="w-full h-11 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] text-xs font-black hover:text-[var(--color-text)] transition-all flex items-center justify-center gap-2">
-                                <FontAwesomeIcon icon={faArrowLeft} /> Kembali ke Input
+                                <ArrowLeft className="w-3.5 h-3.5 mr-1.5" /> Kembali ke Input
                             </button>
                         </div>
                     </div>
@@ -2143,7 +2140,7 @@ export default function RaportPage() {
                             <div className="flex items-center justify-between w-full sm:w-auto">
                                 <div className="flex items-center gap-2">
                                     <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
-                                        <FontAwesomeIcon icon={faMagnifyingGlass} className="text-indigo-500 text-[10px]" />
+                                        <Search className="w-3 h-3 text-indigo-500" />
                                     </div>
                                     <h4 className="text-[11px] font-black text-[var(--color-text)] uppercase tracking-wider">Preview Raport</h4>
                                 </div>
@@ -2151,7 +2148,7 @@ export default function RaportPage() {
                                     onClick={() => setIsFullScreenPreview(true)}
                                     className="h-8 w-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] flex items-center justify-center sm:hidden"
                                 >
-                                    <FontAwesomeIcon icon={faExpand} className="scale-75" />
+                                    <Maximize2 className="w-3 h-3" />
                                 </button>
                             </div>
 
@@ -2173,7 +2170,7 @@ export default function RaportPage() {
                                 <div className="flex items-center gap-2 w-full sm:w-auto">
                                     {/* Zoom Control stretches on mobile */}
                                     <div className="flex-1 sm:flex-initial flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-10">
-                                        <button onClick={() => { manualZoomRef.current = true; setPreviewZoom(p => Math.max(0.3, p - 0.1)) }} className="flex-1 sm:w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><FontAwesomeIcon icon={faSearch} className="scale-75" />-</button>
+                                        <button onClick={() => { manualZoomRef.current = true; setPreviewZoom(p => Math.max(0.3, p - 0.1)) }} className="flex-1 sm:w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><Search className="w-3 h-3 mr-0.5" />-</button>
                                         {/* #3: Fit-Width shortcut — tap sekali langsung fit ke lebar container */}
                                         <button
                                             onClick={() => {
@@ -2188,24 +2185,24 @@ export default function RaportPage() {
                                             title="Fit ke lebar layar"
                                             className="text-[9px] font-black w-10 text-center text-indigo-500 tabular-nums hover:text-indigo-700 transition-colors cursor-pointer select-none"
                                         >{Math.round(previewZoom * 100)}%</button>
-                                        <button onClick={() => { manualZoomRef.current = true; setPreviewZoom(p => Math.min(1.5, p + 0.1)) }} className="flex-1 sm:w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><FontAwesomeIcon icon={faSearch} className="scale-75" />+</button>
+                                        <button onClick={() => { manualZoomRef.current = true; setPreviewZoom(p => Math.min(1.5, p + 0.1)) }} className="flex-1 sm:w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><Search className="w-3 h-3 mr-0.5" />+</button>
                                     </div>
 
                                     {previewStudent?.phone && (
                                         <button onClick={() => sendWATextOnly(previewStudent)} className="h-10 px-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-700 text-[10px] font-black flex items-center justify-center gap-2 flex-1 sm:flex-initial">
-                                            <FontAwesomeIcon icon={faWhatsapp} className="text-xs" /> <span className="hidden xs:inline">Whatsapp</span>
+                                            <WhatsAppIcon className="w-3.5 h-3.5 mr-1" /> <span className="hidden xs:inline">Whatsapp</span>
                                         </button>
                                     )}
 
                                     <button onClick={() => openPrintWindow([previewStudent].filter(Boolean))} className="h-10 px-5 rounded-xl bg-emerald-500 text-white text-[10px] font-black flex items-center justify-center gap-2 flex-1 sm:flex-initial shadow-lg shadow-emerald-500/20">
-                                        <FontAwesomeIcon icon={faPrint} className="text-xs" /> <span className="hidden xs:inline">Cetak</span>
+                                        <Printer className="w-3.5 h-3.5 mr-1" /> <span className="hidden xs:inline">Cetak</span>
                                     </button>
 
                                     <button
                                         onClick={() => setIsFullScreenPreview(true)}
                                         className="h-10 w-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hidden sm:flex items-center justify-center hover:text-indigo-500 transition-all"
                                     >
-                                        <FontAwesomeIcon icon={faExpand} className="scale-90" />
+                                        <Maximize2 className="w-3.5 h-3.5" />
                                     </button>
                                 </div>
                             </div>
@@ -2242,7 +2239,7 @@ export default function RaportPage() {
                         >
                             {/* #2: Animated eye-catching hint badge — hanya di mobile */}
                             <div className="lg:hidden flex items-center gap-1.5 mb-3 px-3 py-1.5 rounded-full bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-indigo-500/20 shadow-sm animate-pulse">
-                                <FontAwesomeIcon icon={faExpand} className="text-indigo-500 text-[9px]" />
+                                <Maximize2 className="w-3 h-3 text-indigo-500" />
                                 <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">Klik raport untuk memperbesar</span>
                             </div>
                             {/* Layout Wrapper — menggunakan transform:scale agar layout width selalu akurat di Android */}
@@ -2362,7 +2359,7 @@ export default function RaportPage() {
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
                             <button onClick={() => { setArchivePreview(null); setArchiveEditMode(false) }} className="w-10 h-10 rounded-xl border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] flex items-center justify-center transition-all">
-                                <FontAwesomeIcon icon={faArrowLeft} className="text-sm" />
+                                <ArrowLeft className="w-4 h-4" />
                             </button>
                             <div>
                                 <h3 className="text-base font-black text-[var(--color-text)]">{entry.class_name}</h3>
@@ -2371,13 +2368,13 @@ export default function RaportPage() {
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
                             <button onClick={() => setArchiveEditMode(!archiveEditMode)} className={`h-9 px-4 rounded-xl border text-xs font-black transition-all ${archiveEditMode ? 'bg-violet-500 border-violet-500 text-white shadow-lg shadow-violet-500/20' : 'bg-violet-500/10 border-violet-500/20 text-violet-600 hover:bg-violet-500/20'}`}>
-                                <FontAwesomeIcon icon={faSliders} className="mr-2" /> {archiveEditMode ? 'Selesai Edit' : 'Edit Arsip'}
+                                <Sliders className="w-3.5 h-3.5 mr-2" /> {archiveEditMode ? 'Selesai Edit' : 'Edit Arsip'}
                             </button>
                             <button onClick={() => runZipBlast(pStu, entry)} className="h-9 px-4 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-600 text-xs font-black hover:bg-teal-500/20 transition-all">
-                                <FontAwesomeIcon icon={faFileZipper} className="mr-2" /> ZIP PDF
+                                <FileArchive className="w-3.5 h-3.5 mr-2" /> ZIP PDF
                             </button>
                             <button onClick={() => openPrintWindow(pStu)} className="h-9 px-4 rounded-xl bg-indigo-500 text-white text-xs font-black hover:bg-indigo-600 transition-all flex items-center gap-2">
-                                <FontAwesomeIcon icon={faPrint} /> Cetak Semua
+                                <Printer className="w-3.5 h-3.5 mr-1.5" /> Cetak Semua
                             </button>
                         </div>
                     </div>
@@ -2405,7 +2402,7 @@ export default function RaportPage() {
                                                     <span className={`text-[9px] font-black ${active ? 'text-white' : 'text-indigo-500'}`}>{s.name.charAt(0)}</span>
                                                 </div>
                                                 <span className="text-[11px] font-bold truncate flex-1">{s.name}</span>
-                                                {complete && <FontAwesomeIcon icon={faCircleCheck} className={`text-[10px] ${active ? 'text-white' : 'text-emerald-500'}`} />}
+                                                {complete && <CheckCircle2 className={`w-3 h-3 ${active ? 'text-white' : 'text-emerald-500'}`} />}
                                             </div>
                                         </button>
                                     )
@@ -2421,7 +2418,7 @@ export default function RaportPage() {
                                         <div className="p-6 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-md animate-fade-in space-y-6">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-10 h-10 rounded-xl bg-violet-500 text-white flex items-center justify-center shadow-lg shadow-violet-500/20 shrink-0">
-                                                    <FontAwesomeIcon icon={faSliders} />
+                                                    <Sliders className="w-3.5 h-3.5" />
                                                 </div>
                                                 <div>
                                                     <h4 className="text-sm font-black text-[var(--color-text)]">Edit Mode: {pStudent.name}</h4>
@@ -2432,7 +2429,7 @@ export default function RaportPage() {
                                             {/* Nilai Kriteria */}
                                             <div className="space-y-2">
                                                 <h5 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] flex items-center gap-1.5">
-                                                    <FontAwesomeIcon icon={faClipboardList} className="opacity-50" /> Nilai Kriteria
+                                                    <ClipboardList className="w-3.5 h-3.5 opacity-50 mr-1.5" /> Nilai Kriteria
                                                 </h5>
                                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                                     {KRITERIA.map(k => {
@@ -2471,7 +2468,7 @@ export default function RaportPage() {
                                                     <div className="grid grid-cols-2 gap-2">
                                                         {FISIK_FIELDS.map(f => (
                                                             <div key={f.key} className="flex items-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-2.5 h-10">
-                                                                <FontAwesomeIcon icon={f.icon} style={{ color: f.color }} className="text-xs shrink-0 opacity-80" />
+                                                                {(() => { const Icon = f.icon; return <Icon style={{ color: f.color }} className="w-3.5 h-3.5 shrink-0 opacity-80" /> })()}
                                                                 <input
                                                                     type="number"
                                                                     inputMode="decimal"
@@ -2492,7 +2489,7 @@ export default function RaportPage() {
                                                     <div className="grid grid-cols-2 gap-2">
                                                         {HAFALAN_FIELDS.map(f => (
                                                             <div key={f.key} className="flex items-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-2.5 h-10">
-                                                                <FontAwesomeIcon icon={f.icon} style={{ color: f.color }} className="text-xs shrink-0 opacity-80" />
+                                                                {(() => { const Icon = f.icon; return <Icon style={{ color: f.color }} className="w-3.5 h-3.5 shrink-0 opacity-80" /> })()}
                                                                 <input
                                                                     type="text"
                                                                     placeholder={f.ph}
@@ -2545,7 +2542,7 @@ export default function RaportPage() {
                                                         }}
                                                         className="h-6 px-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 text-[8px] font-black flex items-center gap-1 transition-all active:scale-95"
                                                     >
-                                                        <FontAwesomeIcon icon={faBolt} className="text-[7px]" />
+                                                        <Zap className="w-3 h-3" />
                                                         Generate Catatan
                                                     </button>
                                                 </div>
@@ -2574,7 +2571,7 @@ export default function RaportPage() {
                                                 <div className="flex items-center justify-between w-full sm:w-auto">
                                                     <div className="flex items-center gap-2">
                                                         <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
-                                                            <FontAwesomeIcon icon={faMagnifyingGlass} className="text-indigo-500 text-[10px]" />
+                                                            <Search className="w-3 h-3 text-indigo-500" />
                                                         </div>
                                                         <h4 className="text-[11px] font-black text-[var(--color-text)] uppercase tracking-wider">Preview Raport</h4>
                                                     </div>
@@ -2582,7 +2579,7 @@ export default function RaportPage() {
                                                         onClick={() => setIsFullScreenPreview(true)}
                                                         className="h-8 w-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] flex items-center justify-center sm:hidden"
                                                     >
-                                                        <FontAwesomeIcon icon={faExpand} className="scale-75" />
+                                                        <Maximize2 className="w-3 h-3" />
                                                     </button>
                                                 </div>
 
@@ -2604,7 +2601,7 @@ export default function RaportPage() {
                                                     <div className="flex items-center gap-2 w-full sm:w-auto">
                                                         {/* Zoom Control stretches on mobile */}
                                                         <div className="flex-1 sm:flex-initial flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-10">
-                                                            <button onClick={() => { manualZoomRef.current = true; setPreviewZoom(p => Math.max(0.3, p - 0.1)) }} className="flex-1 sm:w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><FontAwesomeIcon icon={faSearch} className="scale-75" />-</button>
+                                                            <button onClick={() => { manualZoomRef.current = true; setPreviewZoom(p => Math.max(0.3, p - 0.1)) }} className="flex-1 sm:w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><Search className="w-3 h-3 mr-0.5" />-</button>
                                                             <button
                                                                 onClick={() => {
                                                                     manualZoomRef.current = false
@@ -2618,24 +2615,24 @@ export default function RaportPage() {
                                                                 title="Fit ke lebar layar"
                                                                 className="text-[9px] font-black w-10 text-center text-indigo-500 tabular-nums hover:text-indigo-700 transition-colors cursor-pointer select-none"
                                                             >{Math.round(previewZoom * 100)}%</button>
-                                                            <button onClick={() => { manualZoomRef.current = true; setPreviewZoom(p => Math.min(1.5, p + 0.1)) }} className="flex-1 sm:w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><FontAwesomeIcon icon={faSearch} className="scale-75" />+</button>
+                                                            <button onClick={() => { manualZoomRef.current = true; setPreviewZoom(p => Math.min(1.5, p + 0.1)) }} className="flex-1 sm:w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><Search className="w-3 h-3 mr-0.5" />+</button>
                                                         </div>
 
                                                         {pStudent?.phone && (
                                                             <button onClick={() => sendWATextOnly(pStudent)} className="h-10 px-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-700 text-[10px] font-black flex items-center justify-center gap-2 flex-1 sm:flex-initial">
-                                                                <FontAwesomeIcon icon={faWhatsapp} className="text-xs" /> <span className="hidden xs:inline">Whatsapp</span>
+                                                                <WhatsAppIcon className="w-3.5 h-3.5 mr-1" /> <span className="hidden xs:inline">Whatsapp</span>
                                                             </button>
                                                         )}
 
                                                         <button onClick={() => openPrintWindow([pStudent].filter(Boolean))} className="h-10 px-5 rounded-xl bg-emerald-500 text-white text-[10px] font-black flex items-center justify-center gap-2 flex-1 sm:flex-initial shadow-lg shadow-emerald-500/20">
-                                                            <FontAwesomeIcon icon={faPrint} className="text-xs" /> <span className="hidden xs:inline">Cetak</span>
+                                                            <Printer className="w-3.5 h-3.5 mr-1" /> <span className="hidden xs:inline">Cetak</span>
                                                         </button>
 
                                                         <button
                                                             onClick={() => setIsFullScreenPreview(true)}
                                                             className="h-10 w-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hidden sm:flex items-center justify-center hover:text-indigo-500 transition-all"
                                                         >
-                                                            <FontAwesomeIcon icon={faExpand} className="scale-90" />
+                                                            <Maximize2 className="w-3.5 h-3.5" />
                                                         </button>
                                                     </div>
                                                 </div>
@@ -2771,7 +2768,7 @@ export default function RaportPage() {
     if (isAllowed === null) return (
         <DashboardLayout>
             <div className="flex items-center justify-center min-h-[60vh]">
-                <FontAwesomeIcon icon={faSpinner} className="animate-spin text-2xl text-[var(--color-primary)]" />
+                <Loader2 className="w-8 h-8 animate-spin text-[var(--color-primary)]" />
             </div>
         </DashboardLayout>
     )
@@ -2779,7 +2776,7 @@ export default function RaportPage() {
         <DashboardLayout>
             <div className="p-4 md:p-6 flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center">
                 <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center">
-                    <FontAwesomeIcon icon={faLock} className="text-2xl text-red-500" />
+                    <Lock className="w-8 h-8 text-red-500" />
                 </div>
                 <div>
                     <h2 className="text-xl font-black text-[var(--color-text)] mb-1">Akses Ditolak</h2>
@@ -2834,7 +2831,7 @@ export default function RaportPage() {
                 {/* Read-only Banner — access.teacher_raport flag off */}
                 {!canEdit && (
                     <div className="px-4 py-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-2">
-                        <FontAwesomeIcon icon={faLock} className="text-rose-500 shrink-0" />
+                        <Lock className="w-3.5 h-3.5 text-rose-500 shrink-0" />
                         <p className="text-[11px] font-bold text-rose-600 flex-1">Mode Read-only — Edit raport dinonaktifkan oleh administrator.</p>
                     </div>
                 )}
@@ -2852,7 +2849,7 @@ export default function RaportPage() {
                                     {stepLabels.map((label, i) => (
                                         <div key={i} className="flex items-center gap-1.5">
                                             <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black transition-all ${activeStepIndex === i ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/20' : activeStepIndex > i ? 'bg-emerald-500/20 text-emerald-500' : 'bg-[var(--color-surface)] text-[var(--color-text-muted)]'}`}>
-                                                {activeStepIndex > i ? <FontAwesomeIcon icon={faCheck} className="text-[7px]" /> : i + 1}
+                                                {activeStepIndex > i ? <Check className="w-2 h-2" /> : i + 1}
                                             </div>
                                             <span className={`text-[9px] font-bold transition-all ${activeStepIndex === i ? 'text-indigo-600 font-extrabold' : activeStepIndex > i ? 'text-emerald-600' : 'text-[var(--color-text-muted)]'}`}>{label}</span>
                                             {i < stepLabels.length - 1 && <div className="w-4 h-px bg-[var(--color-border)]" />}
@@ -2867,7 +2864,7 @@ export default function RaportPage() {
                                 className={`h-9 w-9 rounded-lg border flex items-center justify-center text-sm transition-all active:scale-95 ${isHeaderMenuOpen ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-500 shadow-sm' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'}`}
                                 title="Data & Backup Operations"
                             >
-                                <FontAwesomeIcon icon={faSliders} />
+                                <Sliders className="w-3.5 h-3.5" />
                             </button>
 
                             <button
@@ -2880,16 +2877,16 @@ export default function RaportPage() {
                                     }`}
                                 title="Keyboard Shortcuts (?)"
                             >
-                                <FontAwesomeIcon icon={faKeyboard} />
+                                <Keyboard className="w-3.5 h-3.5" />
                             </button>
 
                             <button onClick={() => setShowTutorialModal(true)} aria-label="Panduan penggunaan" className="h-9 px-3 gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/8 text-amber-500 text-[10px] font-black flex items-center justify-center hover:bg-amber-500/15 transition-all" title="Panduan & Tutorial">
-                                <FontAwesomeIcon icon={faLightbulb} className="text-[9px]" />
+                                <Lightbulb className="w-3 h-3" />
                                 Tutorial
                             </button>
                             {step === 0 && (
                                 <button onClick={() => { setSelectedClassId(''); setStep(1) }} className="h-9 px-4 lg:px-5 rounded-xl bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20 flex items-center gap-2 hover:opacity-90 transition-all">
-                                    <FontAwesomeIcon icon={faPlus} className="text-sm" />
+                                    <Plus className="w-4 h-4" />
                                     <span className="text-[10px] font-black uppercase tracking-widest">Buat Raport</span>
                                 </button>
                             )}
@@ -2901,25 +2898,25 @@ export default function RaportPage() {
                 {step === 0 && (
                     <StatsCarousel count={4}>
                         <StatCard
-                            icon={faSchool}
+                            icon={School}
                             label="Total Kelas"
                             value={step0Stats.totalKelas}
                             color="indigo"
                         />
                         <StatCard
-                            icon={faUsers}
+                            icon={Users}
                             label="Total Siswa"
                             value={step0Stats.totalSiswa}
                             color="emerald"
                         />
                         <StatCard
-                            icon={faCircleCheck}
+                            icon={CheckCircle2}
                             label="Raport Lengkap"
                             value={step0Stats.raportLengkap}
                             color="indigo"
                         />
                         <StatCard
-                            icon={faChartPie}
+                            icon={PieChart}
                             label="Rata Input"
                             value={step0Stats.rataInput}
                             color="amber"
@@ -2933,7 +2930,7 @@ export default function RaportPage() {
                     {/* FIX 6: Global auto-save indicator */}
                     {step === 2 && globalSaveIndicator && (
                         <div className={`fixed bottom-4 right-4 z-50 flex items-center gap-2 px-3 py-2 rounded-xl border shadow-lg text-[10px] font-black transition-all duration-300 ${globalSaveIndicator === 'saving' ? 'bg-amber-500/10 border-amber-500/20 text-amber-600' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'}`}>
-                            <FontAwesomeIcon icon={globalSaveIndicator === 'saving' ? faSpinner : faCircleCheck} className={globalSaveIndicator === 'saving' ? 'animate-spin text-[9px]' : 'text-[9px]'} />
+                            {globalSaveIndicator === 'saving' ? <Loader2 className="w-3 h-3 animate-spin text-amber-500" /> : <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
                             {globalSaveIndicator === 'saving' ? 'Menyimpan...' : 'Tersimpan ✓'}
                         </div>
                     )}
@@ -2975,7 +2972,7 @@ export default function RaportPage() {
                                 <button onClick={() => { setIsHeaderMenuOpen(false); setIsImportModalOpen(true) }}
                                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
                                     <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                        <FontAwesomeIcon icon={faFileImport} className="text-xs" />
+                                        <Upload className="w-3.5 h-3.5" />
                                     </div>
                                     <div className="text-left">
                                         <p className="text-[11px] font-black leading-tight">Import XLS</p>
@@ -2986,7 +2983,7 @@ export default function RaportPage() {
                                 <button onClick={() => { setIsHeaderMenuOpen(false); setIsExportModalOpen(true) }}
                                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
                                     <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                        <FontAwesomeIcon icon={faFileExport} className="text-xs" />
+                                        <Download className="w-3.5 h-3.5" />
                                     </div>
                                     <div className="text-left">
                                         <p className="text-[11px] font-black leading-tight">Export Data</p>
@@ -3000,7 +2997,7 @@ export default function RaportPage() {
                                 <button onClick={() => { setIsHeaderMenuOpen(false); setStep(4); loadArchive() }}
                                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group">
                                     <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                        <FontAwesomeIcon icon={faBoxArchive} className="text-xs" />
+                                        <Archive className="w-3.5 h-3.5" />
                                     </div>
                                     <div className="text-left">
                                         <p className="text-[11px] font-black leading-tight">Riwayat Raport</p>
@@ -3098,7 +3095,7 @@ export default function RaportPage() {
                     isOpen={!!waBlastConfirm}
                     onClose={() => setWaBlastConfirm(null)}
                     title="Konfirmasi WA Blast"
-                    icon={faWhatsapp}
+                    icon={WhatsAppIcon}
                     variant="green"
                 >
                     {waBlastConfirm && (
@@ -3115,7 +3112,7 @@ export default function RaportPage() {
                     isOpen={!!waBlast}
                     onClose={() => !waBlast?.active && setWaBlast(null)}
                     title="WA Blast Progress"
-                    icon={faWhatsapp}
+                    icon={WhatsAppIcon}
                     showClose={!waBlast?.active}
                 >
                     {waBlast && (
@@ -3133,7 +3130,7 @@ export default function RaportPage() {
                     isOpen={!!zipBlast}
                     onClose={() => !zipBlast?.active && setZipBlast(null)}
                     title="Ekspor ZIP Progress"
-                    icon={faFileZipper}
+                    icon={FileArchive}
                     showClose={!zipBlast?.active}
                 >
                     {zipBlast && (
@@ -3162,7 +3159,7 @@ export default function RaportPage() {
                         onClose={() => setConfirmDelete(null)}
                         title="Hapus Arsip Raport"
                         description={<span className="text-red-500 font-black">Aksi ini tidak bisa dibatalkan!</span>}
-                        icon={faTriangleExclamation}
+                        icon={AlertTriangle}
                         iconBg="bg-red-500/10"
                         iconColor="text-red-500"
                         size="md"
@@ -3209,7 +3206,7 @@ export default function RaportPage() {
                             </span>
                             <button onClick={saveAll} disabled={savingAll}
                                 className="h-8 px-4 rounded-xl bg-amber-500 text-white text-[10px] font-black hover:bg-amber-600 transition-all flex items-center gap-1.5 disabled:opacity-60 shadow-md shadow-amber-500/20">
-                                <FontAwesomeIcon icon={savingAll ? faSpinner : faFloppyDisk} className={savingAll ? 'animate-spin text-[9px]' : 'text-[9px]'} />
+                                {savingAll ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
                                 {savingAll ? 'Menyimpan...' : 'Simpan'}
                             </button>
                             {/* FIX MAJOR: tombol × hanya dismiss bar, tidak menyimpan apapun */}
@@ -3219,7 +3216,7 @@ export default function RaportPage() {
                                 title="Tutup pengingat (data belum disimpan)"
                                 className="text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all"
                             >
-                                <FontAwesomeIcon icon={faXmark} className="text-[11px]" />
+                                <X className="w-3.5 h-3.5" />
                             </button>
                         </div>
                     )
@@ -3230,7 +3227,7 @@ export default function RaportPage() {
                     isOpen={!!pendingNav}
                     onClose={() => setPendingNav(null)}
                     title="Yakin Ingin Keluar?"
-                    icon={faTriangleExclamation}
+                    icon={AlertTriangle}
                     variant="amber"
                 >
                     <div className="space-y-6">
@@ -3265,7 +3262,7 @@ export default function RaportPage() {
                     isOpen={!!studentDetailDrawer}
                     onClose={() => setStudentDetailDrawer(null)}
                     title={studentDetailDrawer?.student?.name ?? 'Detail Santri'}
-                    icon={faArrowTrendUp}
+                    icon={TrendingUp}
                     size="lg"
                 >
                     {studentDetailDrawer && (
@@ -3278,7 +3275,7 @@ export default function RaportPage() {
                                 </div>
                             ) : !studentDetailDrawer.history?.length ? (
                                 <EmptyState
-                                    icon={faBoxArchive}
+                                    icon={Archive}
                                     title="Belum Ada Histori"
                                     subtitle="Santri ini belum memiliki record raport yang tersimpan."
                                 />
@@ -3290,9 +3287,9 @@ export default function RaportPage() {
                                 return (
                                     <div className="space-y-6">
                                         <div className="grid grid-cols-3 gap-3">
-                                            <StatCard label="Total Record" value={history.length} icon={faTableList} color="indigo" />
-                                            <StatCard label="Skor Tertinggi" value={bestAvg?.toFixed(1) ?? '—'} icon={faArrowTrendUp} color="emerald" />
-                                            <StatCard label="Bulan Terakhir" value={BULAN.find(b => b.id === latest?.month)?.id_str || '—'} icon={faCalendarAlt} color="amber" />
+                                            <StatCard label="Total Record" value={history.length} icon={Table} color="indigo" />
+                                            <StatCard label="Skor Tertinggi" value={bestAvg?.toFixed(1) ?? '—'} icon={TrendingUp} color="emerald" />
+                                            <StatCard label="Bulan Terakhir" value={BULAN.find(b => b.id === latest?.month)?.id_str || '—'} icon={Calendar} color="amber" />
                                         </div>
 
                                         <div className="space-y-3">
@@ -3350,7 +3347,7 @@ export default function RaportPage() {
                     onClose={() => setSaveAllConfirm(null)}
                     title="Simpan Nilai?"
                     description="Beberapa data santri belum terisi lengkap"
-                    icon={faTriangleExclamation}
+                    icon={AlertTriangle}
                     iconBg="bg-emerald-500/10"
                     iconColor="text-emerald-600"
                     size="sm"
@@ -3370,7 +3367,7 @@ export default function RaportPage() {
                                 onClick={_doSaveAll}
                                 className="h-10 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 shrink-0"
                             >
-                                <FontAwesomeIcon icon={faFloppyDisk} className="text-[11px] opacity-70" />
+                                <Save className="w-3.5 h-3.5 opacity-70" />
                                 Simpan yang Terisi
                             </button>
                         </div>
@@ -3420,7 +3417,7 @@ export default function RaportPage() {
                                     : 'bg-red-500 hover:bg-red-600 shadow-red-500/20'
                                     }`}
                             >
-                                {confirmModal.confirmIcon && <FontAwesomeIcon icon={confirmModal.confirmIcon} className="text-[11px] opacity-70" />}
+                                {(() => { if (!confirmModal.confirmIcon) return null; const Icon = confirmModal.confirmIcon; return <Icon className="w-3.5 h-3.5 opacity-70" /> })()}
                                 {confirmModal.confirmLabel ?? 'Lanjutkan'}
                             </button>
                         </div>
@@ -3458,7 +3455,7 @@ export default function RaportPage() {
                                         className="w-9 h-9 sm:w-8 sm:h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 transition-all flex items-center justify-center shrink-0"
                                         title="Tutup fullscreen"
                                     >
-                                        <FontAwesomeIcon icon={faArrowLeft} className="text-[11px]" />
+                                        <ArrowLeft className="w-3.5 h-3.5" />
                                     </button>
                                     <div className="min-w-0">
                                         <p className="text-slate-800 text-[11px] font-black truncate max-w-[140px] sm:max-w-xs">
@@ -3481,7 +3478,7 @@ export default function RaportPage() {
                                         className="w-9 h-9 sm:w-8 sm:h-8 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white shadow-md shadow-indigo-500/30 flex items-center justify-center transition-all"
                                         title="Cetak Raport"
                                     >
-                                        <FontAwesomeIcon icon={faPrint} className="text-[11px]" />
+                                        <Printer className="w-3.5 h-3.5" />
                                     </button>
                                 </div>
                             </div>
@@ -3579,7 +3576,7 @@ export default function RaportPage() {
                                             onClick={() => setFullScreenZoom(p => Math.round(Math.max(0.3, p - 0.1) * 100) / 100)}
                                             className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl text-slate-500 hover:text-slate-700 hover:bg-white transition-all flex items-center justify-center"
                                         >
-                                            <FontAwesomeIcon icon={faSearch} className="text-[10px]" />
+                                            <Search className="w-3 h-3" />
                                             <span className="text-[10px] font-black leading-none ml-0.5">-</span>
                                         </button>
                                         <button
@@ -3595,7 +3592,7 @@ export default function RaportPage() {
                                             onClick={() => setFullScreenZoom(p => Math.round(Math.min(2.0, p + 0.1) * 100) / 100)}
                                             className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl text-slate-500 hover:text-slate-700 hover:bg-white transition-all flex items-center justify-center"
                                         >
-                                            <FontAwesomeIcon icon={faSearch} className="text-[10px]" />
+                                            <Search className="w-3 h-3" />
                                             <span className="text-[10px] font-black leading-none ml-0.5">+</span>
                                         </button>
                                         <div className="w-px h-5 sm:h-6 bg-slate-300 mx-0.5 sm:mx-1" />
@@ -3607,7 +3604,7 @@ export default function RaportPage() {
                                             disabled={!fsStudent || fsStudentsList.findIndex(s => s.id === fsStudent?.id) === 0}
                                             className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl text-slate-500 hover:text-slate-700 hover:bg-white transition-all flex items-center justify-center disabled:opacity-30"
                                         >
-                                            <FontAwesomeIcon icon={faChevronLeft} className="text-[10px]" />
+                                            <ChevronLeft className="w-3 h-3" />
                                         </button>
                                         <span className="min-w-[46px] sm:min-w-[54px] text-center text-[9px] sm:text-[10px] font-black text-slate-400 tabular-nums">
                                             {(fsStudentsList.findIndex(s => s.id === fsStudent?.id) + 1)}/{fsStudentsList.length}
@@ -3620,14 +3617,14 @@ export default function RaportPage() {
                                             disabled={!fsStudent || fsStudentsList.findIndex(s => s.id === fsStudent?.id) === fsStudentsList.length - 1}
                                             className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl text-slate-500 hover:text-slate-700 hover:bg-white transition-all flex items-center justify-center disabled:opacity-30"
                                         >
-                                            <FontAwesomeIcon icon={faChevronRight} className="text-[10px]" />
+                                            <ChevronRight className="w-3 h-3" />
                                         </button>
                                         <div className="w-px h-5 sm:h-6 bg-slate-300 mx-0.5 sm:mx-1" />
                                         <button
                                             onClick={() => setIsFullScreenPreview(false)}
                                             className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all flex items-center justify-center"
                                         >
-                                            <FontAwesomeIcon icon={faXmark} />
+                                            <X className="w-3.5 h-3.5" />
                                         </button>
                                     </div>
                                 </div>
@@ -3641,7 +3638,7 @@ export default function RaportPage() {
                         isOpen={showTemplatePreviewModal}
                         onClose={() => setShowTemplatePreviewModal(false)}
                         title="Perbandingan Template Bahasa Raport"
-                        icon={faLanguage}
+                        icon={Languages}
                         iconBg="bg-indigo-500/10"
                         iconColor="text-indigo-500"
                         description="Perbandingan hasil cetak PDF template bahasa Arab vs Indonesia."
@@ -3665,7 +3662,7 @@ export default function RaportPage() {
                                 <div className="p-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 space-y-4">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                                            <FontAwesomeIcon icon={faMosque} className="text-sm" />
+                                            <MoonStar className="w-4 h-4" />
                                         </div>
                                         <div>
                                             <h4 className="text-xs font-black text-emerald-700">العربية (Boarding / Pondok)</h4>
@@ -3675,15 +3672,15 @@ export default function RaportPage() {
 
                                     <ul className="space-y-2.5 text-[11px] text-[var(--color-text)]">
                                         <li className="flex items-start gap-2">
-                                            <FontAwesomeIcon icon={faCheck} className="text-emerald-500 text-[10px] mt-0.5" />
+                                            <Check className="text-emerald-500 w-3 h-3 mt-0.5" />
                                             <span><strong>Bahasa Pengantar:</strong> Seluruh nama kriteria, predikat, dan nilai dikonversi otomatis ke Bahasa Arab formal (Fusha).</span>
                                         </li>
                                         <li className="flex items-start gap-2">
-                                            <FontAwesomeIcon icon={faCheck} className="text-emerald-500 text-[10px] mt-0.5" />
+                                            <Check className="text-emerald-500 w-3 h-3 mt-0.5" />
                                             <span><strong>Skema Nilai Arab:</strong> Angka 1-100 otomatis diubah ke teks predikat Arab (ممتاز, جيد جداً, جيد, مقبول).</span>
                                         </li>
                                         <li className="flex items-start gap-2">
-                                            <FontAwesomeIcon icon={faCheck} className="text-emerald-500 text-[10px] mt-0.5" />
+                                            <Check className="text-emerald-500 w-3 h-3 mt-0.5" />
                                             <span><strong>Fokus Penilaian:</strong> Akhlak, kedisiplinan shalat jamaah, hafalan Al-Qur'an (Juz & Surah), serta kondisi fisik santri.</span>
                                         </li>
                                     </ul>
@@ -3693,7 +3690,7 @@ export default function RaportPage() {
                                 <div className="p-5 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 space-y-4">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-xl bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                                            <FontAwesomeIcon icon={faSchool} className="text-sm" />
+                                            <School className="w-4 h-4" />
                                         </div>
                                         <div>
                                             <h4 className="text-xs font-black text-indigo-700">Indonesia (Sekolah / Reguler)</h4>
@@ -3703,15 +3700,15 @@ export default function RaportPage() {
 
                                     <ul className="space-y-2.5 text-[11px] text-[var(--color-text)]">
                                         <li className="flex items-start gap-2">
-                                            <FontAwesomeIcon icon={faCheck} className="text-indigo-500 text-[10px] mt-0.5" />
+                                            <Check className="text-indigo-500 w-3 h-3 mt-0.5" />
                                             <span><strong>Bahasa Pengantar:</strong> Seluruh kriteria, label, dan deskripsi menggunakan Bahasa Indonesia yang formal dan baku.</span>
                                         </li>
                                         <li className="flex items-start gap-2">
-                                            <FontAwesomeIcon icon={faCheck} className="text-indigo-500 text-[10px] mt-0.5" />
+                                            <Check className="text-indigo-500 w-3 h-3 mt-0.5" />
                                             <span><strong>Skema Nilai Numerik:</strong> Nilai ditampilkan sebagai angka numerik standar (85, 92, dst.) lengkap dengan skala huruf (A, B, C, D).</span>
                                         </li>
                                         <li className="flex items-start gap-2">
-                                            <FontAwesomeIcon icon={faCheck} className="text-indigo-500 text-[10px] mt-0.5" />
+                                            <Check className="text-indigo-500 w-3 h-3 mt-0.5" />
                                             <span><strong>Fokus Penilaian:</strong> Kinerja akademis mata pelajaran, perkembangan bakat umum, ekstra kurikuler, dan presensi kehadiran.</span>
                                         </li>
                                     </ul>

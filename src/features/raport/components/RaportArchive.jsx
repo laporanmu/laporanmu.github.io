@@ -249,7 +249,7 @@ export default function RaportArchive({
                                                 <div className="grid grid-cols-2 gap-2">
                                                     {FISIK_FIELDS.map(f => (
                                                         <div key={f.key} className="flex items-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-2.5 h-10">
-                                                            <FontAwesomeIcon icon={f.icon} style={{ color: f.color }} className="text-xs shrink-0 opacity-80" />
+                                                            {(() => { const Icon = f.icon; return <Icon style={{ color: f.color }} className="w-3.5 h-3.5 shrink-0 opacity-80" /> })()}
                                                             <input
                                                                 type="number"
                                                                 inputMode="decimal"
@@ -270,7 +270,7 @@ export default function RaportArchive({
                                                 <div className="grid grid-cols-2 gap-2">
                                                     {HAFALAN_FIELDS.map(f => (
                                                         <div key={f.key} className="flex items-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-2.5 h-10">
-                                                            <FontAwesomeIcon icon={f.icon} style={{ color: f.color }} className="text-xs shrink-0 opacity-80" />
+                                                            {(() => { const Icon = f.icon; return <Icon style={{ color: f.color }} className="w-3.5 h-3.5 shrink-0 opacity-80" /> })()}
                                                             <input
                                                                 type="text"
                                                                 placeholder={f.ph}
@@ -323,7 +323,7 @@ export default function RaportArchive({
                                                     }}
                                                     className="h-6 px-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 text-[8px] font-black flex items-center gap-1 transition-all active:scale-95 flex-shrink-0"
                                                 >
-                                                    <FontAwesomeIcon icon={faBolt} className="text-[7px]" />
+                                                    <Zap className="w-3 h-3" />
                                                     Generate Catatan
                                                 </button>
                                             </div>
@@ -351,7 +351,7 @@ export default function RaportArchive({
                                             <div className="flex items-center justify-between w-full sm:w-auto">
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
-                                                        <FontAwesomeIcon icon={faMagnifyingGlass} className="text-indigo-500 text-[10px]" />
+                                                        <Search className="w-3.5 h-3.5 text-indigo-500" />
                                                     </div>
                                                     <h4 className="text-[11px] font-black text-[var(--color-text)] uppercase tracking-wider">Preview Raport</h4>
                                                 </div>
@@ -359,7 +359,7 @@ export default function RaportArchive({
                                                     onClick={() => setIsFullScreenPreview(true)}
                                                     className="h-8 w-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] flex items-center justify-center sm:hidden"
                                                 >
-                                                    <FontAwesomeIcon icon={faExpand} className="scale-75" />
+                                                    <Maximize2 className="w-3 h-3" />
                                                 </button>
                                             </div>
 
@@ -377,7 +377,7 @@ export default function RaportArchive({
 
                                                 <div className="flex items-center gap-2 w-full sm:w-auto">
                                                     <div className="flex-1 sm:flex-initial flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-10">
-                                                        <button onClick={() => { manualZoomRef.current = true; setPreviewZoom(p => Math.max(0.3, p - 0.1)) }} className="flex-1 sm:w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><FontAwesomeIcon icon={faSearch} className="scale-75" />-</button>
+                                                        <button onClick={() => { manualZoomRef.current = true; setPreviewZoom(p => Math.max(0.3, p - 0.1)) }} className="flex-1 sm:w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><Search className="w-3 h-3" />-</button>
                                                         <button
                                                             onClick={() => {
                                                                 manualZoomRef.current = false
@@ -391,24 +391,24 @@ export default function RaportArchive({
                                                             title="Fit ke lebar layar"
                                                             className="text-[9px] font-black w-10 text-center text-indigo-500 tabular-nums hover:text-indigo-700 transition-colors cursor-pointer select-none"
                                                         >{Math.round(previewZoom * 100)}%</button>
-                                                        <button onClick={() => { manualZoomRef.current = true; setPreviewZoom(p => Math.min(1.5, p + 0.1)) }} className="flex-1 sm:w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><FontAwesomeIcon icon={faSearch} className="scale-75" />+</button>
+                                                        <button onClick={() => { manualZoomRef.current = true; setPreviewZoom(p => Math.min(1.5, p + 0.1)) }} className="flex-1 sm:w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><Search className="w-3 h-3" />+</button>
                                                     </div>
 
                                                     {pStudent?.phone && (
                                                         <button onClick={() => sendWATextOnly(pStudent)} className="h-10 px-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-700 text-[10px] font-black flex items-center justify-center gap-2 flex-1 sm:flex-initial">
-                                                            <FontAwesomeIcon icon={faWhatsapp} className="text-xs" /> <span className="hidden xs:inline">Whatsapp</span>
+                                                            <WhatsAppIcon className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Whatsapp</span>
                                                         </button>
                                                     )}
 
                                                     <button onClick={() => openPrintWindow([pStudent].filter(Boolean))} className="h-10 px-5 rounded-xl bg-emerald-500 text-white text-[10px] font-black flex items-center justify-center gap-2 flex-1 sm:flex-initial shadow-lg shadow-emerald-500/20">
-                                                        <FontAwesomeIcon icon={faPrint} className="text-xs" /> <span className="hidden xs:inline">Cetak</span>
+                                                        <Printer className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Cetak</span>
                                                     </button>
 
                                                     <button
                                                         onClick={() => setIsFullScreenPreview(true)}
                                                         className="h-10 w-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hidden sm:flex items-center justify-center hover:text-indigo-500 transition-all"
                                                     >
-                                                        <FontAwesomeIcon icon={faExpand} className="scale-90" />
+                                                        <Maximize2 className="w-3.5 h-3.5" />
                                                     </button>
                                                 </div>
                                             </div>
@@ -450,7 +450,7 @@ export default function RaportArchive({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                     <button onClick={() => setStep(0)} className="w-10 h-10 rounded-xl border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] flex items-center justify-center transition-all">
-                        <FontAwesomeIcon icon={faArrowLeft} className="text-sm" />
+                        <ArrowLeft className="w-3.5 h-3.5" />
                     </button>
                     <div>
                         <h3 className="text-base font-black text-[var(--color-text)]">Riwayat & Arsip</h3>
@@ -459,10 +459,10 @@ export default function RaportArchive({
                 </div>
 
                 <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-sm">
-                    {[{ id: 'list', label: 'Daftar Arsip', icon: faTableList }, { id: 'ringkasan', label: 'Statistik', icon: faChartPie }].map(tab => (
+                    {[{ id: 'list', label: 'Daftar Arsip', icon: Table }, { id: 'ringkasan', label: 'Statistik', icon: PieChart }].map(tab => (
                         <button key={tab.id} onClick={() => setArchiveTab(tab.id)}
                             className={`h-9 px-4 rounded-xl text-[11px] font-black flex items-center gap-2 transition-all ${archiveTab === tab.id ? 'bg-[var(--color-surface)] text-indigo-500 shadow-md border border-[var(--color-border)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
-                            <FontAwesomeIcon icon={tab.icon} className="text-[10px]" /> {tab.label}
+                            {(() => { const Icon = tab.icon; return <Icon className="w-3.5 h-3.5" /> })()} {tab.label}
                         </button>
                     ))}
                 </div>
@@ -470,7 +470,7 @@ export default function RaportArchive({
 
             <div className="flex flex-wrap gap-3 p-4 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
                 <div className="relative flex-1 min-w-[200px]">
-                    <FontAwesomeIcon icon={faSearch} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-[11px]" />
+                    <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                     <input type="text" placeholder="Cari kelas..." value={archiveSearch} onChange={e => setArchiveSearch(e.target.value)} className="w-full h-10 pl-10 pr-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs font-bold text-[var(--color-text)] outline-none focus:border-indigo-500/50 transition-all" />
                 </div>
                 <select value={archiveFilter.year} onChange={e => setArchiveFilter(p => ({ ...p, year: e.target.value }))} className="h-10 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs font-bold text-[var(--color-text)] outline-none">
@@ -523,7 +523,7 @@ export default function RaportArchive({
                     <EmptyState
                         variant="dashed"
                         color="slate"
-                        icon={faChartPie}
+                        icon={PieChart}
                         title="Tidak ada data statistik"
                         description="Pilih filter bulan/tahun yang memiliki data arsip untuk melihat ringkasan performa kelas."
                     />
@@ -533,7 +533,7 @@ export default function RaportArchive({
                     <div className="space-y-4">
                         <div className="flex items-center gap-3 p-3 rounded-xl border border-[var(--color-border)] bg-gradient-to-r from-indigo-500/5 to-emerald-500/5">
                             <div className="w-9 h-9 rounded-xl bg-indigo-500/15 flex items-center justify-center shrink-0">
-                                <FontAwesomeIcon icon={faChartPie} className="text-indigo-500" />
+                                <PieChart className="w-4 h-4 text-indigo-500" />
                             </div>
                             <div>
                                 <p className="text-[12px] font-black text-[var(--color-text)]">Ringkasan {bulanLabel} {useYear}</p>
@@ -628,7 +628,7 @@ export default function RaportArchive({
                 <EmptyState
                     variant="dashed"
                     color="slate"
-                    icon={faBoxArchive}
+                    icon={Archive}
                     title="Arsip tidak ditemukan"
                     description={archiveSearch || archiveFilter.classId || archiveFilter.month
                         ? 'Coba ubah filter atau hapus pencarian untuk menemukan arsip yang kamu cari.'
@@ -636,7 +636,7 @@ export default function RaportArchive({
                     action={(archiveSearch || archiveFilter.classId || archiveFilter.month) && (
                         <button onClick={() => { setArchiveSearch(''); setArchiveFilter({ classId: '', year: '', month: '' }) }}
                             className="h-9 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-black hover:text-[var(--color-text)] transition-all flex items-center gap-2 mx-auto active:scale-95 shadow-sm">
-                            <FontAwesomeIcon icon={faXmark} className="text-[10px]" /> Reset Filter
+                            <X className="w-3.5 h-3.5" /> Reset Filter
                         </button>
                     )}
                 />
@@ -649,11 +649,11 @@ export default function RaportArchive({
                                 <div key={entry.key} className="p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:border-emerald-500/30 transition-all">
                                     <div className="flex items-start justify-between mb-3"><div><div className="text-[11px] font-black text-[var(--color-text)]">{entry.class_name}</div><div className="text-[10px] text-[var(--color-text-muted)] font-bold mt-0.5">{bulan?.id_str} {entry.year} · {entry.lang === 'ar' ? 'عربي' : 'Indonesia'}</div></div><span className={`text-[8px] font-black px-2 py-0.5 rounded-full ${entry.lang === 'ar' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-indigo-500/10 text-indigo-600'}`}>{entry.lang === 'ar' ? 'Pondok' : 'Reguler'}</span></div>
                                     <div className="mb-3"><div className="flex justify-between text-[9px] font-bold text-[var(--color-text-muted)] mb-1"><span>{entry.completed}/{entry.count} lengkap</span><span>{pct}%</span></div><div className="h-1.5 rounded-full bg-[var(--color-surface-alt)] overflow-hidden"><div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: pct === 100 ? '#10b981' : pct > 50 ? '#6366f1' : '#f59e0b' }} /></div></div>
-                                    {entry.musyrif && <div className="text-[9px] text-[var(--color-text-muted)] mb-3 flex items-center gap-1"><FontAwesomeIcon icon={faUsers} className="opacity-50" /> {entry.musyrif}</div>}
+                                    {entry.musyrif && <div className="text-[9px] text-[var(--color-text-muted)] mb-3 flex items-center gap-1"><Users className="w-3 h-3 opacity-50" /> {entry.musyrif}</div>}
                                     <div className="flex gap-1.5">
-                                        <button onClick={() => loadArchiveDetail(entry)} className="flex-1 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 text-[10px] font-black flex items-center justify-center gap-1.5 hover:bg-indigo-500/20 transition-all"><FontAwesomeIcon icon={faMagnifyingGlass} /> Preview</button>
-                                        <button onClick={() => exportBulkPDF(entry)} className="flex-1 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 text-[10px] font-black flex items-center justify-center gap-1.5 hover:bg-amber-500/20 transition-all"><FontAwesomeIcon icon={faFileZipper} /> Export PDF</button>
-                                        <button onClick={() => setConfirmDelete(entry)} aria-label={`Hapus arsip ${entry.class_name}`} className="h-8 w-8 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 flex items-center justify-center hover:bg-red-500/20 transition-all"><FontAwesomeIcon icon={faXmark} className="text-xs" /></button>
+                                        <button onClick={() => loadArchiveDetail(entry)} className="flex-1 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 text-[10px] font-black flex items-center justify-center gap-1.5 hover:bg-indigo-500/20 transition-all"><Search className="w-3.5 h-3.5" /> Preview</button>
+                                        <button onClick={() => exportBulkPDF(entry)} className="flex-1 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 text-[10px] font-black flex items-center justify-center gap-1.5 hover:bg-amber-500/20 transition-all"><FileArchive className="w-3.5 h-3.5" /> Export PDF</button>
+                                        <button onClick={() => setConfirmDelete(entry)} aria-label={`Hapus arsip ${entry.class_name}`} className="h-8 w-8 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 flex items-center justify-center hover:bg-red-500/20 transition-all"><X className="w-3.5 h-3.5" /></button>
                                     </div>
                                 </div>
                             )
@@ -665,7 +665,7 @@ export default function RaportArchive({
                                 onClick={() => setArchiveVisibleCount(prev => prev + 12)}
                                 className="h-9 px-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-alt)] hover:text-indigo-500 hover:border-indigo-500/30 text-[var(--color-text)] text-[11px] font-black transition-all active:scale-95 shadow-sm flex items-center gap-2"
                             >
-                                <FontAwesomeIcon icon={faChevronDown} className="text-[10px]" />
+                                <ChevronDown className="w-3.5 h-3.5" />
                                 Muat Lebih Banyak ({filtered.length - archiveVisibleCount} Kelas Tersisa)
                             </button>
                         </div>
