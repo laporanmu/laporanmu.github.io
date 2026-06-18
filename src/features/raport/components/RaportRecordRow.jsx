@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import {
     MAX_SCORE, KRITERIA, GRADE, FISIK_FIELDS, HAFALAN_FIELDS,
-    CATATAN_TEMPLATES, calcAvg
+    CATATAN_TEMPLATES, calcAvg, HAFALAN_PRESETS
 } from '@utils/reports/raportConstants'
 import { RadarChart, SparklineTrend } from './RaportCharts'
 
@@ -18,7 +18,7 @@ const WhatsAppIcon = (props) => (
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-export const ScoreCell = memo(({ value, onChange, onKeyDown, inputRef, kriteria }) => {
+export const ScoreCell = memo(({ value, studentId, kriteria, onScoreChange, onKeyDown, si, ki, cellRefs }) => {
     const [focused, setFocused] = useState(false)
     const [hasError, setHasError] = useState(false)
     const val = value !== '' && value !== null && value !== undefined ? Number(value) : ''
@@ -26,27 +26,27 @@ export const ScoreCell = memo(({ value, onChange, onKeyDown, inputRef, kriteria 
 
     const handleChange = (e) => {
         const raw = e.target.value.replace(/[^0-9]/g, '')
-        if (raw === '') { setHasError(false); onChange(''); return }
+        if (raw === '') { setHasError(false); onScoreChange(studentId, kriteria.key, ''); return }
         const num = Number(raw)
         if (num < 0 || num > MAX_SCORE) {
-            setHasError(true); onChange(Math.min(MAX_SCORE, Math.max(0, num)))
+            setHasError(true); onScoreChange(studentId, kriteria.key, Math.min(MAX_SCORE, Math.max(0, num)))
             setTimeout(() => setHasError(false), 1200)
         } else {
-            setHasError(false); onChange(num)
+            setHasError(false); onScoreChange(studentId, kriteria.key, num)
         }
     }
 
     return (
         <div title={g ? `${kriteria.id}: ${val} — ${g.id} (${g.label})` : kriteria.id}>
             <input
-                ref={inputRef}
+                ref={el => { if (el) cellRefs.current[`${si}-${ki}`] = el }}
                 type="text"
                 inputMode="decimal"
                 min={0}
                 max={MAX_SCORE}
                 value={val}
                 onChange={handleChange}
-                onKeyDown={onKeyDown}
+                onKeyDown={e => onKeyDown(e, si, ki)}
                 onFocus={() => setFocused(true)}
                 onBlur={() => { setFocused(false); setHasError(false) }}
                 aria-label={`Nilai ${kriteria.id}`}
@@ -64,18 +64,77 @@ export const ScoreCell = memo(({ value, onChange, onKeyDown, inputRef, kriteria 
 
 export const ExtraInput = memo(({ value, studentId, fieldKey, onCommit, ...inputProps }) => {
     const [localVal, setLocalVal] = useState(value ?? '')
+    const [focused, setFocused] = useState(false)
     const debounceRef = useRef(null)
+
     useEffect(() => { setLocalVal(value ?? '') }, [value])
+
     const handleChange = (e) => {
         const v = e.target.value; setLocalVal(v)
         if (debounceRef.current) clearTimeout(debounceRef.current)
         debounceRef.current = setTimeout(() => onCommit(studentId, fieldKey, v), 300)
     }
+
     const handleBlur = () => {
+        setTimeout(() => {
+            setFocused(false)
+        }, 150)
         if (debounceRef.current) { clearTimeout(debounceRef.current); debounceRef.current = null }
         onCommit(studentId, fieldKey, localVal)
     }
-    return <input {...inputProps} value={localVal} onChange={handleChange} onBlur={handleBlur} />
+
+    const handleSelectPreset = (preset) => {
+        setLocalVal(preset)
+        if (debounceRef.current) clearTimeout(debounceRef.current)
+        onCommit(studentId, fieldKey, preset)
+        setFocused(false)
+    }
+
+    const presets = HAFALAN_PRESETS[fieldKey]
+
+    return (
+        <div className="relative flex-1 w-0 h-full flex items-center">
+            <input
+                {...inputProps}
+                value={localVal}
+                onChange={handleChange}
+                onFocus={() => setFocused(true)}
+                onBlur={handleBlur}
+            />
+            {focused && presets && (
+                <div 
+                    className="absolute left-0 z-[100] w-[260px] bg-white/95 dark:bg-slate-900/98 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-2.5 shadow-2xl flex flex-col gap-1.5 animate-in fade-in zoom-in-95 duration-150"
+                    style={{
+                        top: 'calc(100% + 6px)'
+                    }}
+                >
+                    <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/60 pb-1.5 mb-0.5">
+                        <span className="text-[8px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                            Pilih Cepat {fieldKey === 'ziyadah' ? 'Ziyadah' : "Muroja'ah"}
+                        </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                        {presets.map(p => (
+                            <button
+                                key={p}
+                                onMouseDown={(e) => {
+                                    e.preventDefault()
+                                    handleSelectPreset(p)
+                                }}
+                                className={`px-2.5 py-1 rounded-xl text-[9px] font-black tracking-tight border transition-all duration-200 hover:scale-105 active:scale-95 ${
+                                    fieldKey === 'ziyadah'
+                                        ? 'bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white dark:hover:text-white hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/20'
+                                        : 'bg-violet-500/10 dark:bg-violet-500/20 border-violet-500/20 text-violet-600 dark:text-violet-400 hover:bg-violet-500 hover:text-white dark:hover:text-white hover:border-violet-500 hover:shadow-lg hover:shadow-violet-500/20'
+                                }`}
+                            >
+                                {p}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    )
 })
 
 export const ExtraTextarea = memo(({ value, studentId, fieldKey, onCommit, ...textareaProps }) => {
@@ -163,7 +222,7 @@ const StudentRow = memo(({
                 return (
                     <td key={k.key} className="py-2 text-center" style={{ verticalAlign: 'middle' }}>
                         <div className="flex flex-col items-center justify-center">
-                            <ScoreCell value={sc[k.key]} onChange={v => onScoreChange(student.id, k.key, v)} onKeyDown={e => onKeyDown(e, si, ki)} inputRef={el => { cellRefs.current[`${si}-${ki}`] = el }} kriteria={k} />
+                            <ScoreCell value={sc[k.key]} studentId={student.id} kriteria={k} onScoreChange={onScoreChange} onKeyDown={onKeyDown} si={si} ki={ki} cellRefs={cellRefs} />
                             <div style={{ height: 10, fontSize: 8, fontWeight: 900, lineHeight: 1, marginTop: 2 }} className="flex items-center justify-center">
                                 {hasDelta && delta > 0 && <span style={{ color: '#10b981' }} title={`Bulan lalu: ${prevVal}`}>▲{delta}</span>}
                                 {hasDelta && delta < 0 && <span style={{ color: '#ef4444' }} title={`Bulan lalu: ${prevVal}`}>▼{Math.abs(delta)}</span>}
@@ -194,8 +253,8 @@ const StudentRow = memo(({
                     {HAFALAN_FIELDS.map(f => {
                         const IconComp = f.icon
                         return (
-                            <div key={f.key} className="flex items-center gap-1 rounded-md border border-[var(--color-border)] overflow-hidden" style={{ background: 'var(--color-surface)', height: 32 }}>
-                                <div className="w-6 h-full flex items-center justify-center shrink-0" style={{ background: f.color + '18' }}>
+                            <div key={f.key} className="flex items-center gap-1 rounded-md border border-[var(--color-border)]" style={{ background: 'var(--color-surface)', height: 32 }}>
+                                <div className="w-6 h-full flex items-center justify-center shrink-0 rounded-l-[5px]" style={{ background: f.color + '18' }}>
                                     <IconComp className="w-2.5 h-2.5" style={{ color: f.color }} />
                                 </div>
                                 <ExtraInput placeholder={f.ph} value={ex[f.key] ?? ''} studentId={student.id} fieldKey={f.key} onCommit={onExtraChange} aria-label={f.ph} className="flex-1 w-0 h-full px-1 text-[11px] font-bold bg-transparent text-[var(--color-text)] outline-none" />

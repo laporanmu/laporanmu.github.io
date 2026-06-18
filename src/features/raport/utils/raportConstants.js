@@ -100,3 +100,27 @@ export const calcAvg = (scores) => {
     if (!vals.length) return null
     return (vals.reduce((a, b) => a + Number(b), 0) / vals.length).toFixed(1)
 }
+
+export const HAFALAN_PRESETS = {
+    ziyadah: [
+        '1/2 Halaman',
+        '1 Halaman',
+        '2 Halaman',
+        '3 Halaman',
+        '5 Halaman',
+        '7 Halaman',
+        '10 Halaman',
+        '1 Juz',
+        '2 Juz'
+    ],
+    murojaah: [
+        '1/2 Juz',
+        '1 Juz',
+        '2 Juz',
+        '3 Juz',
+        '5 Juz',
+        '10 Juz',
+        '15 Juz',
+        '30 Juz'
+    ]
+}

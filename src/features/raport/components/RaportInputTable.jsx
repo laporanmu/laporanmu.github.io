@@ -101,11 +101,18 @@ export default function RaportInputTable({
 }) {
     const [isBulkModalOpen, setIsBulkModalOpen] = useState(false)
 
-    // Calculate live class statistics for the header
     const classStats = React.useMemo(() => {
-        let sum = 0
-        let count = 0
+        let overallSum = 0
+        let overallCount = 0
         let completeCount = 0
+
+        const criteriaSums = {}
+        const criteriaCounts = {}
+        KRITERIA.forEach(k => {
+            criteriaSums[k.key] = 0
+            criteriaCounts[k.key] = 0
+        })
+
         students.forEach(s => {
             const sc = scores[s.id] || {}
             if (isComplete(sc)) {
@@ -114,16 +121,19 @@ export default function RaportInputTable({
             KRITERIA.forEach(k => {
                 const val = sc[k.key]
                 if (val !== '' && val !== null && val !== undefined) {
-                    sum += Number(val)
-                    count++
+                    const num = Number(val)
+                    overallSum += num
+                    overallCount++
+                    criteriaSums[k.key] += num
+                    criteriaCounts[k.key]++
                 }
             })
         })
-        const overallAverage = count > 0 ? (sum / count).toFixed(1) : '—'
+        const overallAverage = overallCount > 0 ? (overallSum / overallCount).toFixed(1) : '—'
 
         const criteriaAverages = KRITERIA.map(k => {
-            const vals = students.map(s => scores[s.id]?.[k.key]).filter(v => v !== '' && v !== null && v !== undefined)
-            const avg = vals.length ? (vals.reduce((a, b) => a + Number(b), 0) / vals.length).toFixed(1) : '—'
+            const cnt = criteriaCounts[k.key]
+            const avg = cnt > 0 ? (criteriaSums[k.key] / cnt).toFixed(1) : '—'
             return {
                 ...k,
                 average: avg
@@ -146,23 +156,26 @@ export default function RaportInputTable({
             <div className="md:hidden space-y-2">
                 {/* Row 1: Header (Back + Class Title + Mobile Actions) */}
                 <div className="flex items-center gap-1.5 w-full">
-                    <button onClick={() => {
-                        if (hasUnsavedMemo) {
-                            setPendingNav({ action: () => { setStep(0); setSelectedClassId('') } })
-                            return
-                        }
-                        setStep(0); setSelectedClassId('')
-                    }} className="h-8 w-8 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] flex items-center justify-center shrink-0">
-                        <ArrowLeft className="w-3.5 h-3.5" />
-                    </button>
-                    <div className="flex-1 flex items-center gap-1 px-2 h-8 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] overflow-hidden min-w-0">
+                    <button
+                        onClick={() => {
+                            if (hasUnsavedMemo) {
+                                setPendingNav({ action: () => { setStep(0); setSelectedClassId('') } })
+                                return
+                            }
+                            setStep(0); setSelectedClassId('')
+                        }}
+                        className="flex-1 flex items-center gap-1.5 px-2.5 h-8 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] overflow-hidden min-w-0 transition-all group"
+                        title="Kembali ke Pemilihan Kelas"
+                    >
+                        <ArrowLeft className="w-3 h-3 shrink-0 group-hover:-translate-x-0.5 transition-transform" />
+                        <span className="w-px h-3 bg-[var(--color-border)] shrink-0" />
                         <School className="text-emerald-500 w-3 h-3 shrink-0" />
                         <span className="text-[9px] font-black text-[var(--color-text)] truncate">{selectedClass?.name}</span>
                         <span className="w-px h-2.5 bg-[var(--color-border)] mx-0.5 shrink-0" />
                         <span className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase whitespace-nowrap shrink-0">
-                            {BULAN[selectedMonth - 1]?.id_str} {selectedYear} ({classStats.completed}/{classStats.total})
+                            {BULAN[selectedMonth - 1]?.id_str} {selectedYear}
                         </span>
-                    </div>
+                    </button>
                     <button onClick={saveAll} disabled={savingAll || !canEdit} className="h-8 w-8 rounded-xl bg-emerald-500 text-white text-[10px] font-black hover:bg-emerald-600 flex items-center justify-center relative disabled:opacity-70 shrink-0">
                         {savingAll ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                         {!savingAll && hasUnsavedMemo && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 border-2 border-white animate-pulse" />}
@@ -324,68 +337,81 @@ export default function RaportInputTable({
             {/* ── DESKTOP TOOLBAR (hidden md:block) ── */}
             <div className="hidden md:block space-y-2.5">
                 {/* ROW 1: Context + Progress + Actions */}
-                <div className="w-full flex flex-row flex-nowrap items-center justify-between gap-2.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden py-0.5">
-                    {/* Left Context: Back & Class Title */}
-                    <div className="flex items-center gap-1.5 shrink-0 min-w-0">
-                        <button onClick={() => {
-                            if (hasUnsavedMemo) {
-                                setPendingNav({ action: () => { setStep(0); setSelectedClassId('') } })
-                                return
-                            }
-                            setStep(0); setSelectedClassId('')
-                        }} className="h-9 px-3 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all flex items-center gap-1 shrink-0" title="Ganti Kelas">
-                            <ArrowLeft className="w-3.5 h-3.5" />
-                            <span className="hidden lg:inline text-[10px] font-black uppercase tracking-wider">Ganti Kelas</span>
+                <div className="w-full flex flex-row flex-nowrap items-center justify-between gap-4 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden py-0.5">
+                    {/* Left Info Group (Context + Badges) */}
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        {/* Combined Back/Change Class & Class Info */}
+                        <button
+                            onClick={() => {
+                                if (hasUnsavedMemo) {
+                                    setPendingNav({ action: () => { setStep(0); setSelectedClassId('') } })
+                                    return
+                                }
+                                setStep(0); setSelectedClassId('')
+                            }}
+                            className="h-9 px-3 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:border-indigo-500/30 hover:bg-slate-500/5 transition-all flex items-center gap-2 flex-1 max-w-[260px] group min-w-0"
+                            title="Kembali ke Pemilihan Kelas"
+                        >
+                            <ArrowLeft className="w-3.5 h-3.5 text-[var(--color-text-muted)] group-hover:text-[var(--color-text)] group-hover:-translate-x-0.5 transition-all" />
+                            <span className="w-px h-3.5 bg-[var(--color-border)]" />
+                            <div className="flex items-center justify-between flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                    <School className="text-emerald-500 w-3.5 h-3.5 shrink-0 group-hover:scale-105 transition-transform" />
+                                    <span className="text-[10px] font-black text-[var(--color-text)] group-hover:text-emerald-500 transition-colors whitespace-nowrap truncate">{selectedClass?.name}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 shrink-0 ml-1.5">
+                                    <span className="w-px h-3 bg-[var(--color-border)]" />
+                                    <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase">{BULAN[selectedMonth - 1]?.id_str} {selectedYear}</span>
+                                </div>
+                            </div>
                         </button>
-                        <div className="flex items-center gap-1.5 px-2.5 h-9 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] shrink-0 overflow-hidden">
-                            <School className="text-emerald-500 w-3.5 h-3.5 shrink-0" />
-                            <div className="flex items-center gap-1 truncate">
-                                <span className="text-[10px] font-black text-[var(--color-text)] whitespace-nowrap">{selectedClass?.name}</span>
-                                <span className="hidden lg:inline w-px h-3 bg-[var(--color-border)] mx-0.5" />
-                                <span className="hidden lg:inline text-[9px] font-bold text-[var(--color-text-muted)] uppercase">{BULAN[selectedMonth - 1]?.id_str} {selectedYear}</span>
-                            </div>
-                        </div>
-                    </div>
 
-                    {/* Middle Stats Badges */}
-                    <div className="flex flex-row flex-nowrap items-center gap-1.5 shrink-0">
-                        {musyrif && (
-                            <div className="flex items-center gap-1 px-2 h-9 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black uppercase tracking-wider min-w-0 shrink-0" title={`Wali Kelas: ${musyrif}`}>
-                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                                <span><span className="hidden xl:inline">Wali: </span><span className="text-[var(--color-text)] font-black">{musyrif}</span></span>
-                            </div>
-                        )}
+                        {/* Section Divider */}
+                        <span className="w-px h-4 bg-[var(--color-border)] shrink-0 self-center" />
 
-                        <div className={`flex items-center gap-1 px-2 h-9 rounded-xl border text-[9px] font-black uppercase tracking-wider transition-all duration-300 shrink-0 ${globalSaveIndicator === 'saving'
-                            ? 'bg-amber-500/10 border-amber-500/20 text-amber-600 shadow-sm animate-pulse'
-                            : 'bg-emerald-500/5 border-emerald-500/20 text-emerald-600'
-                            }`}>
-                            {globalSaveIndicator === 'saving' ? (
-                                <Loader2 className="w-3 h-3 animate-spin text-amber-600" />
-                            ) : (
-                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        {/* Middle Stats Badges */}
+                        <div className="flex flex-row flex-nowrap items-center gap-1.5 min-w-0 flex-1">
+                            {musyrif && (
+                                <div className="flex items-center gap-1 px-2 h-9 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black uppercase tracking-wider min-w-0 shrink-0" title={`Wali Kelas: ${musyrif}`}>
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                                    <span><span className="hidden xl:inline">Wali: </span><span className="text-[var(--color-text)] font-black">{musyrif}</span></span>
+                                </div>
                             )}
-                            <span>{globalSaveIndicator === 'saving' ? 'Menyimpan...' : <span>Autosave<span className="hidden xl:inline"> Aktif</span></span>}</span>
-                        </div>
 
-                        {/* Progress Bar */}
-                        <div className="hidden xl:flex w-24 xl:w-32 items-center gap-2 px-2 h-9 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] min-w-0 shrink-0">
-                            <div className="flex-1 h-1 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] overflow-hidden relative">
-                                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${progressPct}%`, background: progressPct === 100 ? '#10b981' : progressPct > 50 ? '#6366f1' : '#f59e0b' }} />
+                            <div className={`flex items-center gap-1 px-2 h-9 rounded-xl border text-[9px] font-black uppercase tracking-wider transition-all duration-300 shrink-0 ${globalSaveIndicator === 'saving'
+                                ? 'bg-amber-500/10 border-amber-500/20 text-amber-600 shadow-sm animate-pulse'
+                                : 'bg-emerald-500/5 border-emerald-500/20 text-emerald-600'
+                                }`}>
+                                {globalSaveIndicator === 'saving' ? (
+                                    <Loader2 className="w-3 h-3 animate-spin text-amber-600" />
+                                ) : (
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                )}
+                                <span>{globalSaveIndicator === 'saving' ? 'Menyimpan...' : <span>Autosave<span className="hidden xl:inline"> Aktif</span></span>}</span>
                             </div>
-                            <span className="text-[8px] font-black text-[var(--color-text-muted)] uppercase whitespace-nowrap">{Math.round(progressPct)}%</span>
-                        </div>
 
-                        <div className="flex items-center gap-1 px-2 h-9 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black uppercase tracking-wider shrink-0" title="Statistik Ketuntasan Nilai Santri">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                            <span>Tuntas: <span className="text-emerald-500 text-[10px] font-black">{classStats.completed}/{classStats.total}</span></span>
+                            {/* Progress Bar */}
+                            <div className="hidden [@media(min-width:1500px)]:flex flex-1 items-center gap-2 px-2 h-9 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] min-w-0">
+                                <div className="flex-1 h-1 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] overflow-hidden relative">
+                                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${progressPct}%`, background: progressPct === 100 ? '#10b981' : progressPct > 50 ? '#6366f1' : '#f59e0b' }} />
+                                </div>
+                                <span className="text-[8px] font-black text-[var(--color-text-muted)] uppercase whitespace-nowrap">{Math.round(progressPct)}%</span>
+                            </div>
+
+                            <div className="flex items-center gap-1 px-2 h-9 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black uppercase tracking-wider shrink-0" title="Statistik Ketuntasan Nilai Santri">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                <span>Tuntas: <span className="text-emerald-500 text-[10px] font-black">{classStats.completed}/{classStats.total}</span></span>
+                            </div>
                         </div>
                     </div>
+
+                    {/* Section Divider */}
+                    <span className="w-px h-4 bg-[var(--color-border)] shrink-0 self-center" />
 
                     {/* Right Action buttons */}
                     <div className="flex items-center gap-1.5 shrink-0">
                         <button onClick={saveAll} disabled={savingAll || !canEdit} className="h-9 px-4 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center gap-1.5 relative disabled:opacity-70 shrink-0" title="Simpan Semua Nilai">
-                            {savingAll ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                            {savingAll ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3 h-3" />}
                             <span>{savingAll ? 'Proses...' : <span>Simpan<span className="hidden xl:inline"> Semua</span></span>}</span>
                             {!savingAll && hasUnsavedMemo && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-400 border border-white animate-pulse" />}
                         </button>
@@ -401,46 +427,54 @@ export default function RaportInputTable({
                     {/* Left Group: Search Bar & Filters */}
                     <div className="flex flex-row flex-nowrap items-center gap-1.5 min-w-0 flex-1">
                         {/* Search Bar */}
-                        <div className="relative w-40 lg:w-48 xl:w-56 min-w-[120px] max-w-xs shrink-0">
+                        <div className="relative flex-1 min-w-[120px] transition-all duration-300">
                             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
                             <input type="text" placeholder="Cari santri..." value={studentSearch} onChange={e => setStudentSearch(e.target.value)}
                                 className="h-9 w-full pl-7 pr-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[11px] font-black text-[var(--color-text)] outline-none focus:border-indigo-500/50 transition-all" />
                         </div>
 
                         {/* Filters */}
-                        {classStats.incomplete > 0 && (
-                            <button
-                                onClick={() => { setShowIncompleteOnly(v => !v); setShowNoPhoneOnly(false) }}
-                                className={`h-9 px-2.5 rounded-xl border text-[9px] font-black flex items-center gap-1 transition-all shrink-0 ${showIncompleteOnly
-                                    ? 'bg-amber-500 text-white border-amber-500 shadow-sm shadow-amber-500/10'
-                                    : 'bg-amber-500/10 border-amber-500/20 text-amber-600 hover:bg-amber-500/20'
-                                    }`}
-                                title="Tampilkan santri yang nilainya belum lengkap"
-                            >
-                                <AlertTriangle className="w-3 h-3" />
-                                <span>{classStats.incomplete}<span className="hidden xl:inline"> Belum Lengkap</span></span>
-                            </button>
-                        )}
+                        {(classStats.incomplete > 0 || noPhoneCount > 0) && (
+                            <>
+                                <span className="w-px h-4 bg-[var(--color-border)] shrink-0 self-center" />
+                                {classStats.incomplete > 0 && (
+                                    <button
+                                        onClick={() => { setShowIncompleteOnly(v => !v); setShowNoPhoneOnly(false) }}
+                                        className={`h-9 px-2.5 rounded-xl border text-[9px] font-black flex items-center gap-1 transition-all shrink-0 ${showIncompleteOnly
+                                            ? 'bg-amber-500 text-white border-amber-500 shadow-sm shadow-amber-500/10'
+                                            : 'bg-amber-500/10 border-amber-500/20 text-amber-600 hover:bg-amber-500/20'
+                                            }`}
+                                        title="Tampilkan santri yang nilainya belum lengkap"
+                                    >
+                                        <AlertTriangle className="w-3 h-3" />
+                                        <span>{classStats.incomplete}<span className="hidden lg:inline"> Belum Lengkap</span></span>
+                                    </button>
+                                )}
 
-                        {noPhoneCount > 0 && (
-                            <button
-                                onClick={() => { setShowNoPhoneOnly(v => !v); setShowIncompleteOnly(false) }}
-                                className={`h-9 px-2.5 rounded-xl border text-[9px] font-black flex items-center gap-1 transition-all shrink-0 ${showNoPhoneOnly
-                                    ? 'bg-rose-500 text-white border-rose-500 shadow-sm shadow-rose-500/10'
-                                    : 'bg-rose-500/10 border-rose-500/20 text-rose-600 hover:bg-rose-500/20'
-                                    }`}
-                                title="Tampilkan santri tanpa nomor WA"
-                            >
-                                <AlertCircle className="w-3 h-3" />
-                                <span>{noPhoneCount}<span className="hidden xl:inline"> Tanpa WA</span></span>
-                            </button>
+                                {noPhoneCount > 0 && (
+                                    <button
+                                        onClick={() => { setShowNoPhoneOnly(v => !v); setShowIncompleteOnly(false) }}
+                                        className={`h-9 px-2.5 rounded-xl border text-[9px] font-black flex items-center gap-1 transition-all shrink-0 ${showNoPhoneOnly
+                                            ? 'bg-rose-500 text-white border-rose-500 shadow-sm shadow-rose-500/10'
+                                            : 'bg-rose-500/10 border-rose-500/20 text-rose-600 hover:bg-rose-500/20'
+                                            }`}
+                                        title="Tampilkan santri tanpa nomor WA"
+                                    >
+                                        <AlertCircle className="w-3 h-3" />
+                                        <span>{noPhoneCount}<span className="hidden lg:inline"> Tanpa WA</span></span>
+                                    </button>
+                                )}
+                            </>
                         )}
                     </div>
 
+                    {/* Section Divider */}
+                    <span className="w-px h-4 bg-[var(--color-border)] shrink-0 self-center" />
+
                     {/* Right Group: Navigation Guide & Tool buttons */}
-                    <div className="flex flex-row flex-nowrap items-center gap-2 shrink-0 ml-auto">
+                    <div className="flex flex-row flex-nowrap items-center gap-2 shrink-0">
                         {/* Navigation Guide */}
-                        <div className="hidden 2xl:flex items-center gap-1.5 px-2.5 h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] shrink-0">
+                        <div className="hidden xl:flex items-center gap-1.5 px-2.5 h-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] shrink-0">
                             <Zap className="w-3 h-3 text-amber-500" />
                             <span className="text-[8px] font-black text-[var(--color-text-muted)] uppercase">Navigasi:</span>
                             <div className="flex items-center gap-1 ml-0.5">
@@ -455,6 +489,9 @@ export default function RaportInputTable({
                             </div>
                         </div>
 
+                        {/* Section Divider between Navigasi and Actions */}
+                        <span className="hidden xl:inline w-px h-4 bg-[var(--color-border)] shrink-0 self-center" />
+
                         {/* Action Tools */}
                         <div className="flex flex-row flex-nowrap items-center gap-1.5">
                             <button
@@ -462,23 +499,23 @@ export default function RaportInputTable({
                                     setBulkValues({})
                                     setIsBulkModalOpen(true)
                                 }}
-                                className="h-9 px-2.5 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-600 text-[9px] font-black flex items-center justify-center gap-1 transition-all hover:bg-violet-500/25 shrink-0"
+                                className="h-9 px-2.5 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-600 text-[9px] font-black flex items-center justify-center gap-1 transition-all hover:bg-violet-500/25 flex-grow min-w-[36px] shrink-0"
                                 title="Isi Massal Nilai"
                             >
                                 <Sparkles className="w-3 h-3" />
                                 <span className="hidden xl:inline">Isi Massal</span>
                             </button>
 
-                            <button onClick={() => setIsExportModalOpen(true)} className="h-9 px-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 text-[9px] font-black flex items-center justify-center gap-1 transition-all hover:bg-indigo-500/20 shrink-0" title="Export Data Raport">
+                            <button onClick={() => setIsExportModalOpen(true)} className="h-9 px-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 text-[9px] font-black flex items-center justify-center gap-1 transition-all hover:bg-indigo-500/20 flex-grow min-w-[36px] shrink-0" title="Export Data Raport">
                                 <Download className="w-3 h-3" />
-                                <span className="hidden xl:inline">Export</span>
+                                <span className="hidden lg:inline">Export</span>
                             </button>
 
                             <button onClick={() => {
                                 const withPhone = students.filter(s => s.phone && isComplete(scores[s.id] || {}))
                                 if (withPhone.length) setWaBlastConfirm({ queue: withPhone })
-                            }} className="h-9 px-2.5 rounded-xl bg-green-500/10 border border-green-500/20 text-green-600 text-[9px] font-black flex items-center justify-center gap-1 transition-all hover:bg-green-500/20 shrink-0" title="Blast WhatsApp Nilai">
-                                <WhatsAppIcon className="w-3 h-3" /> <span className="hidden xl:inline">Blast WA</span>
+                            }} className="h-9 px-2.5 rounded-xl bg-green-500/10 border border-green-500/20 text-green-600 text-[9px] font-black flex items-center justify-center gap-1 transition-all hover:bg-green-500/20 flex-grow min-w-[36px] shrink-0" title="Blast WhatsApp Nilai">
+                                <WhatsAppIcon className="w-3 h-3" /> <span className="hidden lg:inline">Blast WA</span>
                             </button>
 
                             <button onClick={() => {
@@ -541,14 +578,14 @@ export default function RaportInputTable({
                                         copyFromLastMonth()
                                     }
                                 })
-                            }} disabled={copyingLastMonth || !canEdit} className="h-9 px-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 text-[9px] font-black flex items-center justify-center gap-1 transition-all hover:bg-amber-500/20 disabled:opacity-50 shrink-0" title="Salin Data Bulan Lalu">
+                            }} disabled={copyingLastMonth || !canEdit} className="h-9 px-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 text-[9px] font-black flex items-center justify-center gap-1.5 transition-all hover:bg-amber-500/20 disabled:opacity-50 flex-grow min-w-[36px] shrink-0" title="Salin Data Bulan Lalu">
                                 {copyingLastMonth ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
-                                <span className="hidden xl:inline">Salin Bulan Lalu</span>
+                                <span className="hidden lg:inline">Salin Bulan Lalu</span>
                             </button>
 
-                            <button onClick={handleResetClass} disabled={!canEdit} className="h-9 px-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 text-[9px] font-black flex items-center justify-center gap-1 transition-all hover:bg-red-500/20 disabled:opacity-50 shrink-0" title="Reset Kelas">
+                            <button onClick={handleResetClass} disabled={!canEdit} className="h-9 px-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 text-[9px] font-black flex items-center justify-center gap-1 transition-all hover:bg-red-500/20 disabled:opacity-50 flex-grow min-w-[36px] shrink-0" title="Reset Kelas">
                                 <AlertTriangle className="w-3 h-3" />
-                                <span className="hidden xl:inline">Reset Kelas</span>
+                                <span className="hidden lg:inline">Reset Kelas</span>
                             </button>
                         </div>
                     </div>
@@ -722,7 +759,7 @@ export default function RaportInputTable({
                         </div>
                     }
                 >
-                    <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
+                    <div className="space-y-5">
                         <div className="p-3 rounded-xl bg-slate-500/5 border border-[var(--color-border)]/50 text-[10px] text-[var(--color-text-muted)] font-bold">
                             {bulkSelected.size > 0 ? (
                                 <span>
@@ -1060,8 +1097,8 @@ export default function RaportInputTable({
                                         </div>
                                         <div className="grid grid-cols-2 gap-1.5">
                                             {[{ key: 'ziyadah', ph: 'Ziyadah', icon: BookOpen, color: '#10b981' }, { key: 'murojaah', ph: "Muroja'ah", icon: FileText, color: '#8b5cf6' }].map(f => (
-                                                <div key={f.key} className="flex items-center gap-1 rounded-lg border border-[var(--color-border)] overflow-hidden" style={{ height: 32 }}>
-                                                    <div className="w-7 h-full flex items-center justify-center shrink-0" style={{ background: f.color + '18' }}>{(() => { const Icon = f.icon; return <Icon style={{ color: f.color }} className="w-3 h-3" /> })()}</div>
+                                                <div key={f.key} className="flex items-center gap-1 rounded-lg border border-[var(--color-border)]" style={{ height: 32 }}>
+                                                    <div className="w-7 h-full flex items-center justify-center shrink-0 rounded-l-[7px]" style={{ background: f.color + '18' }}>{(() => { const Icon = f.icon; return <Icon style={{ color: f.color }} className="w-3 h-3" /> })()}</div>
                                                     <ExtraInput placeholder={f.ph} value={ex[f.key] ?? ''} studentId={student.id} fieldKey={f.key} onCommit={handleExtraChange}
                                                         className="flex-1 w-0 h-full px-1.5 text-[11px] font-bold bg-transparent text-[var(--color-text)] outline-none" />
                                                 </div>
@@ -1117,9 +1154,25 @@ export default function RaportInputTable({
                     })()}
                 </div>
 
-                {/* Averages display */}
+                 {/* Averages display */}
                 <div className="hidden md:grid grid-cols-5 gap-2">
-                    {KRITERIA.map(k => { const vals = filteredStudents.map(s => scores[s.id]?.[k.key]).filter(v => v !== '' && v !== null && v !== undefined); const avg = vals.length ? (vals.reduce((a, b) => a + Number(b), 0) / vals.length).toFixed(1) : '—'; const g = avg !== '—' ? GRADE(Number(avg)) : null; return (<div key={k.key} className="p-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-center"><div className="text-[8px] font-black uppercase tracking-widest mb-1" style={{ color: k.color }}>{k.id}</div><div className="text-lg font-black" style={{ color: g?.uiColor || 'var(--color-text-muted)' }}>{avg}</div><div className="text-[7px] font-bold text-[var(--color-text-muted)]">Rata - Rata Kelas</div></div>) })}
+                    {classStats.criteriaAverages.map(k => {
+                        const avg = k.average
+                        const g = avg !== '—' ? GRADE(Number(avg)) : null
+                        return (
+                            <div key={k.key} className="p-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-center">
+                                <div className="text-[8px] font-black uppercase tracking-widest mb-1" style={{ color: k.color }}>
+                                    {k.id}
+                                </div>
+                                <div className="text-lg font-black" style={{ color: g?.uiColor || 'var(--color-text-muted)' }}>
+                                    {avg}
+                                </div>
+                                <div className="text-[7px] font-bold text-[var(--color-text-muted)]">
+                                    Rata - Rata Kelas
+                                </div>
+                            </div>
+                        )
+                    })}
                 </div>
             </div>
         </div>

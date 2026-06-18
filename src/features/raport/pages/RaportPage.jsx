@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 const WhatsAppIcon = (props) => (
     <svg viewBox="0 0 448 512" fill="currentColor" {...props}>
-        <path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7 .9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/>
+        <path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7 .9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z" />
     </svg>
 )
 import DashboardLayout from '@core/layouts/DashboardLayout'
@@ -44,8 +44,8 @@ import { ShortcutModalContent, WaBlastConfirmContent, WaBlastProgressContent, Zi
 import Skeleton from '@shared/components/Skeleton'
 import { useRaportCore } from '@hooks/reports/useRaportCore'
 import { useRaportImportExport } from '@hooks/reports/useRaportImportExport'
-import RaportInputTable from '@features/raport/components/RaportInputTable'
-import RaportArchive from '@features/raport/components/RaportArchive'
+const LazyRaportInputTable = lazy(() => import('@features/raport/components/RaportInputTable'))
+const LazyRaportArchive = lazy(() => import('@features/raport/components/RaportArchive'))
 
 const LazyRaportImportModal = lazy(() => import('@features/raport/components/RaportImportModal'))
 const LazyRaportExportModal = lazy(() => import('@features/raport/components/RaportExportModal'))
@@ -446,8 +446,11 @@ export default function RaportPage() {
             ? baseFiltered.filter(s => !isComplete(scores[s.id] || {}))
             : baseFiltered
         if (!showIncompleteOnly) {
-            // Tanpa filter incomplete — update langsung, tidak perlu debounce
-            setFilteredStudents(next)
+            // Tanpa filter incomplete — update langsung, tidak perlu debounce, hindari re-render jika referensi sama
+            setFilteredStudents(prev => {
+                if (prev === next) return prev
+                return next
+            })
             return
         }
         // Dengan filter incomplete — debounce agar baris tidak langsung hilang
@@ -897,7 +900,7 @@ export default function RaportPage() {
             saveStudent(studentId)
             setGlobalSaveIndicator('saved')
             globalSaveTimerRef.current = setTimeout(() => setGlobalSaveIndicator(null), 2000)
-        }, 1500)
+        }, 3000)
     }, [saveStudent])
 
     // PERF: Stable callback untuk update extras field — diperlukan agar ExtraInput memo()
@@ -1945,80 +1948,87 @@ export default function RaportPage() {
 
     const renderStep2 = () => {
         return (
-            <RaportInputTable
-                globalSaveIndicator={globalSaveIndicator}
-                students={students}
-                filteredStudents={filteredStudents}
-                scores={scores}
-                setScores={setScores}
-                extras={extras}
-                setExtras={setExtras}
-                savedIds={savedIds}
-                setSavedIds={setSavedIds}
-                saving={saving}
-                savingAll={savingAll}
-                setSavingAll={setSavingAll}
-                studentSearch={studentSearch}
-                setStudentSearch={setStudentSearch}
-                showIncompleteOnly={showIncompleteOnly}
-                setShowIncompleteOnly={setShowIncompleteOnly}
-                showNoPhoneOnly={showNoPhoneOnly}
-                setShowNoPhoneOnly={setShowNoPhoneOnly}
-                selectedMonth={selectedMonth}
-                selectedYear={selectedYear}
-                musyrif={musyrif}
-                selectedClass={selectedClass}
-                progressPct={progressPct}
-                hasUnsavedMemo={hasUnsavedMemo}
-                noPhoneCount={noPhoneCount}
-                bulkMode={bulkMode}
-                setBulkMode={setBulkMode}
-                bulkValues={bulkValues}
-                setBulkValues={setBulkValues}
-                bulkSelected={bulkSelected}
-                setBulkSelected={setBulkSelected}
-                visibleRange={visibleRange}
-                setVisibleRange={setVisibleRange}
-                tableScrollRef={tableScrollRef}
-                mobileActiveIdx={mobileActiveIdx}
-                setMobileActiveIdx={setMobileActiveIdx}
-                templateOpenId={templateOpenId}
-                catatanArabMap={catatanArabMap}
-                prevMonthScores={prevMonthScores}
-                studentTrend={studentTrend}
-                sendingWA={sendingWA}
-                canEdit={canEdit}
-                lang={lang}
-                copyingLastMonth={copyingLastMonth}
-                copyFromLastMonth={copyFromLastMonth}
-                handleResetClass={handleResetClass}
-                setStep={setStep}
-                setSelectedClassId={setSelectedClassId}
-                setPendingNav={setPendingNav}
-                saveAll={saveAll}
-                saveStudent={saveStudent}
-                resetStudent={resetStudent}
-                generateAndSendWA={generateAndSendWA}
-                handlePDF={handlePDF}
-                handleResetStudent={handleResetStudent}
-                handleBulkToggle={handleBulkToggle}
-                handleKeyDown={handleKeyDown}
-                handleTemplateToggle={handleTemplateToggle}
-                handleTemplateApply={handleTemplateApply}
-                handleTranslitToggle={handleTranslitToggle}
-                handleScoreChange={handleScoreChange}
-                handleExtraChange={handleExtraChange}
-                handleCatatanChange={handleCatatanChange}
-                triggerAutoSave={triggerAutoSave}
-                openStudentDetailDrawer={openStudentDetailDrawer}
-                setIsExportModalOpen={setIsExportModalOpen}
-                setWaBlastConfirm={setWaBlastConfirm}
-                addToast={addToast}
-                setConfirmModal={setConfirmModal}
-                runZipBlast={runZipBlast}
-                openPrintWindow={openPrintWindow}
-                cellRefs={cellRefs}
-            />
+            <Suspense fallback={
+                <div className="py-20 flex flex-col items-center justify-center gap-3">
+                    <Loader2 className="w-8 h-8 animate-spin text-[var(--color-primary)]" />
+                    <p className="text-xs font-black text-[var(--color-text-muted)] uppercase tracking-widest animate-pulse">Memuat Lembar Input Nilai...</p>
+                </div>
+            }>
+                <LazyRaportInputTable
+                    globalSaveIndicator={globalSaveIndicator}
+                    students={students}
+                    filteredStudents={filteredStudents}
+                    scores={scores}
+                    setScores={setScores}
+                    extras={extras}
+                    setExtras={setExtras}
+                    savedIds={savedIds}
+                    setSavedIds={setSavedIds}
+                    saving={saving}
+                    savingAll={savingAll}
+                    setSavingAll={setSavingAll}
+                    studentSearch={studentSearch}
+                    setStudentSearch={setStudentSearch}
+                    showIncompleteOnly={showIncompleteOnly}
+                    setShowIncompleteOnly={setShowIncompleteOnly}
+                    showNoPhoneOnly={showNoPhoneOnly}
+                    setShowNoPhoneOnly={setShowNoPhoneOnly}
+                    selectedMonth={selectedMonth}
+                    selectedYear={selectedYear}
+                    musyrif={musyrif}
+                    selectedClass={selectedClass}
+                    progressPct={progressPct}
+                    hasUnsavedMemo={hasUnsavedMemo}
+                    noPhoneCount={noPhoneCount}
+                    bulkMode={bulkMode}
+                    setBulkMode={setBulkMode}
+                    bulkValues={bulkValues}
+                    setBulkValues={setBulkValues}
+                    bulkSelected={bulkSelected}
+                    setBulkSelected={setBulkSelected}
+                    visibleRange={visibleRange}
+                    setVisibleRange={setVisibleRange}
+                    tableScrollRef={tableScrollRef}
+                    mobileActiveIdx={mobileActiveIdx}
+                    setMobileActiveIdx={setMobileActiveIdx}
+                    templateOpenId={templateOpenId}
+                    catatanArabMap={catatanArabMap}
+                    prevMonthScores={prevMonthScores}
+                    studentTrend={studentTrend}
+                    sendingWA={sendingWA}
+                    canEdit={canEdit}
+                    lang={lang}
+                    copyingLastMonth={copyingLastMonth}
+                    copyFromLastMonth={copyFromLastMonth}
+                    handleResetClass={handleResetClass}
+                    setStep={setStep}
+                    setSelectedClassId={setSelectedClassId}
+                    setPendingNav={setPendingNav}
+                    saveAll={saveAll}
+                    saveStudent={saveStudent}
+                    resetStudent={resetStudent}
+                    generateAndSendWA={generateAndSendWA}
+                    handlePDF={handlePDF}
+                    handleResetStudent={handleResetStudent}
+                    handleBulkToggle={handleBulkToggle}
+                    handleKeyDown={handleKeyDown}
+                    handleTemplateToggle={handleTemplateToggle}
+                    handleTemplateApply={handleTemplateApply}
+                    handleTranslitToggle={handleTranslitToggle}
+                    handleScoreChange={handleScoreChange}
+                    handleExtraChange={handleExtraChange}
+                    handleCatatanChange={handleCatatanChange}
+                    triggerAutoSave={triggerAutoSave}
+                    openStudentDetailDrawer={openStudentDetailDrawer}
+                    setIsExportModalOpen={setIsExportModalOpen}
+                    setWaBlastConfirm={setWaBlastConfirm}
+                    addToast={addToast}
+                    setConfirmModal={setConfirmModal}
+                    runZipBlast={runZipBlast}
+                    openPrintWindow={openPrintWindow}
+                    cellRefs={cellRefs}
+                />
+            </Suspense>
         )
     }
 
@@ -2113,7 +2123,6 @@ export default function RaportPage() {
                                                     </div>
                                                     <span className="text-xs font-bold truncate">{s.name}</span>
                                                 </div>
-                                                />
                                             </button>
                                         )
                                     })}
@@ -2693,50 +2702,57 @@ export default function RaportPage() {
         }
 
         return (
-            <RaportArchive
-                archiveList={archiveList}
-                archiveLoading={archiveLoading}
-                archiveFilter={archiveFilter}
-                setArchiveFilter={setArchiveFilter}
-                archiveSearch={archiveSearch}
-                setArchiveSearch={setArchiveSearch}
-                archiveSort={archiveSort}
-                archiveTab={archiveTab}
-                setArchiveTab={setArchiveTab}
-                archiveVisibleCount={archiveVisibleCount}
-                setArchiveVisibleCount={setArchiveVisibleCount}
-                archivePreview={archivePreview}
-                setArchivePreview={setArchivePreview}
-                previewStudentId={previewStudentId}
-                setPreviewStudentId={setPreviewStudentId}
-                archiveEditMode={archiveEditMode}
-                setArchiveEditMode={setArchiveEditMode}
-                archiveEditScores={archiveEditScores}
-                setArchiveEditScores={setArchiveEditScores}
-                archiveEditExtras={archiveEditExtras}
-                setArchiveEditExtras={setArchiveEditExtras}
-                archiveEditSaving={archiveEditSaving}
-                archiveStatusFilter={archiveStatusFilter}
-                archiveMinAvg={archiveMinAvg}
-                loadArchiveDetail={loadArchiveDetail}
-                saveArchiveEdit={saveArchiveEdit}
-                exportBulkPDF={exportBulkPDF}
-                setConfirmDelete={setConfirmDelete}
-                runZipBlast={runZipBlast}
-                openPrintWindow={openPrintWindow}
-                sendWATextOnly={sendWATextOnly}
-                pageSize={pageSize}
-                setPageSize={setPageSize}
-                lang={lang}
-                setLang={setLang}
-                previewZoom={previewZoom}
-                setPreviewZoom={setPreviewZoom}
-                setIsFullScreenPreview={setIsFullScreenPreview}
-                settings={settings}
-                setStep={setStep}
-                previewContainerRef={previewContainerRef}
-                manualZoomRef={manualZoomRef}
-            />
+            <Suspense fallback={
+                <div className="py-20 flex flex-col items-center justify-center gap-3">
+                    <Loader2 className="w-8 h-8 animate-spin text-[var(--color-primary)]" />
+                    <p className="text-xs font-black text-[var(--color-text-muted)] uppercase tracking-widest animate-pulse">Memuat Arsip Raport...</p>
+                </div>
+            }>
+                <LazyRaportArchive
+                    archiveList={archiveList}
+                    archiveLoading={archiveLoading}
+                    archiveFilter={archiveFilter}
+                    setArchiveFilter={setArchiveFilter}
+                    archiveSearch={archiveSearch}
+                    setArchiveSearch={setArchiveSearch}
+                    archiveSort={archiveSort}
+                    archiveTab={archiveTab}
+                    setArchiveTab={setArchiveTab}
+                    archiveVisibleCount={archiveVisibleCount}
+                    setArchiveVisibleCount={setArchiveVisibleCount}
+                    archivePreview={archivePreview}
+                    setArchivePreview={setArchivePreview}
+                    previewStudentId={previewStudentId}
+                    setPreviewStudentId={setPreviewStudentId}
+                    archiveEditMode={archiveEditMode}
+                    setArchiveEditMode={setArchiveEditMode}
+                    archiveEditScores={archiveEditScores}
+                    setArchiveEditScores={setArchiveEditScores}
+                    archiveEditExtras={archiveEditExtras}
+                    setArchiveEditExtras={setArchiveEditExtras}
+                    archiveEditSaving={archiveEditSaving}
+                    archiveStatusFilter={archiveStatusFilter}
+                    archiveMinAvg={archiveMinAvg}
+                    loadArchiveDetail={loadArchiveDetail}
+                    saveArchiveEdit={saveArchiveEdit}
+                    exportBulkPDF={exportBulkPDF}
+                    setConfirmDelete={setConfirmDelete}
+                    runZipBlast={runZipBlast}
+                    openPrintWindow={openPrintWindow}
+                    sendWATextOnly={sendWATextOnly}
+                    pageSize={pageSize}
+                    setPageSize={setPageSize}
+                    lang={lang}
+                    setLang={setLang}
+                    previewZoom={previewZoom}
+                    setPreviewZoom={setPreviewZoom}
+                    setIsFullScreenPreview={setIsFullScreenPreview}
+                    settings={settings}
+                    setStep={setStep}
+                    previewContainerRef={previewContainerRef}
+                    manualZoomRef={manualZoomRef}
+                />
+            </Suspense>
         )
     }
 
@@ -2846,6 +2862,13 @@ export default function RaportPage() {
 
     return (
         <DashboardLayout title="Raport Bulanan">
+            {/* Global auto-save indicator */}
+            {step === 2 && globalSaveIndicator && (
+                <div className={`fixed bottom-6 right-6 z-[9999] flex items-center gap-2 px-3.5 py-2.5 rounded-xl border shadow-2xl text-[10px] font-black transition-all duration-300 backdrop-blur-md ${globalSaveIndicator === 'saving' ? 'bg-amber-500/10 dark:bg-amber-500/20 border-amber-500/20 text-amber-600 dark:text-amber-400' : 'bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'}`}>
+                    {globalSaveIndicator === 'saving' ? <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-500" /> : <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
+                    {globalSaveIndicator === 'saving' ? 'Menyimpan...' : 'Tersimpan ✓'}
+                </div>
+            )}
             {/* TAMBAH INI: */}
             <div className="p-4 md:p-6 space-y-4 max-w-[1800px] mx-auto">
 
@@ -2948,13 +2971,6 @@ export default function RaportPage() {
 
                 {/* ── CONTENT — dengan animasi fade+slide antar step ── */}
                 <div className="glass rounded-[1.5rem] border border-[var(--color-border)] p-4 sm:p-6">
-                    {/* FIX 6: Global auto-save indicator */}
-                    {step === 2 && globalSaveIndicator && (
-                        <div className={`fixed bottom-4 right-4 z-50 flex items-center gap-2 px-3 py-2 rounded-xl border shadow-lg text-[10px] font-black transition-all duration-300 ${globalSaveIndicator === 'saving' ? 'bg-amber-500/10 border-amber-500/20 text-amber-600' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'}`}>
-                            {globalSaveIndicator === 'saving' ? <Loader2 className="w-3 h-3 animate-spin text-amber-500" /> : <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
-                            {globalSaveIndicator === 'saving' ? 'Menyimpan...' : 'Tersimpan ✓'}
-                        </div>
-                    )}
                     <div key={step}
                         style={{
                             animation: 'stepFadeIn 0.22s cubic-bezier(0.16,1,0.3,1) both',
@@ -3532,12 +3548,12 @@ export default function RaportPage() {
                                         )
                                         const ratio = dist / fullScreenPinchDistRef.current
                                         const newZoom = Math.min(2, Math.max(0.3, fullScreenPinchZoomRef.current * ratio))
-                                        
+
                                         const naturalW = pageSize === 'f4' ? 812.6 : 793.7
                                         const naturalH = pageSize === 'f4' ? 1247 : 1122
                                         if (fullScreenOuterWrapperRef.current) {
-                                            fullScreenOuterWrapperRef.current.style.width = `${naturalW * newZoom}px``
-                                            fullScreenOuterWrapperRef.current.style.height = `${naturalH * newZoom}px``
+                                            fullScreenOuterWrapperRef.current.style.width = `${naturalW * newZoom}px`
+                                            fullScreenOuterWrapperRef.current.style.height = `${naturalH * newZoom}px`
                                         }
                                         if (fullScreenInnerWrapperRef.current) {
                                             fullScreenInnerWrapperRef.current.style.transform = `scale(${newZoom})`
@@ -3602,7 +3618,7 @@ export default function RaportPage() {
                                                         settings={settings}
                                                         pageSize={pageSize}
                                                         catatanArab={fsCatatanArab}
-                                                         studentIndex={fsStudentsList.findIndex(s => s.id === fsStudent?.id) + 1}
+                                                        studentIndex={fsStudentsList.findIndex(s => s.id === fsStudent?.id) + 1}
                                                     />
                                                 )}
                                             </div>

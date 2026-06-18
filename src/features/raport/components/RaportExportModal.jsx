@@ -260,7 +260,7 @@ export default function RaportExportModal({
                                 <Tags className="w-3.5 h-3.5" />
                                 <span>Pilih Paket Kolom (Preset)</span>
                             </div>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-row flex-nowrap overflow-x-auto gap-2 pb-0.5 scrollbar-none">
                                 {PRESETS.map(preset => {
                                     const isActive = activePresetId === preset.id
                                     return (

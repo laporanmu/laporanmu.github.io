@@ -118,86 +118,119 @@ export const buildWaLines = ({
  * Generator komentar otomatis berdasarkan tren nilai
  */
 export const generateAutoComment = (sc, studentId = '', trendHistory = []) => {
-    const vals = KRITERIA.map(k => ({ key: k.key, id: k.id, val: sc?.[k.key] }))
-        .filter(k => k.val !== '' && k.val !== null && k.val !== undefined)
-        .map(k => ({ ...k, val: Number(k.val) }))
+    // 1. Parse current scores
+    const currentScores = KRITERIA.map(k => ({
+        key: k.key,
+        id: k.id,
+        val: sc?.[k.key] !== '' && sc?.[k.key] !== null && sc?.[k.key] !== undefined ? Number(sc[k.key]) : null
+    })).filter(k => k.val !== null)
 
-    if (!vals.length) return ''
+    if (currentScores.length === 0) return ''
 
-    const avg = vals.reduce((a, b) => a + b.val, 0) / vals.length
-    const best = vals.reduce((a, b) => b.val > a.val ? b : a, vals[0])
-    const worst = vals.reduce((a, b) => b.val < a.val ? b : a, vals[0])
-    const allHigh = vals.every(v => v.val >= 8)
-    const allMed = vals.every(v => v.val >= 6)
+    const avg = currentScores.reduce((a, b) => a + b.val, 0) / currentScores.length
+    const avgFormatted = avg.toFixed(1)
 
-    const seed = (studentId || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0)
-    const pick = (arr) => arr[seed % arr.length]
+    // Sort current scores to find highest and lowest
+    const sortedScores = [...currentScores].sort((a, b) => b.val - a.val)
+    const bestAspect = sortedScores[0]
+    const worstAspect = sortedScores[sortedScores.length - 1]
 
+    // 2. Parse past history
+    // Sort history chronologically
     const history = (trendHistory || []).slice().sort((a, b) =>
         a.year !== b.year ? a.year - b.year : a.month - b.month
     )
-    const hasHistory = history.length >= 2
+    
+    // Get the immediate previous month report
+    const prevReport = history.length > 0 ? history[history.length - 1] : null
+    
+    let trendText = ''
+    let progressHighlight = ''
+    
+    if (prevReport) {
+        const prevScores = KRITERIA.map(k => ({
+            key: k.key,
+            id: k.id,
+            val: prevReport.scores?.[k.key] !== '' && prevReport.scores?.[k.key] !== null && prevReport.scores?.[k.key] !== undefined ? Number(prevReport.scores[k.key]) : null
+        })).filter(k => k.val !== null)
 
-    const histAvgs = history.map(h => {
-        const hVals = KRITERIA.map(k => h.scores?.[k.key]).filter(v => v !== null && v !== undefined && v !== '')
-        return hVals.length ? hVals.reduce((a, b) => a + Number(b), 0) / hVals.length : null
-    }).filter(v => v !== null)
+        if (prevScores.length > 0) {
+            const prevAvg = prevScores.reduce((a, b) => a + b.val, 0) / prevScores.length
+            const prevAvgFormatted = prevAvg.toFixed(1)
+            const deltaAvg = avg - prevAvg
 
-    const prevAvg = histAvgs.length >= 1 ? histAvgs[histAvgs.length - 1] : null
-    const delta = prevAvg !== null ? avg - prevAvg : 0
-    const isRising = delta > 0.3
-    const isFalling = delta < -0.3
+            if (Math.abs(deltaAvg) > 0.1) {
+                if (deltaAvg > 0) {
+                    trendText = `Alhamdulillah, rata-rata nilai mengalami kenaikan dari ${prevAvgFormatted} menjadi ${avgFormatted}.`
+                } else {
+                    trendText = `Rata-rata nilai bulan ini (${avgFormatted}) mengalami sedikit penurunan dari bulan lalu (${prevAvgFormatted}).`
+                }
+            } else {
+                trendText = `Perkembangan nilai rata-rata ananda stabil di angka ${avgFormatted} dibanding bulan lalu.`
+            }
 
-    let streakUp = 0, streakDown = 0
-    for (let i = histAvgs.length - 1; i >= 1; i--) {
-        if (histAvgs[i] > (histAvgs[i - 1] + 0.2)) streakUp++; else break
+            // Find aspect with highest improvement and aspect with highest decline
+            let maxImprovement = { key: '', id: '', delta: -99 }
+            let maxDecline = { key: '', id: '', delta: 99 }
+
+            currentScores.forEach(curr => {
+                const prev = prevScores.find(p => p.key === curr.key)
+                if (prev) {
+                    const diff = curr.val - prev.val
+                    if (diff > 0 && diff > maxImprovement.delta) {
+                        maxImprovement = { key: curr.key, id: curr.id, delta: diff }
+                    }
+                    if (diff < 0 && diff < maxDecline.delta) {
+                        maxDecline = { key: curr.key, id: curr.id, delta: diff }
+                    }
+                }
+            })
+
+            if (maxImprovement.key && maxImprovement.delta > 0) {
+                progressHighlight = `Peningkatan terbaik terlihat pada aspek ${maxImprovement.id} (+${maxImprovement.delta.toFixed(0)}).`
+            } else if (maxDecline.key && maxDecline.delta < 0) {
+                progressHighlight = `Mohon perhatian khusus pada aspek ${maxDecline.id} yang mengalami penurunan (-${Math.abs(maxDecline.delta).toFixed(0)}).`
+            }
+        }
     }
-    for (let i = histAvgs.length - 1; i >= 1; i--) {
-        if (histAvgs[i] < (histAvgs[i - 1] - 0.2)) streakDown++; else break
-    }
 
-    let parts = []
-    if (hasHistory && streakUp >= 2) {
-        parts.push(pick([
-            `Alhamdulillah, nilai rata-rata terus meningkat ${streakUp + 1} bulan berturut-turut`,
-            `Masya Allah, perkembangan konsisten naik selama ${streakUp + 1} bulan terakhir`
-        ]))
-    } else if (hasHistory && streakDown >= 2) {
-        parts.push(pick([
-            `Nilai rata-rata mengalami penurunan ${streakDown + 1} bulan berturut-turut, perlu perhatian`,
-            `Tren menurun ${streakDown + 1} bulan berturut-turut memerlukan evaluasi segera`
-        ]))
-    } else if (hasHistory && isRising) {
-        parts.push(pick([
-            `Alhamdulillah, terjadi peningkatan rata-rata dibanding bulan lalu`,
-            `Ada kenaikan nilai yang menggembirakan dari bulan sebelumnya`
-        ]))
-    } else if (hasHistory && isFalling) {
-        parts.push(pick([
-            `Nilai rata-rata turun dibanding bulan lalu, perlu evaluasi bersama`,
-            `Terjadi penurunan dari bulan sebelumnya, mohon perhatian lebih`
-        ]))
-    } else if (allHigh) {
-        parts.push(pick([
-            `Alhamdulillah, seluruh aspek penilaian sangat memuaskan bulan ini`,
-            `Masya Allah, perkembangan di semua aspek sangat luar biasa`
-        ]))
-    } else if (avg >= 6) {
-        parts.push(pick([
-            `Alhamdulillah, perkembangan ${best.id.toLowerCase()} cukup baik bulan ini`,
-            `Kemajuan pada aspek ${best.id.toLowerCase()} sudah terlihat nyata`
-        ]))
+    // 3. Construct the comment parts
+    const introParts = []
+    if (avg >= 8.5) {
+        introParts.push(`Masya Allah, ananda menunjukkan prestasi yang luar biasa bulan ini dengan rata-rata ${avgFormatted}.`)
+    } else if (avg >= 7.5) {
+        introParts.push(`Alhamdulillah, perkembangan ananda bulan ini cukup baik dan memuaskan dengan rata-rata ${avgFormatted}.`)
+    } else if (avg >= 6.0) {
+        introParts.push(`Perkembangan ananda bulan ini secara umum cukup stabil dengan rata-rata ${avgFormatted}.`)
     } else {
-        parts.push(pick([
-            `Perlu perhatian lebih pada aspek ${worst.id.toLowerCase()} bulan ini`,
-            `Butuh pendampingan ekstra, khususnya di aspek ${worst.id.toLowerCase()}`
-        ]))
+        introParts.push(`Perkembangan ananda bulan ini masih memerlukan bimbingan lebih intensif (rata-rata ${avgFormatted}).`)
     }
 
-    const closingHigh = ['Semoga terus istiqomah dan menjadi teladan.', 'Barakallahu fiik, semoga terus berkembang.']
-    const closingMid = ['Semoga semakin berkembang ke depannya.', 'Tetap semangat dan terus tingkatkan diri.']
-    const closingLow = ['Mohon dukungan penuh dari wali santri.', 'Diperlukan kerjasama wali santri untuk mendampingi.']
+    const aspectParts = []
+    if (bestAspect.val >= 8) {
+        aspectParts.push(`Ananda sangat unggul dalam aspek ${bestAspect.id} (Nilai: ${bestAspect.val}).`)
+    }
+    if (worstAspect.val < 7 && worstAspect.key !== bestAspect.key) {
+        aspectParts.push(`Perlu pendampingan lebih pada aspek ${worstAspect.id} (Nilai: ${worstAspect.val}) agar bisa lebih ditingkatkan.`)
+    }
 
-    const closing = (allHigh || streakUp >= 2) ? pick(closingHigh) : (allMed && !isFalling) ? pick(closingMid) : pick(closingLow)
-    return parts.join('. ') + '. ' + closing
+    const closingParts = []
+    if (avg >= 8.5) {
+        closingParts.push(`Pertahankan prestasi ini dan semoga terus istiqomah. Barakallahu fiik.`)
+    } else if (avg >= 7.0) {
+        closingParts.push(`Semoga bulan depan ananda bisa meraih hasil yang lebih baik lagi. Tetap semangat.`)
+    } else {
+        closingParts.push(`Mohon kerja sama orang tua untuk turut mendampingi dan memotivasi ananda di rumah.`)
+    }
+
+    // Assembly
+    const paragraph = [
+        introParts[0],
+        trendText,
+        progressHighlight,
+        aspectParts.join(' '),
+        closingParts[0]
+    ].filter(Boolean).join(' ')
+
+    return paragraph
 }
