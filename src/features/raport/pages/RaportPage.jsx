@@ -239,6 +239,27 @@ export default function RaportPage() {
     const fullScreenPinchDistRef = useRef(null)
     const fullScreenPinchZoomRef = useRef(1)
 
+    const fullScreenOuterWrapperRef = useRef(null)
+    const fullScreenInnerWrapperRef = useRef(null)
+    const fullScreenZoomLabelRef = useRef(null)
+    const tempFullScreenZoomRef = useRef(fullScreenZoom)
+
+    useEffect(() => {
+        tempFullScreenZoomRef.current = fullScreenZoom
+        if (fullScreenZoomLabelRef.current) {
+            fullScreenZoomLabelRef.current.textContent = `${Math.round(fullScreenZoom * 100)}%`
+        }
+        const naturalW = pageSize === 'f4' ? 812.6 : 793.7
+        const naturalH = pageSize === 'f4' ? 1247 : 1122
+        if (fullScreenOuterWrapperRef.current) {
+            fullScreenOuterWrapperRef.current.style.width = `${naturalW * fullScreenZoom}px`
+            fullScreenOuterWrapperRef.current.style.height = `${naturalH * fullScreenZoom}px`
+        }
+        if (fullScreenInnerWrapperRef.current) {
+            fullScreenInnerWrapperRef.current.style.transform = `scale(${fullScreenZoom})`
+        }
+    }, [fullScreenZoom, pageSize])
+
     // Reset archive visible count on search/filter changes
     useEffect(() => {
         setArchiveVisibleCount(12)
@@ -3498,21 +3519,41 @@ export default function RaportPage() {
                                             e.touches[0].clientX - e.touches[1].clientX,
                                             e.touches[0].clientY - e.touches[1].clientY
                                         )
-                                        fullScreenPinchZoomRef.current = fullScreenZoom
+                                        fullScreenPinchZoomRef.current = tempFullScreenZoomRef.current
                                     }
                                 }}
                                 onTouchMove={e => {
                                     bumpFullScreenHud()
                                     if (e.touches.length === 2 && fullScreenPinchDistRef.current) {
+                                        e.preventDefault()
                                         const dist = Math.hypot(
                                             e.touches[0].clientX - e.touches[1].clientX,
                                             e.touches[0].clientY - e.touches[1].clientY
                                         )
                                         const ratio = dist / fullScreenPinchDistRef.current
-                                        setFullScreenZoom(Math.min(2, Math.max(0.3, Math.floor(fullScreenPinchZoomRef.current * ratio * 100) / 100)))
+                                        const newZoom = Math.min(2, Math.max(0.3, fullScreenPinchZoomRef.current * ratio))
+                                        
+                                        const naturalW = pageSize === 'f4' ? 812.6 : 793.7
+                                        const naturalH = pageSize === 'f4' ? 1247 : 1122
+                                        if (fullScreenOuterWrapperRef.current) {
+                                            fullScreenOuterWrapperRef.current.style.width = `${naturalW * newZoom}px``
+                                            fullScreenOuterWrapperRef.current.style.height = `${naturalH * newZoom}px``
+                                        }
+                                        if (fullScreenInnerWrapperRef.current) {
+                                            fullScreenInnerWrapperRef.current.style.transform = `scale(${newZoom})`
+                                        }
+                                        if (fullScreenZoomLabelRef.current) {
+                                            fullScreenZoomLabelRef.current.textContent = `${Math.round(newZoom * 100)}%`
+                                        }
+                                        tempFullScreenZoomRef.current = newZoom
                                     }
                                 }}
-                                onTouchEnd={() => { fullScreenPinchDistRef.current = null }}
+                                onTouchEnd={() => {
+                                    fullScreenPinchDistRef.current = null
+                                    if (tempFullScreenZoomRef.current !== fullScreenZoom) {
+                                        setFullScreenZoom(Math.floor(tempFullScreenZoomRef.current * 100) / 100)
+                                    }
+                                }}
                                 onMouseMove={bumpFullScreenHud}
                                 onWheel={bumpFullScreenHud}
                                 onClick={bumpFullScreenHud}
@@ -3534,16 +3575,20 @@ export default function RaportPage() {
                                     const s = fullScreenZoom
                                     return (
                                         <div
+                                            ref={fullScreenOuterWrapperRef}
                                             className="shrink-0"
                                             style={{
-                                                width: `${naturalW * s}px`,
-                                                height: `${naturalH * s}px`,
+                                                width: `${naturalW * fullScreenZoom}px`,
+                                                height: `${naturalH * fullScreenZoom}px`,
                                                 borderRadius: '0px',
                                                 overflow: 'hidden',
                                                 boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
                                             }}
                                         >
-                                            <div style={{ width: `${naturalW}px`, transformOrigin: 'top left', transform: `scale(${s})` }}>
+                                            <div
+                                                ref={fullScreenInnerWrapperRef}
+                                                style={{ width: `${naturalW}px`, transformOrigin: 'top left', transform: `scale(${fullScreenZoom})` }}
+                                            >
                                                 {fsStudent && (
                                                     <RaportPrintCard
                                                         student={fsStudent}
@@ -3580,6 +3625,7 @@ export default function RaportPage() {
                                             <span className="text-[10px] font-black leading-none ml-0.5">-</span>
                                         </button>
                                         <button
+                                            ref={fullScreenZoomLabelRef}
                                             onClick={() => {
                                                 setFullScreenZoom(getFullScreenFitZoom(isMobileViewport))
                                             }}
