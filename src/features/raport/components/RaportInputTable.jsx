@@ -23,9 +23,126 @@ import { supabase } from '@lib/supabase'
 
 const ROW_HEIGHT = 188
 
+const DesktopSkeleton = () => (
+    <div className="overflow-x-auto rounded-xl border border-[var(--color-border)] fade-in animate-in duration-300">
+        <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 910, tableLayout: 'fixed' }}>
+            <colgroup>
+                <col style={{ width: 36 }} />
+                <col style={{ width: 140 }} />
+                {KRITERIA.map(k => <col key={k.key} style={{ width: 55 }} />)}
+                <col style={{ width: 170 }} />
+                <col style={{ width: 160 }} />
+                <col style={{ width: 130 }} />
+            </colgroup>
+            <thead>
+                <tr className="bg-[var(--color-surface-alt)] border-b border-[var(--color-border)]">
+                    <th style={{ padding: '10px 8px' }} className="text-center">
+                        <div className="w-4 h-4 bg-[var(--color-border)] rounded animate-pulse mx-auto" />
+                    </th>
+                    <th style={{ padding: '10px 0' }} className="text-center sticky left-0 bg-[var(--color-surface-alt)] border-r border-[var(--color-border)]">
+                        <div className="w-16 h-3 bg-[var(--color-border)] rounded animate-pulse mx-auto" />
+                    </th>
+                    {KRITERIA.map(k => (
+                        <th key={k.key} style={{ padding: '10px 4px' }} className="text-center">
+                            <div className="w-8 h-3 bg-[var(--color-border)] rounded animate-pulse mx-auto" />
+                        </th>
+                    ))}
+                    <th style={{ padding: '10px 8px' }} className="text-center">
+                        <div className="w-12 h-3 bg-[var(--color-border)] rounded animate-pulse mx-auto" />
+                    </th>
+                    <th style={{ padding: '10px 8px' }} className="text-center">
+                        <div className="w-20 h-3 bg-[var(--color-border)] rounded animate-pulse mx-auto" />
+                    </th>
+                    <th style={{ padding: '10px 8px' }} className="text-center">
+                        <div className="w-10 h-3 bg-[var(--color-border)] rounded animate-pulse mx-auto" />
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {[...Array(5)].map((_, i) => (
+                    <tr key={i} className="border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+                        <td className="p-3 text-center">
+                            <div className="w-3.5 h-3.5 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded animate-pulse mx-auto" />
+                        </td>
+                        <td className="p-3 sticky left-0 bg-[var(--color-surface)] border-r border-[var(--color-border)]">
+                            <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-full bg-[var(--color-surface-alt)] animate-pulse shrink-0" />
+                                <div className="flex-1 space-y-1">
+                                    <div className="h-2.5 bg-[var(--color-surface-alt)] rounded animate-pulse w-20" />
+                                    <div className="h-2 bg-[var(--color-surface-alt)] rounded animate-pulse w-12" />
+                                </div>
+                            </div>
+                        </td>
+                        {KRITERIA.map(k => (
+                            <td key={k.key} className="p-3 text-center">
+                                <div className="w-10 h-8 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-lg animate-pulse mx-auto" />
+                            </td>
+                        ))}
+                        <td className="p-3">
+                            <div className="flex items-center justify-center gap-1">
+                                {[...Array(3)].map((_, idx) => (
+                                    <div key={idx} className="w-8 h-8 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-lg animate-pulse" />
+                                ))}
+                            </div>
+                        </td>
+                        <td className="p-3">
+                            <div className="space-y-1.5">
+                                <div className="h-8 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-lg animate-pulse w-full" />
+                            </div>
+                        </td>
+                        <td className="p-3 sticky right-0 bg-[var(--color-surface)] border-l border-[var(--color-border)]">
+                            <div className="flex items-center justify-center gap-1.5">
+                                <div className="w-8 h-8 bg-[var(--color-surface-alt)] rounded-lg animate-pulse" />
+                                <div className="w-8 h-8 bg-[var(--color-surface-alt)] rounded-lg animate-pulse" />
+                            </div>
+                        </td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    </div>
+)
+
+const MobileSkeleton = () => (
+    <div className="p-4 space-y-4 fade-in animate-in duration-300">
+        <div className="p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] space-y-4">
+            <div className="flex items-center gap-3 pb-3 border-b border-[var(--color-border)]">
+                <div className="w-10 h-10 rounded-full bg-[var(--color-surface-alt)] animate-pulse shrink-0" />
+                <div className="flex-1 space-y-2">
+                    <div className="h-3.5 bg-[var(--color-surface-alt)] rounded animate-pulse w-32" />
+                    <div className="h-2.5 bg-[var(--color-surface-alt)] rounded animate-pulse w-20" />
+                </div>
+                <div className="w-8 h-8 rounded-lg bg-[var(--color-surface-alt)] animate-pulse" />
+            </div>
+            <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                    {[...Array(4)].map((_, i) => (
+                        <div key={i} className="space-y-1">
+                            <div className="h-2 bg-[var(--color-surface-alt)] rounded animate-pulse w-12" />
+                            <div className="h-9 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-lg animate-pulse" />
+                        </div>
+                    ))}
+                </div>
+            </div>
+            <div className="flex items-center justify-between pt-3 border-t border-[var(--color-border)]">
+                <div className="w-20 h-8 bg-[var(--color-surface-alt)] rounded-lg animate-pulse" />
+                <div className="flex gap-2">
+                    <div className="w-8 h-8 bg-[var(--color-surface-alt)] rounded-lg animate-pulse" />
+                    <div className="w-8 h-8 bg-[var(--color-surface-alt)] rounded-lg animate-pulse" />
+                </div>
+            </div>
+        </div>
+    </div>
+)
+
 export default function RaportInputTable({
     // Context States
     globalSaveIndicator,
+    reportType,
+    setReportType,
+    isAcademicRaport,
+    selectedSemester,
+    academicYear,
     students,
     filteredStudents,
     scores,
@@ -68,6 +185,7 @@ export default function RaportInputTable({
     canEdit,
     lang,
     copyingLastMonth,
+    loading,
 
     // Actions & Handlers
     copyFromLastMonth,
@@ -173,7 +291,7 @@ export default function RaportInputTable({
                         <span className="text-[9px] font-black text-[var(--color-text)] truncate">{selectedClass?.name}</span>
                         <span className="w-px h-2.5 bg-[var(--color-border)] mx-0.5 shrink-0" />
                         <span className="text-[8px] font-bold text-[var(--color-text-muted)] uppercase whitespace-nowrap shrink-0">
-                            {BULAN[selectedMonth - 1]?.id_str} {selectedYear}
+                            {reportType === 'bulanan' ? `${BULAN[selectedMonth - 1]?.id_str} ${selectedYear}` : `Sem ${selectedSemester} (${academicYear})`}
                         </span>
                     </button>
                     <button onClick={saveAll} disabled={savingAll || !canEdit} className="h-8 w-8 rounded-xl bg-emerald-500 text-white text-[10px] font-black hover:bg-emerald-600 flex items-center justify-center relative disabled:opacity-70 shrink-0">
@@ -184,6 +302,43 @@ export default function RaportInputTable({
                         <Printer className="w-3.5 h-3.5" />
                     </button>
                 </div>
+
+                {!isAcademicRaport && (
+                    <div className="flex items-center bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl p-0.5 w-full justify-between gap-0.5 shadow-sm h-8">
+                        {[
+                            { id: 'bulanan', label: 'Bulanan' },
+                            { id: 'pondok_lisan', label: 'Lisan' },
+                            { id: 'pondok_mapel', label: 'Mapel' }
+                        ].map(t => (
+                            <button
+                                key={t.id}
+                                onClick={async () => {
+                                    if (reportType === t.id) return
+                                    if (hasUnsavedMemo) {
+                                        setConfirmModal({
+                                            title: 'Perubahan Belum Disimpan',
+                                            description: 'Perubahan nilai belum disimpan akan hilang. Pindah?',
+                                            variant: 'red',
+                                            confirmLabel: 'Ya, Pindah',
+                                            onConfirm: async () => {
+                                                setConfirmModal(null)
+                                                setReportType(t.id)
+                                            }
+                                        })
+                                        return
+                                    }
+                                    setReportType(t.id)
+                                }}
+                                className={`flex-1 h-full rounded-lg text-[9px] font-black uppercase tracking-wider text-center transition-all flex items-center justify-center ${reportType === t.id
+                                    ? 'bg-indigo-600 text-white shadow-sm'
+                                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+                                    }`}
+                            >
+                                {t.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 {/* Row 4: Search & Incomplete/WA filters */}
                 <div className="flex gap-1.5 w-full">
@@ -337,9 +492,9 @@ export default function RaportInputTable({
             {/* ── DESKTOP TOOLBAR (hidden md:block) ── */}
             <div className="hidden md:block space-y-2.5">
                 {/* ROW 1: Context + Progress + Actions */}
-                <div className="w-full flex flex-row flex-nowrap items-center justify-between gap-4 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden py-0.5">
+                <div className="w-full flex flex-row flex-nowrap items-center gap-4 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden py-0.5">
                     {/* Left Info Group (Context + Badges) */}
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
                         {/* Combined Back/Change Class & Class Info */}
                         <button
                             onClick={() => {
@@ -349,7 +504,7 @@ export default function RaportInputTable({
                                 }
                                 setStep(0); setSelectedClassId('')
                             }}
-                            className="h-9 px-3 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:border-indigo-500/30 hover:bg-slate-500/5 transition-all flex items-center gap-2 flex-1 max-w-[260px] group min-w-0"
+                            className="h-9 px-3 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:border-indigo-500/30 hover:bg-slate-500/5 transition-all flex items-center gap-2 flex-1 min-w-[160px] group"
                             title="Kembali ke Pemilihan Kelas"
                         >
                             <ArrowLeft className="w-3.5 h-3.5 text-[var(--color-text-muted)] group-hover:text-[var(--color-text)] group-hover:-translate-x-0.5 transition-all" />
@@ -361,44 +516,99 @@ export default function RaportInputTable({
                                 </div>
                                 <div className="flex items-center gap-1.5 shrink-0 ml-1.5">
                                     <span className="w-px h-3 bg-[var(--color-border)]" />
-                                    <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase">{BULAN[selectedMonth - 1]?.id_str} {selectedYear}</span>
+                                    <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase">
+                                        {reportType === 'bulanan' ? `${BULAN[selectedMonth - 1]?.id_str} ${selectedYear}` : `Sem ${selectedSemester} (${academicYear})`}
+                                    </span>
                                 </div>
                             </div>
                         </button>
+
+                        {!isAcademicRaport && (
+                            <>
+                                <span className="w-px h-4 bg-[var(--color-border)] shrink-0 self-center" />
+                                <div className="flex items-center bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-xl p-0.5 shrink-0 gap-0.5 shadow-sm h-9">
+                                    {[
+                                        { id: 'bulanan', label: 'Bulanan', shortLabel: 'Bulanan' },
+                                        { id: 'pondok_lisan', label: 'Ujian Lisan', shortLabel: 'Lisan' },
+                                        { id: 'pondok_mapel', label: 'Mapel Pondok', shortLabel: 'Mapel' }
+                                    ].map(t => (
+                                        <button
+                                            key={t.id}
+                                            disabled={loading}
+                                            onClick={async () => {
+                                                if (reportType === t.id) return
+                                                if (hasUnsavedMemo) {
+                                                    setConfirmModal({
+                                                        title: 'Perubahan Belum Disimpan',
+                                                        description: 'Anda memiliki perubahan nilai yang belum disimpan. Apakah Anda yakin ingin berpindah tipe raport? Perubahan yang belum disimpan akan hilang.',
+                                                        variant: 'red',
+                                                        confirmLabel: 'Ya, Pindah',
+                                                        onConfirm: async () => {
+                                                            setConfirmModal(null)
+                                                            setReportType(t.id)
+                                                        }
+                                                    })
+                                                    return
+                                                }
+                                                setReportType(t.id)
+                                            }}
+                                            className={`px-2.5 h-full rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex items-center justify-center ${reportType === t.id
+                                                ? 'bg-indigo-600 text-white shadow-sm'
+                                                : loading
+                                                    ? 'text-[var(--color-text-muted)]/40 cursor-not-allowed'
+                                                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+                                                }`}
+                                        >
+                                            <span className="hidden [@media(min-width:1150px)]:inline">{t.label}</span>
+                                            <span className="inline [@media(min-width:1150px)]:hidden">{t.shortLabel}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </>
+                        )}
 
                         {/* Section Divider */}
                         <span className="w-px h-4 bg-[var(--color-border)] shrink-0 self-center" />
 
                         {/* Middle Stats Badges */}
-                        <div className="flex flex-row flex-nowrap items-center gap-1.5 min-w-0 flex-1">
+                        <div className="flex flex-row flex-nowrap items-center gap-1.5 shrink-0">
                             {musyrif && (
-                                <div className="flex items-center gap-1 px-2 h-9 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black uppercase tracking-wider min-w-0 shrink-0" title={`Wali Kelas: ${musyrif}`}>
-                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                                    <span><span className="hidden xl:inline">Wali: </span><span className="text-[var(--color-text)] font-black">{musyrif}</span></span>
+                                <div className="hidden [@media(min-width:1440px)]:flex items-center gap-1.5 px-2.5 h-9 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black uppercase tracking-wider shrink-0" title={`Wali Kelas: ${musyrif}`}>
+                                    <Users className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                                    <span><span className="hidden [@media(min-width:1440px)]:inline">Wali: </span><span className="text-[var(--color-text)] font-black inline-block max-w-[80px] [@media(min-width:1440px)]:max-w-[150px] truncate align-bottom">{musyrif}</span></span>
                                 </div>
                             )}
 
-                            <div className={`flex items-center gap-1 px-2 h-9 rounded-xl border text-[9px] font-black uppercase tracking-wider transition-all duration-300 shrink-0 ${globalSaveIndicator === 'saving'
+                            <div className={`flex items-center justify-center gap-1 px-1.5 [@media(min-width:1350px)]:px-2 h-9 rounded-xl border text-[9px] font-black uppercase tracking-wider transition-all duration-300 shrink-0 ${globalSaveIndicator === 'saving'
                                 ? 'bg-amber-500/10 border-amber-500/20 text-amber-600 shadow-sm animate-pulse'
                                 : 'bg-emerald-500/5 border-emerald-500/20 text-emerald-600'
-                                }`}>
+                                }`}
+                                title={globalSaveIndicator === 'saving' ? 'Sedang menyimpan data otomatis' : 'Autosave Aktif'}>
                                 {globalSaveIndicator === 'saving' ? (
                                     <Loader2 className="w-3 h-3 animate-spin text-amber-600" />
                                 ) : (
                                     <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                                 )}
-                                <span>{globalSaveIndicator === 'saving' ? 'Menyimpan...' : <span>Autosave<span className="hidden xl:inline"> Aktif</span></span>}</span>
+                                <span>
+                                    {globalSaveIndicator === 'saving' ? (
+                                        <span>Menyimpan...</span>
+                                    ) : (
+                                        <span className="hidden [@media(min-width:1350px)]:inline">
+                                            Autosave
+                                        </span>
+                                    )}
+                                </span>
                             </div>
 
                             {/* Progress Bar */}
-                            <div className="hidden [@media(min-width:1500px)]:flex flex-1 items-center gap-2 px-2 h-9 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] min-w-0">
+                            <div className="hidden [@media(min-width:1600px)]:flex items-center gap-2 px-2 h-9 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] w-20 shrink-0">
                                 <div className="flex-1 h-1 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] overflow-hidden relative">
                                     <div className="h-full rounded-full transition-all duration-700" style={{ width: `${progressPct}%`, background: progressPct === 100 ? '#10b981' : progressPct > 50 ? '#6366f1' : '#f59e0b' }} />
                                 </div>
                                 <span className="text-[8px] font-black text-[var(--color-text-muted)] uppercase whitespace-nowrap">{Math.round(progressPct)}%</span>
                             </div>
 
-                            <div className="flex items-center gap-1 px-2 h-9 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black uppercase tracking-wider shrink-0" title="Statistik Ketuntasan Nilai Santri">
+                            <div className="hidden [@media(min-width:1600px)]:flex items-center gap-1 px-2 h-9 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-[9px] font-black uppercase tracking-wider shrink-0" title="Statistik Ketuntasan Nilai Santri">
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
                                 <span>Tuntas: <span className="text-emerald-500 text-[10px] font-black">{classStats.completed}/{classStats.total}</span></span>
                             </div>
@@ -412,12 +622,12 @@ export default function RaportInputTable({
                     <div className="flex items-center gap-1.5 shrink-0">
                         <button onClick={saveAll} disabled={savingAll || !canEdit} className="h-9 px-4 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center gap-1.5 relative disabled:opacity-70 shrink-0" title="Simpan Semua Nilai">
                             {savingAll ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3 h-3" />}
-                            <span>{savingAll ? 'Proses...' : <span>Simpan<span className="hidden xl:inline"> Semua</span></span>}</span>
+                            <span>{savingAll ? 'Proses...' : <span>Simpan<span className="hidden [@media(min-width:1150px)]:inline"> Semua</span></span>}</span>
                             {!savingAll && hasUnsavedMemo && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-400 border border-white animate-pulse" />}
                         </button>
                         <button onClick={() => setStep(3)} className="h-9 px-4 rounded-xl bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all flex items-center justify-center gap-1.5 shrink-0" title="Preview & Cetak Raport">
                             <Printer className="w-3 h-3" />
-                            <span className="hidden lg:inline">Preview & Cetak</span>
+                            <span className="hidden [@media(min-width:1150px)]:inline">Preview & Cetak</span>
                         </button>
                     </div>
                 </div>
@@ -904,7 +1114,9 @@ export default function RaportInputTable({
 
                 {/* Desktop Table View */}
                 <div className="hidden md:block">
-                    {filteredStudents.length === 0 ? (
+                    {loading ? (
+                        <DesktopSkeleton />
+                    ) : filteredStudents.length === 0 ? (
                         <div className="py-10 flex items-center justify-center rounded-xl border border-dashed border-[var(--color-border)]">
                             <EmptyState
                                 icon={Users}
@@ -922,7 +1134,7 @@ export default function RaportInputTable({
                     ) : (
                         <div
                             ref={tableScrollRef}
-                            className="overflow-x-auto rounded-xl border border-[var(--color-border)]"
+                            className="overflow-x-auto rounded-xl border border-[var(--color-border)] fade-in animate-in duration-300"
                             style={{ maxHeight: 'calc(100vh - 140px)', overflowY: 'auto', overflowAnchor: 'none' }}
                         >
                             <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 910, tableLayout: 'fixed' }}>
@@ -998,7 +1210,9 @@ export default function RaportInputTable({
 
                 {/* Mobile Card View */}
                 <div className="md:hidden">
-                    {filteredStudents.length === 0 ? (
+                    {loading ? (
+                        <MobileSkeleton />
+                    ) : filteredStudents.length === 0 ? (
                         <div className="p-4">
                             <EmptyState
                                 icon={showIncompleteOnly ? CheckCircle2 : showNoPhoneOnly ? CheckCircle2 : Search}
@@ -1022,7 +1236,7 @@ export default function RaportInputTable({
                         const onTouchStart = (e) => { _touchStartX = e.touches[0].clientX }
                         const onTouchEnd = (e) => { const dx = e.changedTouches[0].clientX - _touchStartX; if (dx < -50) goTo(safeIdx + 1); else if (dx > 50) goTo(safeIdx - 1) }
                         return (
-                            <div>
+                            <div className="fade-in animate-in duration-300">
                                 {/* Card dengan swipe gesture */}
                                 <div className="rounded-2xl border bg-[var(--color-surface)] overflow-hidden transition-all"
                                     style={{ borderColor: complete ? '#10b98130' : isDirty ? '#f59e0b30' : 'var(--color-border)' }}
@@ -1154,7 +1368,7 @@ export default function RaportInputTable({
                     })()}
                 </div>
 
-                 {/* Averages display */}
+                {/* Averages display */}
                 <div className="hidden md:grid grid-cols-5 gap-2">
                     {classStats.criteriaAverages.map(k => {
                         const avg = k.average

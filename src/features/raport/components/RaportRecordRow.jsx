@@ -196,13 +196,13 @@ const StudentRow = memo(({
 }) => {
     const avg = calcAvg(sc)
     return (
-        <tr className="border-t border-[var(--color-border)] transition-colors hover:bg-[var(--color-primary)]/[0.02] table-row-lazy" style={{ background: isChecked ? 'var(--color-primary, #6366f1)08' : si % 2 === 0 ? 'var(--color-surface)' : 'var(--color-surface-alt)' }}>
+        <tr className={`border-t border-[var(--color-border)] transition-colors group table-row-lazy ${isChecked ? 'bg-indigo-500/5' : si % 2 === 0 ? 'bg-[var(--color-surface)]' : 'bg-[var(--color-surface-alt)]'}`}>
             {bulkMode && (
                 <td className="text-center px-1" style={{ verticalAlign: 'middle' }}>
                     <input type="checkbox" checked={isChecked} onChange={e => onBulkToggle(student.id, e.target.checked)} aria-label={`Pilih ${student.name}`} className="w-3.5 h-3.5 accent-violet-500 cursor-pointer" />
                 </td>
             )}
-            <td className="px-0 py-3 sticky left-0 z-10" style={{ background: isChecked ? '#6366f108' : si % 2 === 0 ? 'var(--color-surface)' : 'var(--color-surface-alt)', borderRight: '1px solid var(--color-border)' }}>
+            <td className={`px-0 py-3 sticky left-0 z-10 transition-colors ${isChecked ? 'bg-indigo-500/5' : si % 2 === 0 ? 'bg-[var(--color-surface)]' : 'bg-[var(--color-surface-alt)]'}`} style={{ borderRight: '1px solid var(--color-border)' }}>
                 <div className="flex flex-col items-center justify-center text-center gap-1.5">
                     <RadarChart scores={sc} size={32} />
                     <div className="min-w-0">
@@ -283,7 +283,7 @@ const StudentRow = memo(({
                     </div>
                 </div>
             </td>
-            <td className="px-2 py-3 sticky right-0 z-10" style={{ verticalAlign: 'middle', background: si % 2 === 0 ? 'var(--color-surface)' : 'var(--color-surface-alt)', borderLeft: '1px solid var(--color-border)', borderRight: '1px solid var(--color-border)' }}>
+            <td className={`px-2 py-3 sticky right-0 z-10 transition-colors ${si % 2 === 0 ? 'bg-[var(--color-surface)]' : 'bg-[var(--color-surface-alt)]'}`} style={{ verticalAlign: 'middle', borderLeft: '1px solid var(--color-border)', borderRight: '1px solid var(--color-border)' }}>
                 <div className="flex flex-col gap-1.5">
                     <button onClick={() => onSave(student.id)} disabled={isSaving} className="w-full h-8 rounded-lg flex items-center justify-center gap-1.5 text-[11px] font-black transition-all disabled:opacity-50" style={{ background: isSaved ? '#10b98115' : isDirty ? '#6366f115' : 'var(--color-surface-alt)', color: isSaved ? '#10b981' : isDirty ? '#6366f1' : 'var(--color-text-muted)', border: '1px solid', borderColor: isSaved ? '#10b98130' : isDirty ? '#6366f130' : 'var(--color-border)' }}>
                         {isSaving ? (

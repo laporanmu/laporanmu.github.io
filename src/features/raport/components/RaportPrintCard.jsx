@@ -1,6 +1,7 @@
 import React, { memo, useEffect } from 'react'
-import { KRITERIA, GRADE, LABEL, toArabicNum, LIST_KAMAR } from '@utils/reports/raportConstants'
+import { LABEL, toArabicNum, LIST_KAMAR } from '@utils/reports/raportConstants'
 import { translitToAr, translitClassToAr } from '@utils/reports/translitData'
+import { RAPORT_TYPES, getClassLevel, getGradePredicate } from '@features/raport/utils/raportTypeRegistry'
 import mbsLogo from '@assets/images/logos/logo-mbs.png'
 import smpLogo from '@assets/images/logos/logo-smp.png'
 import smaLogo from '@assets/images/logos/logo-sma.jpg'
@@ -15,21 +16,41 @@ const printCardAreEqual = (prev, next) => {
     if (prev.studentIndex !== next.studentIndex) return false
     if (prev.student?.metadata?.nama_arab !== next.student?.metadata?.nama_arab) return false
     if (prev.bulanObj?.id !== next.bulanObj?.id) return false
+    if (prev.reportType !== next.reportType) return false
+    if (prev.selectedSemester !== next.selectedSemester) return false
+    if (prev.academicYear !== next.academicYear) return false
 
     // Deep-compare scores
-    const sk = ['nilai_akhlak', 'nilai_ibadah', 'nilai_kebersihan', 'nilai_quran', 'nilai_bahasa']
-    for (const k of sk) { if ((prev.scores?.[k] ?? '') !== (next.scores?.[k] ?? '')) return false }
-
+    if (JSON.stringify(prev.scores) !== JSON.stringify(next.scores)) return false
     // Deep-compare extra fields
-    const ek = ['berat_badan', 'tinggi_badan', 'ziyadah', 'murojaah', 'hari_sakit', 'hari_izin', 'hari_alpa', 'hari_pulang', 'catatan']
-    for (const k of ek) { if ((prev.extra?.[k] ?? '') !== (next.extra?.[k] ?? '')) return false }
+    if (JSON.stringify(prev.extra) !== JSON.stringify(next.extra)) return false
 
     if (JSON.stringify(prev.settings) !== JSON.stringify(next.settings)) return false
     return true
 }
 
-const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif, className, lang = 'ar', settings = {}, catatanArab, onRendered, pageSize = 'a4', studentIndex }) => {
+const RaportPrintCard = memo(({ 
+    student, 
+    scores, 
+    extra, 
+    bulanObj, 
+    tahun, 
+    musyrif, 
+    className, 
+    lang = 'ar', 
+    settings = {}, 
+    catatanArab, 
+    onRendered, 
+    pageSize = 'a4', 
+    studentIndex,
+    reportType = 'bulanan',
+    selectedSemester = 1,
+    academicYear = '',
+    selectedClass
+}) => {
     const sc = scores || {}, ex = extra || {}, L = LABEL[lang], isAr = lang === 'ar'
+    const rtObj = RAPORT_TYPES[reportType] || RAPORT_TYPES.bulanan
+    const criteria = rtObj.getCriteria(selectedClass)
 
     // Dimensi kertas: A4 (210x297) vs F4/Folio (215x330)
     const pageW = pageSize === 'f4' ? '215mm' : '210mm'
@@ -48,10 +69,21 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
 
     useEffect(() => { onRendered?.() }, [onRendered])
 
-    const gradeLabel = isAr ? (v) => GRADE(v)?.label : (v) => GRADE(v)?.id
-    const yearDisplay = isAr ? `\u200F${toArabicNum(tahun - 1)} \u2013 ${toArabicNum(tahun)}` : `${tahun - 1} – ${tahun}`
+    const classLevel = selectedClass ? getClassLevel(selectedClass) : getClassLevel(className)
+    const getGradeObj = (v) => getGradePredicate(v, reportType, classLevel)
+    
+    const gradeLabel = (v) => {
+        const g = getGradeObj(v)
+        return isAr ? g.label : g.id
+    }
+
+    const yearDisplay = reportType === 'bulanan'
+        ? (isAr ? `\u200F${toArabicNum(tahun - 1)} \u2013 ${toArabicNum(tahun)}` : `${tahun - 1} – ${tahun}`)
+        : (isAr ? toArabicNum(academicYear) : academicYear)
+
     const tableDir = isAr ? 'rtl' : 'ltr'
     const displayName = isAr ? (student?.metadata?.nama_arab || student?.name || '—') : (student?.name || '—')
+    
     const displayVal = (v, zeroAsDash = false) => {
         if (v === '' || v === null || v === undefined || (v === 0 && zeroAsDash) || (v === '0' && zeroAsDash)) return '—';
         return isAr ? toArabicNum(v) : v
@@ -136,8 +168,12 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
         };
 
         const cleanClass = getShortClassName(className);
-        const monthName = (bulanObj?.id_str || 'BULAN').toUpperCase();
-        const periodStr = `${monthName}${tahun}`;
+        const monthName = reportType === 'bulanan'
+            ? (bulanObj?.id_str || 'BULAN').toUpperCase()
+            : `SEM${selectedSemester}`;
+        const periodStr = reportType === 'bulanan'
+            ? `${monthName}${tahun}`
+            : `${academicYear.replace('/', '')}`;
 
         let orderStr = '001';
         if (studentIndex !== undefined && studentIndex !== null) {
@@ -163,6 +199,49 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
         }
 
         return `${prefix}/${cleanClass}/${periodStr}/${orderStr}`;
+    }
+
+    const getReportTitle = () => {
+        if (reportType === 'bulanan') {
+            return L.reportTitle
+        }
+        return isAr ? rtObj.arName : rtObj.name
+    }
+
+    const getPeriodTitle = () => {
+        if (reportType === 'bulanan') {
+            return isAr ? `${L.month} ${bulanObj?.ar || ''}` : `${L.month} ${bulanObj?.id_str || ''}`
+        }
+        if (isAr) {
+            return `الفصل الدراسي ${toArabicNum(selectedSemester)} (${selectedSemester === 1 ? 'الأول' : 'الثاني'})`
+        }
+        return `Semester ${selectedSemester} (${selectedSemester === 1 ? 'Ganjil' : 'Genap'})`
+    }
+
+    const getGradingScale = () => {
+        if (reportType === 'bulanan') {
+            return isAr
+                ? [['٩', 'ممتاز'], ['٨', 'جيد جدا'], ['٦ – ٧', 'جيد'], ['٤ – ٥', 'مقبول'], ['٠ – ٣', 'راسب']]
+                : [['9', 'Istimewa'], ['8', 'Sangat Baik'], ['6 – 7', 'Baik'], ['4 – 5', 'Cukup'], ['0 – 3', 'Kurang']]
+        }
+        if (reportType === 'umum') {
+            return [
+                ['90 – 100', 'A (Sangat Baik)'],
+                ['80 – 89', 'B (Baik)'],
+                ['70 – 79', 'C (Cukup)'],
+                ['< 70', 'D (Kurang)']
+            ]
+        }
+        const lvl = classLevel
+        if (lvl === 'SMA') {
+            return isAr
+                ? [['٩٠ – ١٠٠', 'ممتاز'], ['٨٠ – ٨٩', 'جيد جدا'], ['٦٠ – ٧٩', 'جيد'], ['٥٠ – ٥٩', 'مقبول'], ['٠ – ٤٩', 'ضعيف']]
+                : [['90 – 100', 'Istimewa (A)'], ['80 – 89', 'Sangat Baik (B)'], ['60 – 79', 'Baik (C)'], ['50 – 59', 'Cukup (D)'], ['0 – 49', 'Kurang (E)']]
+        } else {
+            return isAr
+                ? [['٩٠ – ١٠٠', 'ممتاز'], ['٨٠ – ٨٩', 'جيد جدا'], ['٦٠ – ٧٩', 'جيد'], ['٥٠ – ٥٩', 'مقبول'], ['٠ – ٤٩', 'راسب']]
+                : [['90 – 100', 'Istimewa (A)'], ['80 – 89', 'Sangat Baik (B)'], ['60 – 79', 'Baik (C)'], ['50 – 59', 'Cukup (D)'], ['0 – 49', 'Gagal (E)']]
+        }
     }
 
     return (
@@ -265,8 +344,8 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
 
             {/* Judul Laporan */}
             <div style={{ textAlign: 'center', margin: '6px 0 10px', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit' }}>
-                <div style={{ fontSize: isAr ? '16pt' : '16pt', fontWeight: 900, direction: isAr ? 'rtl' : 'ltr' }}>{L.reportTitle}</div>
-                <div style={{ fontSize: isAr ? '14pt' : '13pt', fontWeight: 700, direction: isAr ? 'rtl' : 'ltr', marginTop: 2 }}>{isAr ? `${L.month} ${bulanObj?.ar || ''}` : `${L.month} ${bulanObj?.id_str || ''}`}</div>
+                <div style={{ fontSize: '16pt', fontWeight: 900, direction: isAr ? 'rtl' : 'ltr' }}>{getReportTitle()}</div>
+                <div style={{ fontSize: isAr ? '14pt' : '13pt', fontWeight: 700, direction: isAr ? 'rtl' : 'ltr', marginTop: 2 }}>{getPeriodTitle()}</div>
             </div>
 
             {/* Info Santri & Kelas */}
@@ -325,23 +404,37 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
                     </tr>
                 </thead>
                 <tbody>
-                    {KRITERIA.map((k, i) => {
-                        const val = sc[k.key], g = (val !== '' && val !== null && val !== undefined) ? GRADE(val) : null
-                        const numRows = isAr ? ['١', '٢', '٣', '٤', '٥'] : [1, 2, 3, 4, 5]
+                    {criteria.map((k, i) => {
+                        const val = sc[k.key]
+                        const hasVal = val !== '' && val !== null && val !== undefined
+                        const g = hasVal ? getGradeObj(val) : null
+                        const numRows = isAr ? [...Array(criteria.length).keys()].map(n => toArabicNum(n + 1)) : [...Array(criteria.length).keys()].map(n => n + 1)
                         return (
                             <tr key={k.key}>
                                 {isAr ? <>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 8px', textAlign: 'center', fontWeight: 700, color: g?.color || '#000', fontFamily: "'Traditional Arabic', serif", fontSize: '12pt' }}>{g ? gradeLabel(val) : '—'}</td>
+                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 8px', textAlign: 'center', fontWeight: 700, color: g?.uiColor || '#000', fontFamily: "'Traditional Arabic', serif", fontSize: '12pt' }}>{hasVal ? gradeLabel(val) : '—'}</td>
                                     <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 6px', textAlign: 'center', fontWeight: 700, fontSize: '10.5pt' }}>{displayVal(val)}</td>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 10px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif", fontSize: '14pt', width: '34.5%' }}>{k.ar}</td>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 10px', textAlign: 'right', color: '#444', width: '34.5%', fontSize: '10.5pt' }}>{k.id}</td>
+                                    {k.ar ? (
+                                        <>
+                                            <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 10px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif", fontSize: '14pt', width: '34.5%' }}>{k.ar}</td>
+                                            <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 10px', textAlign: 'right', color: '#444', width: '34.5%', fontSize: '10.5pt' }}>{k.id}</td>
+                                        </>
+                                    ) : (
+                                        <td colSpan={2} style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 10px', textAlign: 'right', color: '#444', fontSize: '11pt' }}>{k.id}</td>
+                                    )}
                                     <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 6px', textAlign: 'center', fontFamily: "'Traditional Arabic', serif", fontSize: '12pt' }}>{numRows[i]}</td>
                                 </> : <>
                                     <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 6px', textAlign: 'center' }}>{numRows[i]}</td>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 10px', textAlign: 'left', color: '#444', width: '34.5%' }}>{k.id}</td>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 10px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif", fontSize: '11pt', width: '34.5%' }}>{k.ar}</td>
+                                    {k.ar ? (
+                                        <>
+                                            <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 10px', textAlign: 'left', color: '#444', width: '34.5%' }}>{k.id}</td>
+                                            <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 10px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif", fontSize: '11pt', width: '34.5%' }}>{k.ar}</td>
+                                        </>
+                                    ) : (
+                                        <td colSpan={2} style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 10px', textAlign: 'left', color: '#444', fontSize: '11pt' }}>{k.id}</td>
+                                    )}
                                     <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 6px', textAlign: 'center', fontWeight: 700 }}>{displayVal(val)}</td>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 8px', textAlign: 'center', fontWeight: 700, color: g?.color || '#000' }}>{g ? gradeLabel(val) : '—'}</td>
+                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '4px 8px', textAlign: 'center', fontWeight: 700, color: g?.uiColor || '#000' }}>{hasVal ? gradeLabel(val) : '—'}</td>
                                 </>}
                             </tr>
                         )
@@ -350,96 +443,104 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
             </table>
 
             {/* Data Tambahan (Fisik, Hafalan, Kehadiran) */}
-            <div style={{ display: 'flex', gap: 14, marginBottom: 14, flexDirection: isAr ? 'row-reverse' : 'row', alignItems: 'stretch' }}>
-                {/* BB / TB */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ fontSize: isAr ? '12pt' : '9pt', fontWeight: 700, marginBottom: 0, textAlign: 'center', background: '#f0f4f8', border: '1px solid #999', borderBottom: 'none', padding: '3px 0', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit' }}>
-                        {isAr ? 'التطور البدني' : 'PERKEMBANGAN FISIK'}
-                    </div>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10pt', flex: 1 }}>
-                        <tbody>
-                            <tr style={{ height: '50%' }}>
-                                {isAr ? <>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'center', fontWeight: 700, width: '35%', fontSize: '10pt' }}>{displayVal(ex.berat_badan)}</td>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif", fontSize: '12pt' }}>{L.weight}</td>
-                                </> : <>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'left' }}>{L.weight}</td>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex.berat_badan)}</td>
-                                </>}
-                            </tr>
-                            <tr style={{ height: '50%' }}>
-                                {isAr ? <>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'center', fontWeight: 700, width: '35%', fontSize: '10pt' }}>{displayVal(ex.tinggi_badan)}</td>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif", fontSize: '12pt' }}>{L.height}</td>
-                                </> : <>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'left' }}>{L.height}</td>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'center', fontWeight: 700 }}>{displayVal(ex.tinggi_badan)}</td>
-                                </>}
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+            {(rtObj.hasFisik || rtObj.hasHafalan || rtObj.hasAttendance) && (
+                <div style={{ display: 'flex', gap: 14, marginBottom: 14, flexDirection: isAr ? 'row-reverse' : 'row', alignItems: 'stretch' }}>
+                    {/* BB / TB */}
+                    {rtObj.hasFisik && (
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ fontSize: isAr ? '12pt' : '9pt', fontWeight: 700, marginBottom: 0, textAlign: 'center', background: '#f0f4f8', border: '1px solid #999', borderBottom: 'none', padding: '3px 0', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit' }}>
+                                {isAr ? 'التطور البدني' : 'PERKEMBANGAN FISIK'}
+                            </div>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10pt', flex: 1 }}>
+                                <tbody>
+                                    <tr style={{ height: '50%' }}>
+                                        {isAr ? <>
+                                            <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'center', fontWeight: 700, width: '35%', fontSize: '10pt' }}>{displayVal(ex.berat_badan)}</td>
+                                            <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif", fontSize: '12pt' }}>{L.weight}</td>
+                                        </> : <>
+                                            <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'left' }}>{L.weight}</td>
+                                            <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex.berat_badan)}</td>
+                                        </>}
+                                    </tr>
+                                    <tr style={{ height: '50%' }}>
+                                        {isAr ? <>
+                                            <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'center', fontWeight: 700, width: '35%', fontSize: '10pt' }}>{displayVal(ex.tinggi_badan)}</td>
+                                            <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif", fontSize: '12pt' }}>{L.height}</td>
+                                        </> : <>
+                                            <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'left' }}>{L.height}</td>
+                                            <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'center', fontWeight: 700 }}>{displayVal(ex.tinggi_badan)}</td>
+                                        </>}
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
 
-                {/* Ziyadah / Murojaah */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ fontSize: isAr ? '12pt' : '9pt', fontWeight: 700, marginBottom: 0, textAlign: 'center', background: '#f0f4f8', border: '1px solid #999', borderBottom: 'none', padding: '3px 0', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit' }}>
-                        {isAr ? 'تطور الحفظ' : 'PERKEMBANGAN HAFALAN'}
-                    </div>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10pt', flex: 1 }}>
-                        <tbody>
-                            <tr style={{ height: '50%' }}>
-                                {isAr ? <>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'center', fontWeight: 700, width: '35%', fontSize: '10pt' }}>{displayVal(ex.ziyadah, true)}</td>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif", fontSize: '12pt' }}>{L.ziyadah}</td>
-                                </> : <>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'left' }}>{L.ziyadah}</td>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex.ziyadah, true)}</td>
-                                </>}
-                            </tr>
-                            <tr style={{ height: '50%' }}>
-                                {isAr ? <>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'center', fontWeight: 700, width: '35%', fontSize: '10pt' }}>{displayVal(ex.murojaah, true)}</td>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif", fontSize: '12pt' }}>{L.murojaah}</td>
-                                </> : <>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'left' }}>{L.murojaah}</td>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'center', fontWeight: 700 }}>{displayVal(ex.murojaah, true)}</td>
-                                </>}
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                    {/* Ziyadah / Murojaah */}
+                    {rtObj.hasHafalan && (
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ fontSize: isAr ? '12pt' : '9pt', fontWeight: 700, marginBottom: 0, textAlign: 'center', background: '#f0f4f8', border: '1px solid #999', borderBottom: 'none', padding: '3px 0', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit' }}>
+                                {isAr ? 'تطور الحفظ' : 'PERKEMBANGAN HAFALAN'}
+                            </div>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10pt', flex: 1 }}>
+                                <tbody>
+                                    <tr style={{ height: '50%' }}>
+                                        {isAr ? <>
+                                            <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'center', fontWeight: 700, width: '35%', fontSize: '10pt' }}>{displayVal(ex.ziyadah, true)}</td>
+                                            <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif", fontSize: '12pt' }}>{L.ziyadah}</td>
+                                        </> : <>
+                                            <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'left' }}>{L.ziyadah}</td>
+                                            <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>{displayVal(ex.ziyadah, true)}</td>
+                                        </>}
+                                    </tr>
+                                    <tr style={{ height: '50%' }}>
+                                        {isAr ? <>
+                                            <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'center', fontWeight: 700, width: '35%', fontSize: '10pt' }}>{displayVal(ex.murojaah, true)}</td>
+                                            <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif", fontSize: '12pt' }}>{L.murojaah}</td>
+                                        </> : <>
+                                            <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'left' }}>{L.murojaah}</td>
+                                            <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '13.5px 7px', textAlign: 'center', fontWeight: 700 }}>{displayVal(ex.murojaah, true)}</td>
+                                        </>}
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
 
-                {/* Kehadiran */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ fontSize: isAr ? '12pt' : '9pt', fontWeight: 700, marginBottom: 0, textAlign: 'center', background: '#f0f4f8', border: '1px solid #999', borderBottom: 'none', padding: '3px 0', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit' }}>
-                        {isAr ? 'الغياب' : 'ABSENSI'}
-                    </div>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9.5pt', flex: 1 }}>
-                        <tbody>
-                            {[
-                                { key: 'hari_sakit', label: L.sick },
-                                { key: 'hari_izin', label: L.izin },
-                                { key: 'hari_alpa', label: L.alpa },
-                                { key: 'hari_pulang', label: L.home },
-                            ].map(item => (
-                                <tr key={item.key}>
-                                    {isAr ? <>
-                                        <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%', fontFamily: "'Traditional Arabic', serif", fontSize: '12pt' }}>
-                                            {displayVal(ex[item.key], true) === '—' ? '—' : `${displayVal(ex[item.key], true)} يَوْم`}
-                                        </td>
-                                        <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif", fontSize: '12pt' }}>{item.label}</td>
-                                    </> : <>
-                                        <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'left' }}>{item.label}</td>
-                                        <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>
-                                            {displayVal(ex[item.key], true) === '—' ? '—' : `${displayVal(ex[item.key], true)} hari`}
-                                        </td>
-                                    </>}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                    {/* Kehadiran */}
+                    {rtObj.hasAttendance && (
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ fontSize: isAr ? '12pt' : '9pt', fontWeight: 700, marginBottom: 0, textAlign: 'center', background: '#f0f4f8', border: '1px solid #999', borderBottom: 'none', padding: '3px 0', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit' }}>
+                                {isAr ? 'الغياب' : 'ABSENSI'}
+                            </div>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9.5pt', flex: 1 }}>
+                                <tbody>
+                                    {[
+                                        { key: 'hari_sakit', label: L.sick },
+                                        { key: 'hari_izin', label: L.izin },
+                                        { key: 'hari_alpa', label: L.alpa },
+                                        { key: 'hari_pulang', label: L.home },
+                                    ].map(item => (
+                                        <tr key={item.key}>
+                                            {isAr ? <>
+                                                <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%', fontFamily: "'Traditional Arabic', serif", fontSize: '12pt' }}>
+                                                    {displayVal(ex[item.key], true) === '—' ? '—' : `${displayVal(ex[item.key], true)} يَوْم`}
+                                                </td>
+                                                <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif", fontSize: '12pt' }}>{item.label}</td>
+                                            </> : <>
+                                                <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'left' }}>{item.label}</td>
+                                                <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '3px 7px', textAlign: 'center', fontWeight: 700, width: '35%' }}>
+                                                    {displayVal(ex[item.key], true) === '—' ? '—' : `${displayVal(ex[item.key], true)} hari`}
+                                                </td>
+                                            </>}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </div>
-            </div>
+            )}
 
             {/* Skala Penilaian & Catatan */}
             <div style={{ display: 'flex', gap: 16, marginTop: 10, alignItems: 'flex-start', flexDirection: isAr ? 'row-reverse' : 'row' }}>
@@ -453,10 +554,7 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
                             </tr>
                         </thead>
                         <tbody>
-                            {(isAr
-                                ? [['٩', 'ممتاز'], ['٨', 'جيد جدا'], ['٦ – ٧', 'جيد'], ['٤ – ٥', 'مقبول'], ['٠ – ٣', 'راسب']]
-                                : [['9', 'Istimewa'], ['8', 'Sangat Baik'], ['6 – 7', 'Baik'], ['4 – 5', 'Cukup'], ['0 – 3', 'Kurang']]
-                            ).map(([n, l]) => (
+                            {getGradingScale().map(([n, l]) => (
                                 <tr key={n}>
                                     <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '2px 14px', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit', textAlign: isAr ? 'right' : 'left', fontSize: isAr ? '12pt' : '9pt' }}>{l}</td>
                                     <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: '2px 14px', textAlign: 'center', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit', whiteSpace: 'nowrap', fontSize: isAr ? '12pt' : '9pt' }}>{n}</td>
@@ -465,7 +563,7 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
                         </tbody>
                     </table>
                 </div>
-                {ex.catatan && (
+                {rtObj.hasCatatan && ex.catatan && (
                     <div style={{
                         flex: 1, alignSelf: 'stretch', border: '1px solid #ccc', borderRadius: 4, padding: '8px 12px',
                         display: 'flex', flexDirection: 'column'
@@ -475,7 +573,7 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
                             direction: isAr ? 'rtl' : 'ltr', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit',
                             textAlign: isAr ? 'right' : 'left'
                         }}>
-                            {isAr ? 'ملاحظة' : 'Catatan Musyrif'}
+                            {isAr ? 'ملاحظة' : 'Catatan Wali Kelas'}
                         </div>
                         <div style={{
                             fontSize: (isAr && catatanArab) ? '12pt' : '9.5pt',
@@ -537,7 +635,7 @@ const RaportPrintCard = memo(({ student, scores, extra, bulanObj, tahun, musyrif
                     <div style={{ display: 'flex', flexDirection: 'column', textAlign: isAr ? 'right' : 'left', lineHeight: 1.2 }}>
                         <span style={{ fontWeight: 700, color: '#555' }}>{isAr ? 'بوابة LaporanMu الأكاديمية' : 'LaporanMu Academic Portal'}</span>
                         <span style={{ fontSize: '6.5pt', color: '#999', fontStyle: 'italic' }}>
-                            {isAr ? 'امسح الرمز للتحقق من صحة التقرير' : 'Pindai QR untuk verifikasi keaslian raport'}
+                            {isAr ? 'امسح الرمز للتحقق dari صحة التقرير' : 'Pindai QR untuk verifikasi keaslian raport'}
                         </span>
                     </div>
                 </div>

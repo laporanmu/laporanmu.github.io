@@ -314,9 +314,7 @@ tr:last-child td {
   border-bottom: none;
 }
 
-tr:hover td {
-  background-color: var(--color-surface-alt);
-}
+
 
 /* Modal */
 .modal-overlay {

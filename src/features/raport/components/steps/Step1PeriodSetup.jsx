@@ -6,6 +6,7 @@ import {
 import { EmptyState } from '@shared/components/DataDisplay'
 import RichSelect from '@shared/components/RichSelect'
 import { BULAN } from '@utils/reports/raportConstants'
+import { RAPORT_TYPES } from '@utils/reports/raportTypeRegistry'
 
 export default function Step1PeriodSetup({
     selectedClassId,
@@ -37,7 +38,28 @@ export default function Step1PeriodSetup({
     selectedClass,
     monthOptions,
     yearOptions,
+    reportType,
+    selectedSemester,
+    setSelectedSemester,
+    academicYear,
+    setAcademicYear
 }) {
+    const rtObj = RAPORT_TYPES[reportType] || RAPORT_TYPES.bulanan
+
+    // Build academic year options dynamically
+    const currentYear = new Date().getFullYear()
+    const academicYearOptions = [
+        { id: `${currentYear - 2}/${currentYear - 1}`, name: `${currentYear - 2}/${currentYear - 1}` },
+        { id: `${currentYear - 1}/${currentYear}`, name: `${currentYear - 1}/${currentYear}` },
+        { id: `${currentYear}/${currentYear + 1}`, name: `${currentYear}/${currentYear + 1}` },
+        { id: `${currentYear + 1}/${currentYear + 2}`, name: `${currentYear + 1}/${currentYear + 2}` }
+    ]
+
+    const semesterOptions = [
+        { id: 1, name: 'Semester 1 (Ganjil)' },
+        { id: 2, name: 'Semester 2 (Genap)' }
+    ]
+
     if (!selectedClassId) {
         return (
             <div className="space-y-6 animate-fade-in pb-2">
@@ -49,7 +71,7 @@ export default function Step1PeriodSetup({
                         <div>
                             <h3 className="text-sm font-black text-[var(--color-text)]">Pilih Kelas</h3>
                             <p className="text-[11px] text-[var(--color-text-muted)] font-medium">
-                                Langkah 1: Pilih kelas aktif untuk mulai mengisi atau mencetak raport bulanan.
+                                Langkah 1: Pilih kelas aktif untuk mulai mengisi atau mencetak {rtObj.name.toLowerCase()}.
                             </p>
                         </div>
                     </div>
@@ -116,7 +138,7 @@ export default function Step1PeriodSetup({
                                     classSelectionGrade === opt.id
                                         ? 'bg-indigo-500/10 border-indigo-500/40 text-indigo-600 shadow-sm'
                                         : 'border-[var(--color-border)] text-[var(--color-text-muted)] bg-[var(--color-surface)] hover:border-indigo-500/25 hover:text-indigo-600'
-                                }`}
+                                    }`}
                             >
                                 {opt.label}
                             </button>
@@ -205,7 +227,7 @@ export default function Step1PeriodSetup({
 
                 <div className="flex gap-2 sm:gap-4 pt-4 border-t border-[var(--color-border)]">
                     <button
-                        onClick={() => setStep(0)}
+                        onClick={() => setStep(1)} // Go back to class selection
                         className="h-12 px-4 rounded-2xl border border-[var(--color-border)] text-xs sm:text-sm font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all flex items-center gap-2 shrink-0"
                     >
                         <ArrowLeft className="w-3.5 h-3.5 mr-1.5" /> <span className="hidden sm:inline">Kembali</span>
@@ -217,7 +239,8 @@ export default function Step1PeriodSetup({
                         onClick={() => {
                             const cls = classesList.find(c => c.id === tempSelectedClassId)
                             setSelectedClassId(tempSelectedClassId)
-                            setLang('id')
+                            // Set default language according to report type
+                            setLang(rtObj.defaultLang)
                             if (cls?.metadata?.homeroom_teacher) setMusyrif(cls.metadata.homeroom_teacher)
                         }}
                         className={`flex-1 h-12 rounded-2xl text-white text-xs sm:text-sm font-black shadow-lg transition-all flex items-center justify-center gap-2 overflow-hidden px-2
@@ -242,7 +265,7 @@ export default function Step1PeriodSetup({
                         <ClipboardList className="text-emerald-500 w-5 h-5" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-black text-[var(--color-text)]">Setup Raport Bulanan</h3>
+                        <h3 className="text-sm font-black text-[var(--color-text)]">Setup {rtObj.name}</h3>
                         <p className="text-[11px] text-[var(--color-text-muted)] font-medium">
                             Langkah 2: Tentukan periode dan bahasa pengantar untuk raport kelas ini.
                         </p>
@@ -282,26 +305,49 @@ export default function Step1PeriodSetup({
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Bulan</label>
-                            <RichSelect
-                                value={selectedMonth}
-                                onChange={val => setSelectedMonth(Number(val))}
-                                options={monthOptions}
-                                placeholder="Pilih Bulan"
-                            />
+                    {rtObj.periodType === 'monthly' ? (
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Bulan</label>
+                                <RichSelect
+                                    value={selectedMonth}
+                                    onChange={val => setSelectedMonth(Number(val))}
+                                    options={monthOptions}
+                                    placeholder="Pilih Bulan"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Tahun</label>
+                                <RichSelect
+                                    value={selectedYear}
+                                    onChange={val => setSelectedYear(Number(val))}
+                                    options={yearOptions}
+                                    placeholder="Pilih Tahun"
+                                />
+                            </div>
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Tahun</label>
-                            <RichSelect
-                                value={selectedYear}
-                                onChange={val => setSelectedYear(Number(val))}
-                                options={yearOptions}
-                                placeholder="Pilih Tahun"
-                            />
+                    ) : (
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Semester</label>
+                                <RichSelect
+                                    value={selectedSemester}
+                                    onChange={val => setSelectedSemester(Number(val))}
+                                    options={semesterOptions}
+                                    placeholder="Pilih Semester"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Tahun Ajaran</label>
+                                <RichSelect
+                                    value={academicYear}
+                                    onChange={val => setAcademicYear(val)}
+                                    options={academicYearOptions}
+                                    placeholder="Pilih Tahun Ajaran"
+                                />
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
 
                 <div className="space-y-4">
@@ -392,7 +438,7 @@ export default function Step1PeriodSetup({
                     onClick={async () => {
                         if (!selectedClassId) return
                         const ok = await loadStudents()
-                        if (ok) setStep(2)
+                        if (ok) setStep(3)
                     }}
                     disabled={!selectedClassId || loading}
                     className="flex-1 h-12 rounded-2xl bg-emerald-500 text-white text-xs sm:text-sm font-black shadow-lg shadow-emerald-500/20 hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 overflow-hidden px-2"

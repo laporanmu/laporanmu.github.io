@@ -73,7 +73,7 @@ const FINANCE_ITEMS = [
 
 const REPORTS_ITEMS = [
     { to: "/boarding/gate", label: "Portal Keluar Masuk", icon: faPersonWalkingArrowRight, desc: "Manajemen Izin Keluar Masuk Santri", color: "bg-red-500/10 text-red-500" },
-    { to: "/raport", label: "Raport Bulanan", icon: faClipboardList, desc: "Rekapitulasi Akademik Santri", color: "bg-indigo-500/10 text-indigo-600" },
+    { to: "/raport", label: "Raport Pondok", icon: faClipboardList, desc: "Rekapitulasi Raport Bulanan & Pondok Santri", color: "bg-indigo-500/10 text-indigo-600" },
     { to: "/attendance", label: "Absensi Bulanan", icon: faCalendarWeek, desc: "Rekapitulasi Absensi Santri", color: "bg-emerald-500/10 text-emerald-600" },
     { to: "/boarding/behavior", label: "Kedisiplinan & Poin", icon: faShieldHalved, desc: "Rekapitulasi Pelanggaran & Prestasi Santri", color: "bg-orange-500/10 text-orange-500" },
 ]

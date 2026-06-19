@@ -1,10 +1,11 @@
 import React from 'react'
 import {
-    AlertTriangle, X, Zap, ChevronRight, Archive, Search, School, Moon, Sun
+    AlertTriangle, X, Zap, ChevronRight, Archive, Search, School, Moon, Sun, ArrowLeft
 } from 'lucide-react'
 import { EmptyState } from '@shared/components/DataDisplay'
 import Skeleton from '@shared/components/Skeleton'
 import { BULAN } from '@utils/reports/raportConstants'
+import { RAPORT_TYPES } from '@utils/reports/raportTypeRegistry'
 
 const ClassCardSkeleton = () => (
     <div className="p-4 rounded-[2rem] border border-[var(--color-border)] bg-[var(--color-surface-alt)] animate-pulse">
@@ -41,11 +42,14 @@ export default function Step0ClassSelection({
     searchInputRef,
     loadArchive,
     now,
+    reportType,
 }) {
+    const rtObj = RAPORT_TYPES[reportType] || RAPORT_TYPES.bulanan
+
     return (
         <div className="space-y-6">
             {/* Banner Raport Belum Lengkap */}
-            {newMonthBanner && (
+            {newMonthBanner && reportType === 'bulanan' && (
                 <div className="p-4 rounded-2xl border border-amber-500/30 bg-amber-500/8 flex items-start gap-3 overflow-hidden">
                     <div className="w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center shrink-0 mt-0.5">
                         <AlertTriangle className="text-amber-500 w-3.5 h-3.5" />
@@ -72,7 +76,7 @@ export default function Step0ClassSelection({
                                             const n = (clsObj.name || '').toLowerCase();
                                             setLang(n.includes('boarding') || n.includes('pondok') ? 'ar' : 'id')
                                         }
-                                        setStep(1)
+                                        setStep(2) // Go to Period Setup step
                                     }}
                                     className="h-9 px-3 rounded-xl bg-white/70 border border-amber-500/30 text-amber-900 text-[10px] font-black hover:bg-white hover:shadow-md hover:border-amber-500 transition-all flex items-center justify-between gap-2 shrink-0 shadow-sm"
                                 >
@@ -122,7 +126,7 @@ export default function Step0ClassSelection({
             )}
 
             {/* Banner Lanjutkan Sesi Terakhir */}
-            {lastSession && classesList.find(c => c.id === lastSession.classId) && (
+            {lastSession && lastSession.reportType === reportType && classesList.find(c => c.id === lastSession.classId) && (
                 <div className="flex items-center gap-3 p-3 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 shadow-sm">
                     <div className="w-9 h-9 rounded-xl bg-indigo-500/10 flex items-center justify-center shrink-0">
                         <Zap className="text-indigo-500 w-3.5 h-3.5" />
@@ -130,18 +134,24 @@ export default function Step0ClassSelection({
                     <div className="flex-1 min-w-0">
                         <p className="text-[11px] font-black text-[var(--color-text)] leading-tight">Lanjutkan yang tadi?</p>
                         <p className="text-[9px] text-[var(--color-text-muted)] font-medium truncate opacity-70">
-                            {lastSession.className} · {BULAN.find(b => b.id === lastSession.month)?.id_str} {lastSession.year}
+                            {lastSession.className} · {
+                                lastSession.reportType === 'bulanan'
+                                    ? `${BULAN.find(b => b.id === lastSession.month)?.id_str} ${lastSession.year}`
+                                    : `Semester ${lastSession.selectedSemester} (${lastSession.academicYear})`
+                            }
                         </p>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                         <button
                             onClick={async () => {
                                 setSelectedClassId(lastSession.classId)
-                                setSelectedMonth(lastSession.month)
-                                setSelectedYear(lastSession.year)
+                                if (lastSession.reportType === 'bulanan') {
+                                    setSelectedMonth(lastSession.month)
+                                    setSelectedYear(lastSession.year)
+                                }
                                 setLang(lastSession.useLang)
                                 const ok = await loadStudents(lastSession.classId, lastSession.month, lastSession.year, lastSession.useLang)
-                                if (ok) setStep(2)
+                                if (ok) setStep(3) // Go directly to input table
                             }}
                             className="h-8 px-4 rounded-xl bg-indigo-600 text-white text-[9px] font-black hover:bg-indigo-700 transition-all shadow-md shadow-indigo-500/20"
                         >
@@ -164,11 +174,17 @@ export default function Step0ClassSelection({
             <div className="flex flex-col gap-4 border-b border-[var(--color-border)]/50 pb-6">
                 <div className="flex items-center justify-between px-1">
                     <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setStep(0)} // Go back to selector
+                            className="mr-2 p-1.5 rounded-lg border border-[var(--color-border)] hover:bg-[var(--color-surface-alt)] transition-all text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                        >
+                            <ArrowLeft className="w-3.5 h-3.5" />
+                        </button>
                         <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
                             <School className="text-indigo-500 w-3.5 h-3.5" />
                         </div>
                         <label className="text-[10px] font-black uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
-                            Pilih Kelas
+                            Pilih Kelas · {rtObj.name}
                         </label>
                     </div>
                 </div>
@@ -199,7 +215,7 @@ export default function Step0ClassSelection({
                     <div className="grid grid-cols-3 sm:flex sm:items-center gap-1.5 p-1 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-2xl w-full sm:w-auto overflow-hidden shrink-0 shadow-inner">
                         {[
                             { id: 'all', label: 'Semua', icon: School },
-                            { id: 'boarding', label: 'Boarding', icon: Moon },
+                            { id: 'boarding', label: 'Board', icon: Moon },
                             { id: 'regular', label: 'Reguler', icon: Sun }
                         ].map(opt => (
                             <button
@@ -309,18 +325,13 @@ export default function Step0ClassSelection({
                                     {/* Right Side Actions */}
                                     <div className="flex items-center gap-1 shrink-0 ml-1 h-full pl-2 border-l border-[var(--color-border)]/50">
                                         <button
-                                            onClick={async () => {
-                                                const m = now.getMonth() + 1
-                                                const y = now.getFullYear()
-                                                const l = 'id'
+                                            onClick={() => {
                                                 setSelectedClassId(cls.id)
-                                                setSelectedMonth(m)
-                                                setSelectedYear(y)
-                                                setLang(l)
-                                                const ok = await loadStudents(cls.id, m, y, l)
-                                                if (ok) setStep(2)
+                                                // Initialize default language
+                                                setLang(rtObj.defaultLang)
+                                                setStep(2) // Go to Period Setup step
                                             }}
-                                            title="Mulai Input"
+                                            title="Setup & Mulai Input"
                                             className="w-8 h-8 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-lg transition-all flex items-center justify-center shrink-0"
                                         >
                                             <ChevronRight className="w-3 h-3" />
@@ -329,13 +340,13 @@ export default function Step0ClassSelection({
                                             onClick={(e) => {
                                                 e.stopPropagation()
                                                 setSelectedClassId(cls.id)
-                                                setStep(4)
+                                                setStep(5) // Go to Archive
                                                 loadArchive()
                                             }}
-                                            disabled={!lastLabel}
+                                            disabled={reportType === 'bulanan' ? !lastLabel : false}
                                             title="Lihat Arsip"
                                             className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 transition-all ${
-                                                lastLabel
+                                                reportType !== 'bulanan' || lastLabel
                                                     ? 'border-[var(--color-border)] bg-[var(--color-surface-alt)] hover:border-indigo-500/30 hover:text-indigo-600 text-[var(--color-text-muted)]'
                                                     : 'opacity-20 cursor-not-allowed border-dashed'
                                             }`}

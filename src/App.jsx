@@ -462,7 +462,8 @@ function AppRoutes() {
             {/* Core — module flag guarded */}
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/task-center" element={<TaskCenterPage />} />
-            <Route path="/raport" element={<FlagRoute flag="module.raport" label="Raport Bulanan"><RaportPage /></FlagRoute>} />
+            <Route path="/raport" element={<FlagRoute flag="module.raport" label="Raport Pondok"><RaportPage /></FlagRoute>} />
+            <Route path="/academic/raport" element={<FlagRoute flag="module.raport" label="Rapor & Penilaian"><RaportPage /></FlagRoute>} />
             <Route path="/boarding/behavior" element={<FlagRoute flag="module.poin" label="Kedisiplinan & Poin"><BehaviorPage /></FlagRoute>} />
             <Route path="/attendance" element={<FlagRoute flag="module.absensi" label="Absensi Bulanan"><AttendancePage /></FlagRoute>} />
             <Route path="/settings" element={<SettingsPage />} />

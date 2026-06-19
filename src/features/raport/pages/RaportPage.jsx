@@ -98,6 +98,7 @@ export default function RaportPage() {
         step, setStep, selectedClassId, setSelectedClassId,
         homeroomTeacherName, setHomeroomTeacherName, selectedMonth, setSelectedMonth,
         selectedYear, setSelectedYear, musyrif, setMusyrif, lang, setLang,
+        reportType, setReportType, selectedSemester, setSelectedSemester, academicYear, setAcademicYear, isAcademicRaport,
         students, setStudents, loading, setLoading,
         transliterating, setTransliterating, scores, setScores, setScoresRaw,
         scoresHistoryRef, scoresHistoryIdxRef,
@@ -418,13 +419,19 @@ export default function RaportPage() {
 
     // FIX 10: tab title dinamis — harus setelah selectedClass & bulanObj dideklarasi
     useEffect(() => {
-        if (step === 2 && selectedClass?.name && bulanObj?.id_str) {
-            document.title = `${selectedClass.name} · ${bulanObj.id_str} ${selectedYear} | Laporanmu`
+        if (step === 2 && selectedClass?.name) {
+            if (reportType === 'bulanan') {
+                if (bulanObj?.id_str) {
+                    document.title = `${selectedClass.name} · ${bulanObj.id_str} ${selectedYear} | Laporanmu`
+                }
+            } else {
+                document.title = `${selectedClass.name} · Sem ${selectedSemester} (${academicYear}) | Laporanmu`
+            }
         } else {
-            document.title = 'Raport Bulanan | Laporanmu'
+            document.title = `${isAcademicRaport ? 'Rapor & Penilaian' : 'Raport Pondok'} | Laporanmu`
         }
         return () => { document.title = 'Laporanmu' }
-    }, [step, selectedClass, bulanObj, selectedYear])
+    }, [step, selectedClass, bulanObj, selectedYear, selectedSemester, academicYear, reportType, isAcademicRaport])
 
     // FIX MINOR: filteredStudents dipecah menjadi dua useMemo agar tidak
     // recompute setiap kali guru mengetik nilai.
@@ -1588,12 +1595,21 @@ export default function RaportPage() {
                             const lastLabel = prog?.lastMonth ? `${BULAN.find(b => b.id === prog.lastMonth)?.id_str} ${prog.lastYear}` : null
 
                             return (
-                                <div key={cls.id} className="group relative rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:border-indigo-500/50 hover:shadow-md transition-all duration-200 flex items-center p-2.5 gap-3 h-[72px]">
+                                <div
+                                    key={cls.id}
+                                    onClick={() => {
+                                        setSelectedClassId(cls.id)
+                                        setLang('id')
+                                        if (cls.metadata?.homeroom_teacher) setMusyrif(cls.metadata.homeroom_teacher)
+                                        setStep(1)
+                                    }}
+                                    className="group relative rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:border-indigo-500/50 hover:shadow-md cursor-pointer transition-all duration-200 flex items-center p-2.5 gap-3 h-[72px]"
+                                >
                                     {/* Small Initial */}
                                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 font-black text-[10px] transition-all ${isDone ? 'bg-emerald-500 text-white' : isBoarding ? 'bg-indigo-500/10 text-indigo-600' : 'bg-emerald-500/10 text-emerald-600'}`}>
                                         {cls.name?.charAt(0)}
                                     </div>
-
+ 
                                     {/* Main Info Area */}
                                     <div className="min-w-0 flex-1 flex flex-col justify-center gap-0.5">
                                         <div className="flex items-center gap-2">
@@ -1603,7 +1619,7 @@ export default function RaportPage() {
                                             </span>
                                         </div>
                                         <p className="text-[9px] font-bold text-[var(--color-text-muted)] truncate opacity-60 leading-none">{teacher}</p>
-
+ 
                                         {/* Slim Progress */}
                                         <div className="flex items-center gap-2 mt-1">
                                             <div className="h-1 flex-1 rounded-full bg-[var(--color-border)]/40 overflow-hidden">
@@ -1615,16 +1631,18 @@ export default function RaportPage() {
                                             <span className="text-[8px] font-black text-indigo-500 w-6 text-right">{pct}%</span>
                                         </div>
                                     </div>
-
+ 
                                     {/* Right Side Actions */}
                                     <div className="flex items-center gap-1 shrink-0 ml-1 h-full pl-2 border-l border-[var(--color-border)]/50">
                                         <button
-                                            onClick={async () => {
-                                                const m = now.getMonth() + 1, y = now.getFullYear(), l = 'id'
-                                                setSelectedClassId(cls.id); setSelectedMonth(m); setSelectedYear(y); setLang(l)
-                                                const ok = await loadStudents(cls.id, m, y, l); if (ok) setStep(2)
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                setSelectedClassId(cls.id)
+                                                setLang('id')
+                                                if (cls.metadata?.homeroom_teacher) setMusyrif(cls.metadata.homeroom_teacher)
+                                                setStep(1)
                                             }}
-                                            title="Mulai Input"
+                                            title="Setup & Mulai Input"
                                             className="w-8 h-8 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-lg transition-all flex items-center justify-center shrink-0"
                                         >
                                             <ChevronRight className="w-3 h-3" />
@@ -1649,175 +1667,11 @@ export default function RaportPage() {
 
     const renderStep1 = () => {
         if (!selectedClassId) {
+            setTimeout(() => setStep(0), 0)
             return (
-                <div className="space-y-6 animate-fade-in pb-2">
-                    <div className="p-5 rounded-3xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 flex items-center justify-center shrink-0">
-                                <School className="text-indigo-500 w-5 h-5" />
-                            </div>
-                            <div>
-                                <h3 className="text-sm font-black text-[var(--color-text)]">Pilih Kelas</h3>
-                                <p className="text-[11px] text-[var(--color-text-muted)] font-medium">Langkah 1: Pilih kelas aktif untuk mulai mengisi atau mencetak raport bulanan.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="space-y-4">
-                        {/* Search and Category Filter Row */}
-                        <div className="flex flex-col md:flex-row gap-3">
-                            <div className="relative flex-1">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] w-3.5 h-3.5" />
-                                <input
-                                    type="text"
-                                    placeholder="Cari nama kelas..."
-                                    value={searchQuery}
-                                    onChange={e => setSearchQuery(e.target.value)}
-                                    className="w-full h-12 pl-11 pr-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-sm font-bold text-[var(--color-text)] outline-none focus:border-indigo-500/50 transition-all shadow-sm"
-                                />
-                            </div>
-
-                            {/* Class Type Segmented Switch */}
-                            <div className="flex items-center gap-1 p-1 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-2xl shadow-inner shrink-0 overflow-hidden">
-                                {[
-                                    { id: 'all', label: 'Semua Kategori', icon: School },
-                                    { id: 'boarding', label: 'Boarding', icon: MoonStar },
-                                    { id: 'regular', label: 'Reguler', icon: School }
-                                ].map(opt => (
-                                    <button
-                                        key={opt.id}
-                                        type="button"
-                                        onClick={() => setClassSelectionType(opt.id)}
-                                        className={`h-10 px-4 rounded-xl text-[10px] font-black transition-all flex items-center justify-center gap-2 ${classSelectionType === opt.id ? 'bg-indigo-600 text-white shadow-md' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-white dark:hover:bg-slate-800'}`}
-                                    >
-                                        {(() => { const Icon = opt.icon; return <Icon className="w-2.5 h-2.5 shrink-0" /> })()}
-                                        <span className="whitespace-nowrap">{opt.label}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Grade Filters */}
-                        <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-2xl">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mr-2">Tingkat Kelas:</span>
-                            {[
-                                { id: 'all', label: 'Semua Tingkat' },
-                                { id: '7', label: 'Tingkat 7 / VII' },
-                                { id: '8', label: 'Tingkat 8 / VIII' },
-                                { id: '9', label: 'Tingkat 9 / IX' },
-                                { id: '10', label: 'Tingkat 10 / X' }
-                            ].map(opt => (
-                                <button
-                                    key={opt.id}
-                                    type="button"
-                                    onClick={() => setClassSelectionGrade(opt.id)}
-                                    className={`h-8 px-3.5 rounded-lg text-[9px] font-black border transition-all ${classSelectionGrade === opt.id ? 'bg-indigo-500/10 border-indigo-500/40 text-indigo-600 shadow-sm' : 'border-[var(--color-border)] text-[var(--color-text-muted)] bg-[var(--color-surface)] hover:border-indigo-500/25 hover:text-indigo-600'}`}
-                                >
-                                    {opt.label}
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* Card Grid */}
-                        {pickerFilteredClasses.length === 0 ? (
-                            <EmptyState
-                                icon={Search}
-                                title="Kelas tidak ditemukan"
-                                subtitle="Coba kata kunci pencarian lain atau pastikan kelas memiliki siswa terdaftar."
-                                variant="dashed"
-                            />
-                        ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                {pickerFilteredClasses.map(cls => {
-                                    const isBoarding = (cls.name || '').toLowerCase().includes('boarding') || (cls.name || '').toLowerCase().includes('pondok')
-                                    const teacher = cls.teachers?.name || 'Wali Kelas -'
-                                    const studentCount = classProgress[cls.id]?.total || 0
-                                    const isEmpty = studentCount === 0
-                                    const isSelected = tempSelectedClassId === cls.id
-
-                                    return (
-                                        <button
-                                            key={cls.id}
-                                            type="button"
-                                            disabled={isEmpty}
-                                            onClick={() => {
-                                                if (isEmpty) return
-                                                setTempSelectedClassId(cls.id)
-                                            }}
-                                            className={`p-4 rounded-2xl border transition-all text-left flex items-center gap-3.5 relative overflow-hidden group shadow-sm active:scale-[0.98]
-                                                ${isEmpty
-                                                    ? 'opacity-40 cursor-not-allowed bg-slate-100/50 dark:bg-slate-800/30 border-dashed border-[var(--color-border)]'
-                                                    : isSelected
-                                                        ? 'border-indigo-500 bg-indigo-500/10 ring-2 ring-indigo-500/20 shadow-md scale-[1.01]'
-                                                        : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-indigo-500/50 hover:bg-indigo-500/5 hover:shadow-md'
-                                                }`}
-                                        >
-                                            {/* Leading Circle with Initial / Checkmark */}
-                                            <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 font-black text-xs transition-all
-                                                ${isEmpty
-                                                    ? 'bg-slate-200 text-slate-400'
-                                                    : isSelected
-                                                        ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30'
-                                                        : isBoarding
-                                                            ? 'bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white'
-                                                            : 'bg-indigo-500/10 text-indigo-600 group-hover:bg-indigo-500 group-hover:text-white'
-                                                }`}
-                                            >
-                                                {isSelected ? <Check className="w-3.5 h-3.5 text-white animate-bounce" /> : cls.name?.charAt(0)}
-                                            </div>
-
-                                            {/* Core Info */}
-                                            <div className="min-w-0 flex-1">
-                                                <div className="flex items-center justify-between gap-2 mb-1">
-                                                    <span className={`text-[12px] font-black transition-colors truncate ${isSelected ? 'text-indigo-600' : 'text-[var(--color-text)]'}`}>{cls.name}</span>
-                                                    {isEmpty ? (
-                                                        <span className="text-[7px] font-black px-1.5 py-0.5 rounded-md bg-rose-500/10 text-rose-500 border border-rose-500/20 shrink-0">
-                                                            Kosong
-                                                        </span>
-                                                    ) : (
-                                                        <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-md border shrink-0 ${isBoarding ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20'}`}>
-                                                            {isBoarding ? 'Boarding' : 'Reguler'}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="flex items-center gap-2 opacity-70">
-                                                    <p className="text-[9.5px] font-bold text-[var(--color-text-muted)] truncate">{teacher}</p>
-                                                    <div className="w-1 h-1 rounded-full bg-[var(--color-border)] shrink-0" />
-                                                    <p className={`text-[9.5px] font-black shrink-0 ${isEmpty ? 'text-rose-500 font-bold' : 'text-indigo-500'}`}>{studentCount} Siswa</p>
-                                                </div>
-                                            </div>
-                                        </button>
-                                    )
-                                })}
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="flex gap-2 sm:gap-4 pt-4 border-t border-[var(--color-border)]">
-                        <button onClick={() => setStep(0)} className="h-12 px-4 rounded-2xl border border-[var(--color-border)] text-xs sm:text-sm font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all flex items-center gap-2 shrink-0">
-                            <ArrowLeft className="w-3.5 h-3.5 mr-1.5" /> <span className="hidden sm:inline">Kembali</span>
-                        </button>
-
-                        <button
-                            type="button"
-                            disabled={!tempSelectedClassId}
-                            onClick={() => {
-                                const cls = classesList.find(c => c.id === tempSelectedClassId)
-                                const isBoarding = (cls?.name || '').toLowerCase().includes('boarding') || (cls?.name || '').toLowerCase().includes('pondok')
-                                setSelectedClassId(tempSelectedClassId)
-                                setLang('id')
-                                if (cls?.metadata?.homeroom_teacher) setMusyrif(cls.metadata.homeroom_teacher)
-                            }}
-                            className={`flex-1 h-12 rounded-2xl text-white text-xs sm:text-sm font-black shadow-lg transition-all flex items-center justify-center gap-2 overflow-hidden px-2
-                                ${!tempSelectedClassId
-                                    ? 'bg-slate-300 dark:bg-slate-700 cursor-not-allowed shadow-none'
-                                    : 'bg-emerald-500 shadow-emerald-500/20 hover:brightness-110 active:scale-95'
-                                }`}
-                        >
-                            <span className="whitespace-nowrap">Lanjut ke Setup Periode</span>
-                            <ArrowRight className="w-3 h-3 opacity-70" />
-                        </button>
-                    </div>
+                <div className="py-20 flex flex-col items-center justify-center gap-3">
+                    <Loader2 className="w-8 h-8 animate-spin text-[var(--color-primary)]" />
+                    <p className="text-xs font-black text-[var(--color-text-muted)] animate-pulse">Mengalihkan ke Dashboard...</p>
                 </div>
             )
         }
@@ -1830,8 +1684,8 @@ export default function RaportPage() {
                             <ClipboardList className="text-emerald-500 w-5 h-5" />
                         </div>
                         <div>
-                            <h3 className="text-sm font-black text-[var(--color-text)]">Setup Raport Bulanan</h3>
-                            <p className="text-[11px] text-[var(--color-text-muted)] font-medium">Langkah 2: Tentukan periode dan bahasa pengantar untuk raport kelas ini.</p>
+                            <h3 className="text-sm font-black text-[var(--color-text)]">Setup {isAcademicRaport ? 'Rapor & Penilaian' : 'Raport Pondok'}</h3>
+                            <p className="text-[11px] text-[var(--color-text-muted)] font-medium">Langkah 1: Tentukan periode dan bahasa pengantar untuk raport kelas ini.</p>
                         </div>
                     </div>
                 </div>
@@ -1857,34 +1711,64 @@ export default function RaportPage() {
                                     </div>
                                 </div>
                                 <button
-                                    onClick={() => { setSelectedClassId(''); setMusyrif('') }}
-                                    className="h-9 px-4 rounded-xl border border-emerald-500/30 bg-white text-emerald-600 text-[11px] font-black hover:bg-emerald-500/10 transition-all shrink-0 shadow-sm active:scale-95"
+                                    onClick={() => { setSelectedClassId(''); setMusyrif(''); setStep(0) }}
+                                    className="h-9 px-4 rounded-xl border border-emerald-500/30 bg-white text-emerald-600 text-[11px] font-black hover:bg-emerald-500/10 transition-all shrink-0 shadow-sm active:scale-95 dark:bg-slate-800 dark:hover:bg-slate-700"
                                 >
                                     Ganti
                                 </button>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Bulan</label>
-                                <RichSelect
-                                    value={selectedMonth}
-                                    onChange={val => setSelectedMonth(Number(val))}
-                                    options={monthOptions}
-                                    placeholder="Pilih Bulan"
-                                />
+                        {reportType === 'bulanan' ? (
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Bulan</label>
+                                    <RichSelect
+                                        value={selectedMonth}
+                                        onChange={val => setSelectedMonth(Number(val))}
+                                        options={monthOptions}
+                                        placeholder="Pilih Bulan"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Tahun</label>
+                                    <RichSelect
+                                        value={selectedYear}
+                                        onChange={val => setSelectedYear(Number(val))}
+                                        options={yearOptions}
+                                        placeholder="Pilih Tahun"
+                                    />
+                                </div>
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Tahun</label>
-                                <RichSelect
-                                    value={selectedYear}
-                                    onChange={val => setSelectedYear(Number(val))}
-                                    options={yearOptions}
-                                    placeholder="Pilih Tahun"
-                                />
+                        ) : (
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Semester</label>
+                                    <RichSelect
+                                        value={selectedSemester}
+                                        onChange={val => setSelectedSemester(Number(val))}
+                                        options={[
+                                            { id: 1, label: 'Semester 1 (Ganjil)' },
+                                            { id: 2, label: 'Semester 2 (Genap)' }
+                                        ]}
+                                        placeholder="Pilih Semester"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Tahun Ajaran</label>
+                                    <RichSelect
+                                        value={academicYear}
+                                        onChange={val => setAcademicYear(val)}
+                                        options={Array.from({ length: 3 }).map((_, i) => {
+                                            const startYear = now.getFullYear() - 1 + i
+                                            const val = `${startYear}/${startYear + 1}`
+                                            return { id: val, label: val }
+                                        })}
+                                        placeholder="Pilih Tahun Ajaran"
+                                    />
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
 
                     <div className="space-y-4">
@@ -1928,7 +1812,7 @@ export default function RaportPage() {
                 </div>
 
                 <div className="flex gap-2 sm:gap-4 pt-4 border-t border-[var(--color-border)]">
-                    <button onClick={() => { setSelectedClassId(''); setMusyrif('') }} className="h-12 px-4 rounded-2xl border border-[var(--color-border)] text-xs sm:text-sm font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all flex items-center gap-2 shrink-0">
+                    <button onClick={() => { setSelectedClassId(''); setMusyrif(''); setStep(0) }} className="h-12 px-4 rounded-2xl border border-[var(--color-border)] text-xs sm:text-sm font-black text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-all flex items-center gap-2 shrink-0">
                         <ArrowLeft className="w-3.5 h-3.5 mr-1.5" /> <span className="hidden sm:inline">Kembali</span>
                     </button>
                     <button onClick={async () => { if (!selectedClassId) return; const ok = await loadStudents(); if (ok) setStep(2) }} disabled={!selectedClassId || loading} className="flex-1 h-12 rounded-2xl bg-emerald-500 text-white text-xs sm:text-sm font-black shadow-lg shadow-emerald-500/20 hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 overflow-hidden px-2">
@@ -1956,6 +1840,7 @@ export default function RaportPage() {
             }>
                 <LazyRaportInputTable
                     globalSaveIndicator={globalSaveIndicator}
+                    loading={loading}
                     students={students}
                     filteredStudents={filteredStudents}
                     scores={scores}
@@ -1973,6 +1858,11 @@ export default function RaportPage() {
                     setShowIncompleteOnly={setShowIncompleteOnly}
                     showNoPhoneOnly={showNoPhoneOnly}
                     setShowNoPhoneOnly={setShowNoPhoneOnly}
+                    reportType={reportType}
+                    setReportType={setReportType}
+                    isAcademicRaport={isAcademicRaport}
+                    selectedSemester={selectedSemester}
+                    academicYear={academicYear}
                     selectedMonth={selectedMonth}
                     selectedYear={selectedYear}
                     musyrif={musyrif}
@@ -2827,7 +2717,7 @@ export default function RaportPage() {
     // FIX MINOR: pageLoading pakai skeleton layout, bukan full-page spinner kosong
     if (pageLoading) {
         return (
-            <DashboardLayout title="Raport Bulanan">
+            <DashboardLayout title={isAcademicRaport ? 'Rapor & Penilaian' : 'Raport Pondok'}>
                 {/* Header skeleton */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div>
@@ -2861,7 +2751,7 @@ export default function RaportPage() {
     }
 
     return (
-        <DashboardLayout title="Raport Bulanan">
+        <DashboardLayout title={isAcademicRaport ? 'Rapor & Penilaian' : 'Raport Pondok'}>
             {/* Global auto-save indicator */}
             {step === 2 && globalSaveIndicator && (
                 <div className={`fixed bottom-6 right-6 z-[9999] flex items-center gap-2 px-3.5 py-2.5 rounded-xl border shadow-2xl text-[10px] font-black transition-all duration-300 backdrop-blur-md ${globalSaveIndicator === 'saving' ? 'bg-amber-500/10 dark:bg-amber-500/20 border-amber-500/20 text-amber-600 dark:text-amber-400' : 'bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'}`}>
@@ -2884,8 +2774,8 @@ export default function RaportPage() {
                 <PageHeader
                     badge="academic"
                     breadcrumbs={['Grade Reports']}
-                    title="Raport Bulanan"
-                    subtitle="نتيجة الشخصية — Kelola dan cetak raport bulanan per kelas."
+                    title={isAcademicRaport ? 'Rapor & Penilaian' : 'Raport Pondok'}
+                    subtitle={isAcademicRaport ? 'Kelola dan cetak rapor umum & penilaian akademik per kelas.' : 'Kelola dan cetak raport pondok bulanan per kelas.'}
                     actions={
                         <>
                             {step >= 1 && step <= 3 && activeStepIndex !== -1 && (
@@ -2928,12 +2818,7 @@ export default function RaportPage() {
                                 <Lightbulb className="w-3 h-3" />
                                 Tutorial
                             </button>
-                            {step === 0 && (
-                                <button onClick={() => { setSelectedClassId(''); setStep(1) }} className="h-9 px-4 lg:px-5 rounded-xl bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20 flex items-center gap-2 hover:opacity-90 transition-all">
-                                    <Plus className="w-4 h-4" />
-                                    <span className="text-[10px] font-black uppercase tracking-widest">Buat Raport</span>
-                                </button>
-                            )}
+                            
                         </>
                     }
                 />

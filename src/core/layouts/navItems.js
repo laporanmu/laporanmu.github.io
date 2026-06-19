@@ -64,7 +64,7 @@ export const BOARDING_ITEMS = [
     { to: "/boarding/dorms", label: "Manajemen Asrama", icon: Bed, desc: "Plotting kamar santri, kontrol kebersihan, & tugas Musyrif", color: "bg-indigo-500/10 text-indigo-600" },
     { to: "/boarding/health", label: "Klinik & Kesehatan", icon: HeartPulse, desc: "Pos Kesehatan Pesantren (Poskestren) & rekam medis santri", color: "bg-emerald-500/10 text-emerald-600" },
     { to: "/boarding/counseling", label: "Konseling & BK", icon: HeartHandshake, desc: "Sesi konseling santri, bimbingan psikologis & pembinaan mental", color: "bg-purple-500/10 text-purple-600" },
-    { to: "/raport", label: "Raport Bulanan", icon: FileSpreadsheet, desc: "Kelola dan cetak raport bulanan per kelas", color: "bg-blue-500/10 text-blue-600" },
+    { to: "/raport", label: "Raport Pondok", icon: FileSpreadsheet, desc: "Kelola dan cetak raport bulanan & pondok per kelas", color: "bg-blue-500/10 text-blue-600" },
 ]
 
 // ─── Akademik & Keagamaan ─────────────────────────────────────────────────────

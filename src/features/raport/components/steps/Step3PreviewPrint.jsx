@@ -16,6 +16,8 @@ const WhatsAppIcon = (props) => (
     </svg>
 )
 
+import { RAPORT_TYPES } from '@features/raport/utils/raportTypeRegistry'
+
 export default function Step3PreviewPrint({
     students,
     previewStudentId,
@@ -42,12 +44,20 @@ export default function Step3PreviewPrint({
     showMobileStudentPicker,
     setShowMobileStudentPicker,
     musyrif,
+    reportType = 'bulanan',
+    selectedSemester = 1,
+    academicYear = '',
 }) {
     const previewStudent = previewStudentId ? students.find(s => s.id === previewStudentId) : students[0]
-    const completeCount = students.filter(s => isComplete(scores[s.id] || {})).length
+    const rtObj = RAPORT_TYPES[reportType] || RAPORT_TYPES.bulanan
+    const criteria = rtObj.getCriteria(selectedClass)
+    const completeCount = students.filter(s => isComplete(scores[s.id] || {}, criteria)).length
     const totalCount = students.length
     const pct = totalCount ? Math.round((completeCount / totalCount) * 100) : 0
     const currentMonthObj = BULAN.find(b => b.id === selectedMonth)
+    const periodValue = reportType === 'bulanan'
+        ? `${currentMonthObj?.id_str || ''} ${selectedYear}`
+        : `Sem. ${selectedSemester} (${academicYear})`
 
     const outerWrapperRef = React.useRef(null)
     const innerCardRef = React.useRef(null)
@@ -77,7 +87,7 @@ export default function Step3PreviewPrint({
                 <StatCard key="total" label="Total Santri" value={totalCount} icon={Users} color="sky" />
                 <StatCard key="progress" label="Progress Lengkap" value={completeCount} icon={CheckCircle2} color="emerald" />
                 <StatCard key="pct" label="Persentase" value={pct} suffix="%" icon={PieChart} color="indigo" />
-                <StatCard key="periode" label="Periode" value={`${currentMonthObj?.id_str || ''} ${selectedYear}`} icon={Calendar} color="amber" />
+                <StatCard key="periode" label="Periode" value={periodValue} icon={Calendar} color="amber" />
             </StatsCarousel>
 
             <div className="flex flex-col lg:flex-row gap-6">
@@ -435,6 +445,10 @@ export default function Step3PreviewPrint({
                                                 settings={settings}
                                                 pageSize={pageSize}
                                                 catatanArab={catatanArabMap[previewStudent.id]}
+                                                reportType={reportType}
+                                                selectedSemester={selectedSemester}
+                                                academicYear={academicYear}
+                                                selectedClass={selectedClass}
                                             />
                                         )}
                                     </div>

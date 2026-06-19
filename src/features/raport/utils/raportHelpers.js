@@ -1,11 +1,11 @@
-import { KRITERIA, MAX_SCORE, GRADE, calcAvg } from './raportConstants'
+import { RAPORT_TYPES, getClassLevel, getGradePredicate } from './raportTypeRegistry'
 
 /**
  * Validasi apakah semua kriteria nilai sudah terisi
  */
-export const isComplete = (scores) => {
-    if (!scores) return false
-    return KRITERIA.every(k =>
+export const isComplete = (scores, criteria) => {
+    if (!scores || !criteria) return false
+    return criteria.every(k =>
         scores[k.key] !== '' &&
         scores[k.key] !== null &&
         scores[k.key] !== undefined
@@ -24,49 +24,60 @@ export const escapeCsvCell = (val) => {
 }
 
 /**
+ * Hitung Rata-Rata Secara Dinamis
+ */
+export const calcAvg = (scores, criteria) => {
+    if (!scores || !criteria || !criteria.length) return null
+    const vals = criteria.map(k => scores[k.key]).filter(v => v !== '' && v !== null && v !== undefined)
+    if (!vals.length) return null
+    return (vals.reduce((a, b) => a + Number(b), 0) / vals.length).toFixed(1)
+}
+
+/**
  * Membangun baris pesan WhatsApp
  */
 export const buildWaLines = ({
-    student, sc, extras, bulanObj, selectedYear, selectedClass, musyrif, pdfUrl, waFooter
+    student, sc, extras, bulanObj, selectedYear, selectedSemester, selectedClass, musyrif, pdfUrl, waFooter, reportTypeId = 'bulanan'
 }) => {
-    const avg = calcAvg(sc)
-    const g = avg ? GRADE(Number(avg)) : null
+    const rtObj = RAPORT_TYPES[reportTypeId] || RAPORT_TYPES.bulanan
+    const classLevel = getClassLevel(selectedClass)
+    const criteria = rtObj.getCriteria(selectedClass)
+    const avg = calcAvg(sc, criteria)
+    const g = avg ? getGradePredicate(Number(avg), reportTypeId, classLevel) : null
+
+    const periodStr = rtObj.periodType === 'monthly'
+        ? `Bulanan ${bulanObj?.id_str || ''} ${selectedYear}`
+        : `Semester ${selectedSemester === 1 ? '1 (Ganjil)' : '2 (Genap)'} T.A ${selectedYear}`
 
     const header = [
         `Assalamu'alaikum Wr. Wb.`,
         ``,
         `Yth. Bapak/Ibu Wali dari Ananda *${student.name}*`,
         ``,
-        `Berikut hasil *Raport Bulanan ${bulanObj?.id_str || ''} ${selectedYear}*:`,
+        `Berikut hasil *${rtObj.name} ${periodStr}*:`,
         `Kelas: *${selectedClass?.name || '—'}* | Musyrif: *${musyrif || '—'}*`,
-        `\n━ ASPEK AKADEMIK & KARAKTER`,
+        `\n━ ASPEK PENILAIAN`,
     ]
 
-    const scoreLines = KRITERIA.map(k => {
+    const scoreLines = criteria.map(k => {
         const v = sc[k.key]
         const hasScore = v !== '' && v !== null && v !== undefined
-        const gr = hasScore ? GRADE(Number(v)) : null
-        return `- ${k.id}: *${hasScore ? v : '—'}*${gr ? ` (${gr.id})` : ''}`
+        const gr = hasScore ? getGradePredicate(Number(v), reportTypeId, classLevel) : null
+        return `- ${k.id}: *${hasScore ? v : '—'}*${gr ? ` (${gr.id || gr.label})` : ''}`
     })
 
     const avgLine = avg ? [
-        `Rata-rata: *${avg}/${MAX_SCORE}* (${Math.round((Number(avg) / MAX_SCORE) * 100)}/100) — *${g?.id || '—'}*`
+        `Rata-rata: *${avg}/${rtObj.maxScore}* — *${g?.id || g?.label || '—'}*`
     ] : []
 
-    // Physical stats & Attendance & Hafalan
+    // Physical stats & Attendance
     const devLines = []
-    if (extras) {
-        const hasFisik = extras.berat_badan || extras.tinggi_badan
-        const hasKehadiran = extras.hari_sakit || extras.hari_izin || extras.hari_alpa || extras.hari_pulang
-        const hasHafalan = extras.ziyadah || extras.murojaah
+    if (extras && (rtObj.hasFisik || rtObj.hasAttendance)) {
+        const hasFisik = rtObj.hasFisik && (extras.berat_badan || extras.tinggi_badan)
+        const hasKehadiran = rtObj.hasAttendance && (extras.hari_sakit || extras.hari_izin || extras.hari_alpa || extras.hari_pulang)
 
-        if (hasFisik || hasKehadiran || hasHafalan) {
+        if (hasFisik || hasKehadiran) {
             devLines.push(`━ PERKEMBANGAN & KEHADIRAN`)
-
-            if (hasHafalan) {
-                if (extras.ziyadah) devLines.push(`- Ziyadah: *${extras.ziyadah}*`)
-                if (extras.murojaah) devLines.push(`- Muroja'ah: *${extras.murojaah}*`)
-            }
 
             if (hasFisik) {
                 const parts = []
@@ -87,7 +98,7 @@ export const buildWaLines = ({
     }
 
     const catatanLine = []
-    if (extras?.catatan) {
+    if (extras?.catatan && rtObj.hasCatatan) {
         catatanLine.push(`━ CATATAN MUSYRIF`)
         catatanLine.push(`_"${extras.catatan}"_`)
     }
@@ -117,9 +128,11 @@ export const buildWaLines = ({
 /**
  * Generator komentar otomatis berdasarkan tren nilai
  */
-export const generateAutoComment = (sc, studentId = '', trendHistory = []) => {
+export const generateAutoComment = (sc, studentId = '', trendHistory = [], criteria = [], reportTypeId = 'bulanan', classLevel = 'SMP') => {
+    if (!criteria || criteria.length === 0) return ''
+
     // 1. Parse current scores
-    const currentScores = KRITERIA.map(k => ({
+    const currentScores = criteria.map(k => ({
         key: k.key,
         id: k.id,
         val: sc?.[k.key] !== '' && sc?.[k.key] !== null && sc?.[k.key] !== undefined ? Number(sc[k.key]) : null
@@ -127,6 +140,7 @@ export const generateAutoComment = (sc, studentId = '', trendHistory = []) => {
 
     if (currentScores.length === 0) return ''
 
+    const rtObj = RAPORT_TYPES[reportTypeId] || RAPORT_TYPES.bulanan
     const avg = currentScores.reduce((a, b) => a + b.val, 0) / currentScores.length
     const avgFormatted = avg.toFixed(1)
 
@@ -136,19 +150,18 @@ export const generateAutoComment = (sc, studentId = '', trendHistory = []) => {
     const worstAspect = sortedScores[sortedScores.length - 1]
 
     // 2. Parse past history
-    // Sort history chronologically
     const history = (trendHistory || []).slice().sort((a, b) =>
         a.year !== b.year ? a.year - b.year : a.month - b.month
     )
     
-    // Get the immediate previous month report
+    // Get the immediate previous report
     const prevReport = history.length > 0 ? history[history.length - 1] : null
     
     let trendText = ''
     let progressHighlight = ''
     
     if (prevReport) {
-        const prevScores = KRITERIA.map(k => ({
+        const prevScores = criteria.map(k => ({
             key: k.key,
             id: k.id,
             val: prevReport.scores?.[k.key] !== '' && prevReport.scores?.[k.key] !== null && prevReport.scores?.[k.key] !== undefined ? Number(prevReport.scores[k.key]) : null
@@ -159,14 +172,14 @@ export const generateAutoComment = (sc, studentId = '', trendHistory = []) => {
             const prevAvgFormatted = prevAvg.toFixed(1)
             const deltaAvg = avg - prevAvg
 
-            if (Math.abs(deltaAvg) > 0.1) {
+            if (Math.abs(deltaAvg) > (rtObj.maxScore === 9 ? 0.1 : 1.0)) {
                 if (deltaAvg > 0) {
                     trendText = `Alhamdulillah, rata-rata nilai mengalami kenaikan dari ${prevAvgFormatted} menjadi ${avgFormatted}.`
                 } else {
-                    trendText = `Rata-rata nilai bulan ini (${avgFormatted}) mengalami sedikit penurunan dari bulan lalu (${prevAvgFormatted}).`
+                    trendText = `Rata-rata nilai bulan ini (${avgFormatted}) mengalami sedikit penurunan dari periode lalu (${prevAvgFormatted}).`
                 }
             } else {
-                trendText = `Perkembangan nilai rata-rata ananda stabil di angka ${avgFormatted} dibanding bulan lalu.`
+                trendText = `Perkembangan nilai rata-rata ananda stabil di angka ${avgFormatted} dibanding periode lalu.`
             }
 
             // Find aspect with highest improvement and aspect with highest decline
@@ -196,29 +209,36 @@ export const generateAutoComment = (sc, studentId = '', trendHistory = []) => {
 
     // 3. Construct the comment parts
     const introParts = []
-    if (avg >= 8.5) {
-        introParts.push(`Masya Allah, ananda menunjukkan prestasi yang luar biasa bulan ini dengan rata-rata ${avgFormatted}.`)
-    } else if (avg >= 7.5) {
-        introParts.push(`Alhamdulillah, perkembangan ananda bulan ini cukup baik dan memuaskan dengan rata-rata ${avgFormatted}.`)
-    } else if (avg >= 6.0) {
-        introParts.push(`Perkembangan ananda bulan ini secara umum cukup stabil dengan rata-rata ${avgFormatted}.`)
+    const thresholdHigh = rtObj.maxScore === 9 ? 8.5 : 85
+    const thresholdMedium = rtObj.maxScore === 9 ? 7.5 : 75
+    const thresholdLow = rtObj.maxScore === 9 ? 6.0 : 60
+
+    if (avg >= thresholdHigh) {
+        introParts.push(`Masya Allah, ananda menunjukkan prestasi yang luar biasa periode ini dengan rata-rata ${avgFormatted}.`)
+    } else if (avg >= thresholdMedium) {
+        introParts.push(`Alhamdulillah, perkembangan ananda periode ini cukup baik dan memuaskan dengan rata-rata ${avgFormatted}.`)
+    } else if (avg >= thresholdLow) {
+        introParts.push(`Perkembangan ananda periode ini secara umum cukup stabil dengan rata-rata ${avgFormatted}.`)
     } else {
-        introParts.push(`Perkembangan ananda bulan ini masih memerlukan bimbingan lebih intensif (rata-rata ${avgFormatted}).`)
+        introParts.push(`Perkembangan ananda periode ini masih memerlukan bimbingan lebih intensif (rata-rata ${avgFormatted}).`)
     }
 
     const aspectParts = []
-    if (bestAspect.val >= 8) {
+    const aspectGoodThreshold = rtObj.maxScore === 9 ? 8 : 80
+    const aspectNeedThreshold = rtObj.maxScore === 9 ? 7 : 70
+
+    if (bestAspect.val >= aspectGoodThreshold) {
         aspectParts.push(`Ananda sangat unggul dalam aspek ${bestAspect.id} (Nilai: ${bestAspect.val}).`)
     }
-    if (worstAspect.val < 7 && worstAspect.key !== bestAspect.key) {
+    if (worstAspect.val < aspectNeedThreshold && worstAspect.key !== bestAspect.key) {
         aspectParts.push(`Perlu pendampingan lebih pada aspek ${worstAspect.id} (Nilai: ${worstAspect.val}) agar bisa lebih ditingkatkan.`)
     }
 
     const closingParts = []
-    if (avg >= 8.5) {
+    if (avg >= thresholdHigh) {
         closingParts.push(`Pertahankan prestasi ini dan semoga terus istiqomah. Barakallahu fiik.`)
-    } else if (avg >= 7.0) {
-        closingParts.push(`Semoga bulan depan ananda bisa meraih hasil yang lebih baik lagi. Tetap semangat.`)
+    } else if (avg >= thresholdMedium) {
+        closingParts.push(`Semoga periode depan ananda bisa meraih hasil yang lebih baik lagi. Tetap semangat.`)
     } else {
         closingParts.push(`Mohon kerja sama orang tua untuk turut mendampingi dan memotivasi ananda di rumah.`)
     }
