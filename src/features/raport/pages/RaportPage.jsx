@@ -786,6 +786,12 @@ export default function RaportPage() {
         // Reset input agar bisa pilih file yang sama lagi
         e.target.value = ''
 
+        // Guard: Import XLS hanya support schema raport bulanan
+        if (reportType !== 'bulanan') {
+            addToast('Import XLS hanya tersedia untuk Raport Bulanan. Gunakan input manual untuk tipe raport lain.', 'warning')
+            return
+        }
+
         const XLSX = await import('xlsx')
 
         setLoading(true)
@@ -900,7 +906,7 @@ export default function RaportPage() {
         } finally {
             setLoading(false)
         }
-    }, [selectedMonth, selectedYear, musyrif, profile, addToast, loadStudents])
+    }, [selectedMonth, selectedYear, musyrif, profile, addToast, loadStudents, reportType])
 
     // ── Auto-save
     const triggerAutoSave = useCallback((studentId) => {
@@ -1068,12 +1074,19 @@ export default function RaportPage() {
             const PAGE_SIZE = 1000
             let allReports = []
             let page = 0
+            const tableName = reportType === 'bulanan' ? 'student_monthly_reports' : 'student_semester_reports'
+            const selectCols = reportType === 'bulanan'
+                ? 'student_id, month, year, musyrif_name, nilai_akhlak, nilai_ibadah, nilai_kebersihan, nilai_quran, nilai_bahasa'
+                : 'student_id, report_type, semester, academic_year, musyrif_name, scores, extras'
+
             while (true) {
-                const { data: batch, error: batchErr } = await supabase
-                    .from('student_monthly_reports')
-                    .select('student_id, month, year, musyrif_name, nilai_akhlak, nilai_ibadah, nilai_kebersihan, nilai_quran, nilai_bahasa')
-                    .order('year', { ascending: false })
-                    .order('month', { ascending: false })
+                let query = supabase.from(tableName).select(selectCols)
+                if (reportType !== 'bulanan') {
+                    query = query.eq('report_type', reportType)
+                }
+                const { data: batch, error: batchErr } = await query
+                    .order(reportType === 'bulanan' ? 'year' : 'academic_year', { ascending: false })
+                    .order(reportType === 'bulanan' ? 'month' : 'semester', { ascending: false })
                     .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
                 if (batchErr) throw batchErr
                 if (!batch?.length) break
@@ -1092,69 +1105,152 @@ export default function RaportPage() {
             for (const s of (stuData || [])) stuMap[s.id] = s
             for (const c of (classData || [])) clsMap[c.id] = c
             const grouped = {}
+            const rtObj = RAPORT_TYPES[reportType] || RAPORT_TYPES.bulanan
+
             for (const row of reports) {
                 const stu = stuMap[row.student_id]; if (!stu?.class_id) continue
                 const cls = clsMap[stu.class_id]; if (!cls) continue
-                const isBoarding = (cls.name || '').toLowerCase().includes('boarding') || (cls.name || '').toLowerCase().includes('pondok') || (cls.major || '').toLowerCase().includes('boarding')
-                const key = `${cls.id}__${row.month}__${row.year}`
-                if (!grouped[key]) grouped[key] = { key, class_id: cls.id, class_name: cls.name, month: row.month, year: row.year, musyrif: row.musyrif_name, count: 0, completed: 0, lang: 'id' }
-                grouped[key].count++
-                const hasAllMainScores = ['nilai_akhlak', 'nilai_ibadah', 'nilai_kebersihan', 'nilai_quran', 'nilai_bahasa']
-                    .every(k => row[k] !== '' && row[k] !== null && row[k] !== undefined)
-                if (hasAllMainScores) grouped[key].completed++
+                if (reportType === 'bulanan') {
+                    const key = `${cls.id}__${row.month}__${row.year}`
+                    if (!grouped[key]) grouped[key] = { key, class_id: cls.id, class_name: cls.name, month: row.month, year: row.year, musyrif: row.musyrif_name, count: 0, completed: 0, lang: 'id' }
+                    grouped[key].count++
+                    const hasAllMainScores = ['nilai_akhlak', 'nilai_ibadah', 'nilai_kebersihan', 'nilai_quran', 'nilai_bahasa']
+                        .every(k => row[k] !== '' && row[k] !== null && row[k] !== undefined)
+                    if (hasAllMainScores) grouped[key].completed++
+                } else {
+                    const key = `${cls.id}__${row.semester}__${row.academic_year.replace('/', '_')}`
+                    if (!grouped[key]) grouped[key] = {
+                        key,
+                        class_id: cls.id,
+                        class_name: cls.name,
+                        semester: row.semester,
+                        academic_year: row.academic_year,
+                        report_type: row.report_type,
+                        musyrif: row.musyrif_name,
+                        count: 0,
+                        completed: 0,
+                        lang: 'id'
+                    }
+                    grouped[key].count++
+                    const criteria = rtObj.getCriteria(cls)
+                    const hasAllMainScores = criteria.every(k => row.scores?.[k.key] !== '' && row.scores?.[k.key] !== null && row.scores?.[k.key] !== undefined)
+                    if (hasAllMainScores) grouped[key].completed++
+                }
             }
-            const list = Object.values(grouped).sort((a, b) => b.year - a.year || b.month - a.month)
+            const list = Object.values(grouped).sort((a, b) => {
+                if (reportType === 'bulanan') {
+                    return b.year - a.year || b.month - a.month
+                } else {
+                    return b.academic_year.localeCompare(a.academic_year) || b.semester - a.semester
+                }
+            })
             setArchiveList(list)
             if (list.length > 0) {
                 const latest = list[0]
                 setArchiveFilter(prev => {
-                    if (!prev.year && !prev.month) {
-                        return { ...prev, year: String(latest.year), month: String(latest.month) }
+                    if (reportType === 'bulanan') {
+                        if (!prev.year && !prev.month) {
+                            return { ...prev, year: String(latest.year), month: String(latest.month) }
+                        }
+                    } else {
+                        if (!prev.academic_year && !prev.semester) {
+                            return { ...prev, academic_year: latest.academic_year, semester: String(latest.semester) }
+                        }
                     }
                     return prev
                 })
             }
         } catch (e) { addToast('Gagal memuat arsip', 'error'); console.error('loadArchive error:', e) }
         finally { setArchiveLoading(false) }
-    }, [addToast])
+    }, [addToast, reportType])
 
     // ── Load student trend
     const loadStudentTrend = useCallback(async (stuIds) => {
         if (!stuIds?.length) return
         try {
-            const { data } = await supabase
-                .from('student_monthly_reports')
-                .select('student_id, month, year, nilai_akhlak, nilai_ibadah, nilai_kebersihan, nilai_quran, nilai_bahasa')
-                .in('student_id', stuIds)
-                .order('year').order('month')
+            const tableName = reportType === 'bulanan' ? 'student_monthly_reports' : 'student_semester_reports'
+            let query = supabase.from(tableName)
+            if (reportType === 'bulanan') {
+                query = query.select('student_id, month, year, nilai_akhlak, nilai_ibadah, nilai_kebersihan, nilai_quran, nilai_bahasa')
+                    .in('student_id', stuIds)
+                    .order('year').order('month')
+            } else {
+                query = query.select('student_id, semester, academic_year, scores')
+                    .eq('report_type', reportType)
+                    .in('student_id', stuIds)
+                    .order('academic_year').order('semester')
+            }
+            const { data } = await query
             const trendMap = {}
             for (const r of (data || [])) {
                 if (!trendMap[r.student_id]) trendMap[r.student_id] = []
-                trendMap[r.student_id].push({ month: r.month, year: r.year, scores: { nilai_akhlak: r.nilai_akhlak, nilai_ibadah: r.nilai_ibadah, nilai_kebersihan: r.nilai_kebersihan, nilai_quran: r.nilai_quran, nilai_bahasa: r.nilai_bahasa } })
+                if (reportType === 'bulanan') {
+                    trendMap[r.student_id].push({ month: r.month, year: r.year, scores: { nilai_akhlak: r.nilai_akhlak, nilai_ibadah: r.nilai_ibadah, nilai_kebersihan: r.nilai_kebersihan, nilai_quran: r.nilai_quran, nilai_bahasa: r.nilai_bahasa } })
+                } else {
+                    trendMap[r.student_id].push({ semester: r.semester, academic_year: r.academic_year, scores: r.scores })
+                }
             }
             setStudentTrend(trendMap)
         } catch (e) { console.error('loadStudentTrend error:', e) }
-    }, [])
+    }, [reportType])
 
     const loadArchiveDetail = useCallback(async (entry) => {
         setArchiveLoading(true)
         try {
             const { data: stuData } = await supabase.from('students').select('id, name, phone, metadata').eq('class_id', entry.class_id).is('deleted_at', null).order('name')
             const ids = (stuData || []).map(s => s.id)
-            const { data: repData } = await supabase.from('student_monthly_reports').select('*').in('student_id', ids).eq('month', entry.month).eq('year', entry.year)
+            const tableName = reportType === 'bulanan' ? 'student_monthly_reports' : 'student_semester_reports'
+            let query = supabase.from(tableName).select('*').in('student_id', ids)
+            if (reportType === 'bulanan') {
+                query = query.eq('month', entry.month).eq('year', entry.year)
+            } else {
+                query = query.eq('report_type', reportType).eq('semester', entry.semester).eq('academic_year', entry.academic_year)
+            }
+            const { data: repData } = await query
+            const rtObj = RAPORT_TYPES[reportType] || RAPORT_TYPES.bulanan
+            const classObj = classesList.find(c => c.id === entry.class_id)
+            const criteria = rtObj.getCriteria(classObj)
+
             const scMap = {}, exMap = {}
             for (const s of (stuData || [])) {
                 const rep = repData?.find(r => r.student_id === s.id)
-                scMap[s.id] = { nilai_akhlak: rep?.nilai_akhlak ?? '', nilai_ibadah: rep?.nilai_ibadah ?? '', nilai_kebersihan: rep?.nilai_kebersihan ?? '', nilai_quran: rep?.nilai_quran ?? '', nilai_bahasa: rep?.nilai_bahasa ?? '' }
-                exMap[s.id] = { berat_badan: rep?.berat_badan ?? '', tinggi_badan: rep?.tinggi_badan ?? '', ziyadah: rep?.ziyadah ?? '', murojaah: rep?.murojaah ?? '', hari_sakit: rep?.hari_sakit ?? '', hari_izin: rep?.hari_izin ?? '', hari_alpa: rep?.hari_alpa ?? '', hari_pulang: rep?.hari_pulang ?? '', catatan: rep?.catatan ?? '' }
+                if (reportType === 'bulanan') {
+                    scMap[s.id] = { nilai_akhlak: rep?.nilai_akhlak ?? '', nilai_ibadah: rep?.nilai_ibadah ?? '', nilai_kebersihan: rep?.nilai_kebersihan ?? '', nilai_quran: rep?.nilai_quran ?? '', nilai_bahasa: rep?.nilai_bahasa ?? '' }
+                    exMap[s.id] = { berat_badan: rep?.berat_badan ?? '', tinggi_badan: rep?.tinggi_badan ?? '', ziyadah: rep?.ziyadah ?? '', murojaah: rep?.murojaah ?? '', hari_sakit: rep?.hari_sakit ?? '', hari_izin: rep?.hari_izin ?? '', hari_alpa: rep?.hari_alpa ?? '', hari_pulang: rep?.hari_pulang ?? '', catatan: rep?.catatan ?? '' }
+                } else {
+                    const scObj = {}
+                    criteria.forEach(k => {
+                        scObj[k.key] = rep?.scores?.[k.key] ?? ''
+                    })
+                    scMap[s.id] = scObj
+                    exMap[s.id] = {
+                        berat_badan: rep?.extras?.berat_badan ?? '',
+                        tinggi_badan: rep?.extras?.tinggi_badan ?? '',
+                        hari_sakit: rep?.extras?.hari_sakit ?? '',
+                        hari_izin: rep?.extras?.hari_izin ?? '',
+                        hari_alpa: rep?.extras?.hari_alpa ?? '',
+                        hari_pulang: rep?.extras?.hari_pulang ?? '',
+                        catatan: rep?.catatan ?? rep?.extras?.catatan ?? ''
+                    }
+                }
             }
             const stuList = stuData || []
-            setArchivePreview({ students: stuList, scores: scMap, extras: exMap, bulanObj: BULAN.find(b => b.id === entry.month), tahun: entry.year, musyrif: entry.musyrif, className: entry.class_name, lang: entry.lang, entry })
+            setArchivePreview({
+                students: stuList,
+                scores: scMap,
+                extras: exMap,
+                bulanObj: reportType === 'bulanan' ? BULAN.find(b => b.id === entry.month) : null,
+                tahun: reportType === 'bulanan' ? entry.year : null,
+                musyrif: entry.musyrif,
+                className: entry.class_name,
+                lang: entry.lang,
+                entry
+            })
             setStudentTrend({})
             loadStudentTrend(stuList.map(s => s.id))
         } catch (e) { addToast('Gagal memuat detail arsip', 'error'); console.error('loadArchiveDetail error:', e) }
         finally { setArchiveLoading(false) }
-    }, [loadStudentTrend, addToast])
+    }, [loadStudentTrend, addToast, reportType, classesList])
 
     // ── Save archive inline edits back to Supabase
     const saveArchiveEdit = useCallback(async () => {
@@ -1162,29 +1258,58 @@ export default function RaportPage() {
         setArchiveEditSaving(true)
         try {
             const { students: pStu, entry } = archivePreview
+            const tableName = reportType === 'bulanan' ? 'student_monthly_reports' : 'student_semester_reports'
             const payloads = pStu.map(s => {
                 const sc = archiveEditScores[s.id] || archivePreview.scores[s.id] || {}
                 const ex = archiveEditExtras[s.id] || archivePreview.extras[s.id] || {}
-                return {
-                    student_id: s.id,
-                    month: entry.month,
-                    year: entry.year,
-                    musyrif_name: archivePreview.musyrif,
-                    updated_by: profile?.id ?? null,
-                    updated_by_name: profile?.name ?? null,
-                    ...Object.fromEntries(Object.entries(sc).map(([k, v]) => [k, v === '' ? null : Number(v)])),
-                    berat_badan: ex.berat_badan !== '' && ex.berat_badan != null ? Number(ex.berat_badan) : null,
-                    tinggi_badan: ex.tinggi_badan !== '' && ex.tinggi_badan != null ? Number(ex.tinggi_badan) : null,
-                    ziyadah: ex.ziyadah || null,
-                    murojaah: ex.murojaah || null,
-                    hari_sakit: ex.hari_sakit !== '' && ex.hari_sakit != null ? Number(ex.hari_sakit) : 0,
-                    hari_izin: ex.hari_izin !== '' && ex.hari_izin != null ? Number(ex.hari_izin) : 0,
-                    hari_alpa: ex.hari_alpa !== '' && ex.hari_alpa != null ? Number(ex.hari_alpa) : 0,
-                    hari_pulang: ex.hari_pulang !== '' && ex.hari_pulang != null ? Number(ex.hari_pulang) : 0,
-                    catatan: ex.catatan || null,
+                if (reportType === 'bulanan') {
+                    return {
+                        student_id: s.id,
+                        month: entry.month,
+                        year: entry.year,
+                        musyrif_name: archivePreview.musyrif,
+                        updated_by: profile?.id ?? null,
+                        updated_by_name: profile?.name ?? null,
+                        ...Object.fromEntries(Object.entries(sc).map(([k, v]) => [k, v === '' ? null : Number(v)])),
+                        berat_badan: ex.berat_badan !== '' && ex.berat_badan != null ? Number(ex.berat_badan) : null,
+                        tinggi_badan: ex.tinggi_badan !== '' && ex.tinggi_badan != null ? Number(ex.tinggi_badan) : null,
+                        ziyadah: ex.ziyadah || null,
+                        murojaah: ex.murojaah || null,
+                        hari_sakit: ex.hari_sakit !== '' && ex.hari_sakit != null ? Number(ex.hari_sakit) : 0,
+                        hari_izin: ex.hari_izin !== '' && ex.hari_izin != null ? Number(ex.hari_izin) : 0,
+                        hari_alpa: ex.hari_alpa !== '' && ex.hari_alpa != null ? Number(ex.hari_alpa) : 0,
+                        hari_pulang: ex.hari_pulang !== '' && ex.hari_pulang != null ? Number(ex.hari_pulang) : 0,
+                        catatan: ex.catatan || null,
+                    }
+                } else {
+                    return {
+                        student_id: s.id,
+                        report_type: reportType,
+                        semester: entry.semester,
+                        academic_year: entry.academic_year,
+                        musyrif_name: archivePreview.musyrif,
+                        updated_by: profile?.id ?? null,
+                        updated_by_name: profile?.name ?? null,
+                        scores: Object.fromEntries(Object.entries(sc).map(([k, v]) => [k, v === '' ? null : Number(v)])),
+                        extras: {
+                            berat_badan: ex.berat_badan !== '' && ex.berat_badan != null ? Number(ex.berat_badan) : null,
+                            tinggi_badan: ex.tinggi_badan !== '' && ex.tinggi_badan != null ? Number(ex.tinggi_badan) : null,
+                            hari_sakit: ex.hari_sakit !== '' && ex.hari_sakit != null ? Number(ex.hari_sakit) : 0,
+                            hari_izin: ex.hari_izin !== '' && ex.hari_izin != null ? Number(ex.hari_izin) : 0,
+                            hari_alpa: ex.hari_alpa !== '' && ex.hari_alpa != null ? Number(ex.hari_alpa) : 0,
+                            hari_pulang: ex.hari_pulang !== '' && ex.hari_pulang != null ? Number(ex.hari_pulang) : 0,
+                            catatan: ex.catatan || null,
+                        }
+                    }
                 }
             })
-            const { error } = await supabase.from('student_monthly_reports').upsert(payloads, { onConflict: 'student_id,month,year' })
+            let query
+            if (reportType === 'bulanan') {
+                query = supabase.from(tableName).upsert(payloads, { onConflict: 'student_id,month,year' })
+            } else {
+                query = supabase.from(tableName).upsert(payloads, { onConflict: 'student_id,report_type,semester,academic_year' })
+            }
+            const { error } = await query
             if (error) throw error
             // Merge edits back into archivePreview so preview reflects saved data
             setArchivePreview(prev => {
@@ -1200,37 +1325,57 @@ export default function RaportPage() {
             setArchiveEditMode(false)
             addToast(`${pStu.length} raport arsip berhasil diperbarui`, 'success')
             await logAudit({
-                action: 'UPDATE', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
-                newData: { bulk_archive_edit: true, count: pStu.length, class_name: archivePreview.className, month: entry.month, year: entry.year }
+                action: 'UPDATE', source: 'OPERATIONAL', tableName: tableName,
+                newData: { bulk_archive_edit: true, count: pStu.length, class_name: archivePreview.className, ...(reportType === 'bulanan' ? { month: entry.month, year: entry.year } : { semester: entry.semester, academic_year: entry.academic_year }) }
             })
         } catch (e) { addToast('Gagal menyimpan: ' + e.message, 'error') }
         finally { setArchiveEditSaving(false) }
-    }, [archivePreview, archiveEditScores, archiveEditExtras, addToast])
+    }, [archivePreview, archiveEditScores, archiveEditExtras, addToast, reportType, profile])
 
     // ── Load full monthly history for student detail drawer
     const openStudentDetailDrawer = useCallback(async (student) => {
         setStudentDetailLoading(true)
         setStudentDetailDrawer({ student, history: null })
         try {
-            const { data, error } = await supabase
-                .from('student_monthly_reports')
-                .select('month, year, nilai_akhlak, nilai_ibadah, nilai_kebersihan, nilai_quran, nilai_bahasa, catatan, musyrif_name')
-                .eq('student_id', student.id)
-                .order('year', { ascending: true })
-                .order('month', { ascending: true })
+            const tableName = reportType === 'bulanan' ? 'student_monthly_reports' : 'student_semester_reports'
+            let query = supabase.from(tableName)
+            if (reportType === 'bulanan') {
+                query = query.select('month, year, nilai_akhlak, nilai_ibadah, nilai_kebersihan, nilai_quran, nilai_bahasa, catatan, musyrif_name')
+                    .eq('student_id', student.id)
+                    .order('year', { ascending: true })
+                    .order('month', { ascending: true })
+            } else {
+                query = query.select('semester, academic_year, scores, extras, musyrif_name')
+                    .eq('report_type', reportType)
+                    .eq('student_id', student.id)
+                    .order('academic_year', { ascending: true })
+                    .order('semester', { ascending: true })
+            }
+            const { data, error } = await query
             if (error) throw error
-            const history = (data || []).map(r => ({
-                month: r.month, year: r.year,
-                musyrif: r.musyrif_name,
-                catatan: r.catatan,
-                scores: { nilai_akhlak: r.nilai_akhlak, nilai_ibadah: r.nilai_ibadah, nilai_kebersihan: r.nilai_kebersihan, nilai_quran: r.nilai_quran, nilai_bahasa: r.nilai_bahasa }
-            }))
+            const history = (data || []).map(r => {
+                if (reportType === 'bulanan') {
+                    return {
+                        month: r.month, year: r.year,
+                        musyrif: r.musyrif_name,
+                        catatan: r.catatan,
+                        scores: { nilai_akhlak: r.nilai_akhlak, nilai_ibadah: r.nilai_ibadah, nilai_kebersihan: r.nilai_kebersihan, nilai_quran: r.nilai_quran, nilai_bahasa: r.nilai_bahasa }
+                    }
+                } else {
+                    return {
+                        semester: r.semester, academic_year: r.academic_year,
+                        musyrif: r.musyrif_name,
+                        catatan: r.extras?.catatan ?? r.catatan ?? '',
+                        scores: r.scores
+                    }
+                }
+            })
             setStudentDetailDrawer({ student, history })
         } catch (e) {
             addToast('Gagal memuat histori santri: ' + e.message, 'error')
             setStudentDetailDrawer(null)
         } finally { setStudentDetailLoading(false) }
-    }, [addToast])
+    }, [addToast, reportType])
 
     const executeDeleteArchive = useCallback(async (entry) => {
         setConfirmDelete(null)
@@ -1238,15 +1383,22 @@ export default function RaportPage() {
             const { data: stuData } = await supabase.from('students').select('id').eq('class_id', entry.class_id)
             const ids = (stuData || []).map(s => s.id)
             if (!ids.length) { setArchiveList(prev => prev.filter(a => a.key !== entry.key)); addToast('Arsip berhasil dihapus', 'success'); return }
-            const { data: toDelete } = await supabase.from('student_monthly_reports').select('id').in('student_id', ids).eq('month', entry.month).eq('year', entry.year)
+            const tableName = reportType === 'bulanan' ? 'student_monthly_reports' : 'student_semester_reports'
+            let selectQuery = supabase.from(tableName).select('id').in('student_id', ids)
+            if (reportType === 'bulanan') {
+                selectQuery = selectQuery.eq('month', entry.month).eq('year', entry.year)
+            } else {
+                selectQuery = selectQuery.eq('report_type', reportType).eq('semester', entry.semester).eq('academic_year', entry.academic_year)
+            }
+            const { data: toDelete } = await selectQuery
             if (!toDelete?.length) { setArchiveList(prev => prev.filter(a => a.key !== entry.key)); addToast('Arsip berhasil dihapus', 'success'); return }
-            const { error: delErr } = await supabase.from('student_monthly_reports').delete().in('id', toDelete.map(r => r.id))
+            const { error: delErr } = await supabase.from(tableName).delete().in('id', toDelete.map(r => r.id))
             if (delErr) throw delErr
             setArchiveList(prev => prev.filter(a => a.key !== entry.key))
             addToast('Arsip berhasil dihapus', 'success')
             await logAudit({
-                action: 'DELETE', source: 'OPERATIONAL', tableName: 'student_monthly_reports', recordId: null,
-                oldData: { archive_month: entry.month, archive_year: entry.year, class_id: entry.class_id, count: toDelete.length }
+                action: 'DELETE', source: 'OPERATIONAL', tableName: tableName, recordId: null,
+                oldData: { ...(reportType === 'bulanan' ? { archive_month: entry.month, archive_year: entry.year } : { semester: entry.semester, academic_year: entry.academic_year }), class_id: entry.class_id, count: toDelete.length }
             })
             loadArchive()
         } catch (e) { addToast('Gagal menghapus arsip: ' + e.message, 'error'); console.error('executeDeleteArchive error:', e) }
@@ -1318,7 +1470,7 @@ export default function RaportPage() {
                     setPrintQueue([]);
                     setPrintRenderedCount(0);
                     logAudit({
-                        action: 'PRINT', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
+                        action: 'PRINT', source: 'OPERATIONAL', tableName: activeDbTable,
                         newData: { format: 'PDF_PRINT', count: stuList.length, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear }
                     });
                 }, 500);
@@ -2667,6 +2819,7 @@ export default function RaportPage() {
                     setStep={setStep}
                     previewContainerRef={previewContainerRef}
                     manualZoomRef={manualZoomRef}
+                    reportType={reportType}
                 />
             </Suspense>
         )

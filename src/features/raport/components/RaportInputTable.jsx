@@ -30,7 +30,7 @@ const DesktopSkeleton = ({ criteria = [] }) => (
             <colgroup>
                 <col style={{ width: 36 }} />
                 <col style={{ width: 140 }} />
-                {(criteria || []).map(k => <col key={k.key} style={{ width: 55 }} />)}
+                {(criteria || []).map(k => <col key={k.key} style={{ width: 54 }} />)}
                 <col style={{ width: 170 }} />
                 <col style={{ width: 160 }} />
                 <col style={{ width: 130 }} />
@@ -76,7 +76,7 @@ const DesktopSkeleton = ({ criteria = [] }) => (
                         </td>
                         {(criteria || []).map(k => (
                             <td key={k.key} className="p-3 text-center">
-                                <div className="w-10 h-8 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-lg animate-pulse mx-auto" />
+                                <div className="w-9 h-8 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-lg animate-pulse mx-auto" />
                             </td>
                         ))}
                         <td className="p-3">
@@ -325,9 +325,18 @@ export default function RaportInputTable({
                                     if (hasUnsavedMemo) {
                                         setConfirmModal({
                                             title: 'Perubahan Belum Disimpan',
-                                            description: 'Perubahan nilai belum disimpan akan hilang. Pindah?',
+                                            description: 'Anda memiliki perubahan nilai yang belum disimpan.',
+                                            body: (
+                                                <>
+                                                    Apakah Anda yakin ingin berpindah tipe raport? Perubahan yang belum disimpan akan hilang.
+                                                </>
+                                            ),
+                                            icon: AlertTriangle,
+                                            iconBg: 'bg-red-500/10',
+                                            iconColor: 'text-red-500',
                                             variant: 'red',
                                             confirmLabel: 'Ya, Pindah',
+                                            confirmIcon: AlertTriangle,
                                             onConfirm: async () => {
                                                 setConfirmModal(null)
                                                 setReportType(t.id)
@@ -548,9 +557,18 @@ export default function RaportInputTable({
                                                 if (hasUnsavedMemo) {
                                                     setConfirmModal({
                                                         title: 'Perubahan Belum Disimpan',
-                                                        description: 'Anda memiliki perubahan nilai yang belum disimpan. Apakah Anda yakin ingin berpindah tipe raport? Perubahan yang belum disimpan akan hilang.',
+                                                        description: 'Anda memiliki perubahan nilai yang belum disimpan.',
+                                                        body: (
+                                                            <>
+                                                                Apakah Anda yakin ingin berpindah tipe raport? Perubahan yang belum disimpan akan hilang.
+                                                            </>
+                                                        ),
+                                                        icon: AlertTriangle,
+                                                        iconBg: 'bg-red-500/10',
+                                                        iconColor: 'text-red-500',
                                                         variant: 'red',
                                                         confirmLabel: 'Ya, Pindah',
+                                                        confirmIcon: AlertTriangle,
                                                         onConfirm: async () => {
                                                             setConfirmModal(null)
                                                             setReportType(t.id)
@@ -817,6 +835,7 @@ export default function RaportInputTable({
                     onSave={async () => {
                         const selected = students.filter(s => bulkSelected.has(s.id))
                         if (!selected.length) return
+                        const isBulanan = reportType === 'bulanan'
                         const hasAnyData = (sc, ex) =>
                             criteria.some(k => sc[k.key] !== '' && sc[k.key] !== null && sc[k.key] !== undefined) ||
                             [ex.berat_badan, ex.tinggi_badan, ex.ziyadah, ex.murojaah,
@@ -826,23 +845,59 @@ export default function RaportInputTable({
                         if (!toSave.length) { addToast('Santri yang dipilih belum ada yang diisi nilainya', 'warning'); return }
                         setSavingAll(true)
                         try {
-                            const payloads = toSave.map(s => {
-                                const sc = scores[s.id] || {}, ex = extras[s.id] || {}
-                                return {
-                                    student_id: s.id, month: selectedMonth, year: selectedYear,
-                                    musyrif_name: musyrif, updated_by: null, updated_by_name: null,
-                                    ...Object.fromEntries(Object.entries(sc).map(([k, v]) => [k, v === '' ? null : Number(v)])),
-                                    berat_badan: ex.berat_badan !== '' ? Number(ex.berat_badan) : null,
-                                    tinggi_badan: ex.tinggi_badan !== '' ? Number(ex.tinggi_badan) : null,
-                                    ziyadah: ex.ziyadah || null, murojaah: ex.murojaah || null,
-                                    hari_sakit: ex.hari_sakit !== '' ? Number(ex.hari_sakit) : 0,
-                                    hari_izin: ex.hari_izin !== '' ? Number(ex.hari_izin) : 0,
-                                    hari_alpa: ex.hari_alpa !== '' ? Number(ex.hari_alpa) : 0,
-                                    hari_pulang: ex.hari_pulang !== '' ? Number(ex.hari_pulang) : 0,
-                                    catatan: ex.catatan || null
-                                }
-                            })
-                            const { data: upserted, error } = await supabase.from('student_monthly_reports').upsert(payloads, { onConflict: 'student_id,month,year' }).select('id, student_id')
+                            let upserted, error
+                            if (isBulanan) {
+                                // ── Monthly: flat column schema
+                                const payloads = toSave.map(s => {
+                                    const sc = scores[s.id] || {}, ex = extras[s.id] || {}
+                                    return {
+                                        student_id: s.id, month: selectedMonth, year: selectedYear,
+                                        musyrif_name: musyrif, updated_by: null, updated_by_name: null,
+                                        ...Object.fromEntries(Object.entries(sc).map(([k, v]) => [k, v === '' ? null : Number(v)])),
+                                        berat_badan: ex.berat_badan !== '' && ex.berat_badan != null ? Number(ex.berat_badan) : null,
+                                        tinggi_badan: ex.tinggi_badan !== '' && ex.tinggi_badan != null ? Number(ex.tinggi_badan) : null,
+                                        ziyadah: ex.ziyadah || null, murojaah: ex.murojaah || null,
+                                        hari_sakit: ex.hari_sakit !== '' && ex.hari_sakit != null ? Number(ex.hari_sakit) : 0,
+                                        hari_izin: ex.hari_izin !== '' && ex.hari_izin != null ? Number(ex.hari_izin) : 0,
+                                        hari_alpa: ex.hari_alpa !== '' && ex.hari_alpa != null ? Number(ex.hari_alpa) : 0,
+                                        hari_pulang: ex.hari_pulang !== '' && ex.hari_pulang != null ? Number(ex.hari_pulang) : 0,
+                                        catatan: ex.catatan || null
+                                    }
+                                });
+                                ({ data: upserted, error } = await supabase
+                                    .from('student_monthly_reports')
+                                    .upsert(payloads, { onConflict: 'student_id,month,year' })
+                                    .select('id, student_id'))
+                            } else {
+                                // ── Semester: scores/extras JSON schema
+                                const payloads = toSave.map(s => {
+                                    const sc = scores[s.id] || {}, ex = extras[s.id] || {}
+                                    return {
+                                        student_id: s.id,
+                                        report_type: reportType,
+                                        semester: selectedSemester,
+                                        academic_year: academicYear,
+                                        musyrif_name: musyrif,
+                                        updated_by: null, updated_by_name: null,
+                                        scores: Object.fromEntries(
+                                            Object.entries(sc).map(([k, v]) => [k, v === '' ? null : Number(v)])
+                                        ),
+                                        extras: {
+                                            berat_badan: ex.berat_badan !== '' && ex.berat_badan != null ? Number(ex.berat_badan) : null,
+                                            tinggi_badan: ex.tinggi_badan !== '' && ex.tinggi_badan != null ? Number(ex.tinggi_badan) : null,
+                                            hari_sakit: ex.hari_sakit !== '' && ex.hari_sakit != null ? Number(ex.hari_sakit) : 0,
+                                            hari_izin: ex.hari_izin !== '' && ex.hari_izin != null ? Number(ex.hari_izin) : 0,
+                                            hari_alpa: ex.hari_alpa !== '' && ex.hari_alpa != null ? Number(ex.hari_alpa) : 0,
+                                            hari_pulang: ex.hari_pulang !== '' && ex.hari_pulang != null ? Number(ex.hari_pulang) : 0,
+                                            catatan: ex.catatan || null
+                                        }
+                                    }
+                                });
+                                ({ data: upserted, error } = await supabase
+                                    .from('student_semester_reports')
+                                    .upsert(payloads, { onConflict: 'student_id,report_type,semester,academic_year' })
+                                    .select('id, student_id'))
+                            }
                             if (error) throw error
                             if (upserted?.length) {
                                 setSavedIds(prev => { const n = new Set(prev); toSave.forEach(s => n.add(s.id)); return n })
@@ -1161,7 +1216,7 @@ export default function RaportInputTable({
                                 <colgroup>
                                     <col style={{ width: 36 }} />
                                     <col style={{ width: 140 }} />
-                                    {criteria.map(k => <col key={k.key} style={{ width: 55 }} />)}
+                                    {criteria.map(k => <col key={k.key} style={{ width: 54 }} />)}
                                     {(rtObj.hasFisik || rtObj.hasAttendance) && <col style={{ width: 170 }} />}
                                     {(rtObj.hasHafalan || rtObj.hasCatatan) && <col style={{ width: 160 }} />}
                                     <col style={{ width: 130 }} />
@@ -1177,7 +1232,26 @@ export default function RaportInputTable({
                                             />
                                         </th>
                                         <th className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] sticky left-0 z-10" style={{ background: 'var(--color-surface-alt)', padding: '10px 0', textAlign: 'center', verticalAlign: 'middle', borderRight: '1px solid var(--color-border)', boxShadow: 'inset 0 -1px 0 var(--color-border)' }}>Santri</th>
-                                        {criteria.map(k => (<th key={k.key} style={{ padding: '10px 4px', textAlign: 'center', verticalAlign: 'middle', background: 'var(--color-surface-alt)', boxShadow: 'inset 0 -1px 0 var(--color-border)' }}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><span style={{ direction: 'rtl', fontSize: 14, fontWeight: 900, color: k.color, lineHeight: 1, whiteSpace: 'nowrap', fontFamily: 'serif' }}>{k.arShort}</span><span style={{ fontSize: 8, fontWeight: 800, color: 'var(--color-text-muted)', letterSpacing: 1, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{k.id}</span></div></th>))}
+                                        {criteria.map(k => (
+                                            <th key={k.key} style={{ padding: '8px 2px', textAlign: 'center', verticalAlign: 'middle', background: 'var(--color-surface-alt)', boxShadow: 'inset 0 -1px 0 var(--color-border)' }}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 0 }}>
+                                                    <span style={{
+                                                        fontSize: 9.5,
+                                                        fontWeight: 900,
+                                                        color: 'var(--color-text-muted)',
+                                                        lineHeight: 1.2,
+                                                        whiteSpace: 'normal',
+                                                        textAlign: 'center',
+                                                        wordBreak: 'break-word',
+                                                        width: '100%',
+                                                        textTransform: 'uppercase',
+                                                        letterSpacing: '0.5px'
+                                                    }}>
+                                                        {k.id}
+                                                    </span>
+                                                </div>
+                                            </th>
+                                        ))}
                                         {(rtObj.hasFisik || rtObj.hasAttendance) && (
                                             <th style={{ padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle', background: 'var(--color-surface-alt)', boxShadow: 'inset 0 -1px 0 var(--color-border)' }}>
                                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
@@ -1340,42 +1414,58 @@ export default function RaportInputTable({
                                                 ))}
                                             </div>
                                         </div>
-                                        <div>
-                                            <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5 flex justify-between items-center">
-                                                <span>Fisik & Kehadiran</span>
-                                                <span className="text-[7px] opacity-40 font-medium uppercase">BB • TB • SAKIT • IZIN • ALPA • PULANG</span>
-                                            </p>
+                                        {(rtObj.hasFisik || rtObj.hasAttendance) && (
+                                            <div>
+                                                <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5 flex justify-between items-center">
+                                                    <span>{rtObj.hasFisik && rtObj.hasAttendance ? 'Fisik & Kehadiran' : rtObj.hasFisik ? 'Kondisi Fisik' : 'Ketidakhadiran'}</span>
+                                                </p>
+                                                <div className="grid grid-cols-2 gap-1.5">
+                                                    {[
+                                                        ...(rtObj.hasFisik ? [
+                                                            { key: 'berat_badan', label: 'Berat Badan', icon: Scale, color: '#6366f1', unit: 'kg' },
+                                                            { key: 'tinggi_badan', label: 'Tinggi Badan', icon: Ruler, color: '#06b6d4', unit: 'cm' }
+                                                        ] : []),
+                                                        ...(rtObj.hasAttendance ? [
+                                                            { key: 'hari_sakit', label: 'Sakit', icon: HeartPulse, color: '#ef4444', unit: 'hr' },
+                                                            { key: 'hari_izin', label: 'Izin', icon: AlertCircle, color: '#f59e0b', unit: 'hr' },
+                                                            { key: 'hari_alpa', label: 'Alpa', icon: AlertCircle, color: '#ef4444', unit: 'hr' },
+                                                            { key: 'hari_pulang', label: 'Pulang', icon: DoorOpen, color: '#8b5cf6', unit: 'x' }
+                                                        ] : [])
+                                                    ].map(f => (
+                                                        <div key={f.key} className="flex items-center gap-1 rounded-lg border border-[var(--color-border)] overflow-hidden bg-[var(--color-surface-alt)]" style={{ height: 32 }}>
+                                                            <div className="w-7 h-full flex items-center justify-center shrink-0" style={{ background: f.color + '18' }}>{(() => { const Icon = f.icon; return <Icon style={{ color: f.color }} className="w-3 h-3" /> })()}</div>
+                                                            <ExtraInput type="text" inputMode="decimal" placeholder={f.label} value={ex[f.key] ?? ''} studentId={student.id} fieldKey={f.key} onCommit={handleExtraChange}
+                                                                className="flex-1 w-0 h-full text-[11px] font-black text-left px-1.5 bg-transparent text-[var(--color-text)] outline-none" />
+                                                            <span className="text-[7px] font-black text-[var(--color-text-muted)] pr-1.5 opacity-60 uppercase">{f.unit}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                        {rtObj.hasHafalan && (
                                             <div className="grid grid-cols-2 gap-1.5">
-                                                {[{ key: 'berat_badan', label: 'Berat Badan', icon: Scale, color: '#6366f1', unit: 'kg' }, { key: 'tinggi_badan', label: 'Tinggi Badan', icon: Ruler, color: '#06b6d4', unit: 'cm' }, { key: 'hari_sakit', label: 'Sakit', icon: HeartPulse, color: '#ef4444', unit: 'hr' }, { key: 'hari_izin', label: 'Izin', icon: AlertCircle, color: '#f59e0b', unit: 'hr' }, { key: 'hari_alpa', label: 'Alpa', icon: AlertCircle, color: '#ef4444', unit: 'hr' }, { key: 'hari_pulang', label: 'Pulang', icon: DoorOpen, color: '#8b5cf6', unit: 'x' }].map(f => (
-                                                    <div key={f.key} className="flex items-center gap-1 rounded-lg border border-[var(--color-border)] overflow-hidden bg-[var(--color-surface-alt)]" style={{ height: 32 }}>
-                                                        <div className="w-7 h-full flex items-center justify-center shrink-0" style={{ background: f.color + '18' }}>{(() => { const Icon = f.icon; return <Icon style={{ color: f.color }} className="w-3 h-3" /> })()}</div>
-                                                        <ExtraInput type="text" inputMode="decimal" placeholder={f.label} value={ex[f.key] ?? ''} studentId={student.id} fieldKey={f.key} onCommit={handleExtraChange}
-                                                            className="flex-1 w-0 h-full text-[11px] font-black text-left px-1.5 bg-transparent text-[var(--color-text)] outline-none" />
-                                                        <span className="text-[7px] font-black text-[var(--color-text-muted)] pr-1.5 opacity-60 uppercase">{f.unit}</span>
+                                                {[{ key: 'ziyadah', ph: 'Ziyadah', icon: BookOpen, color: '#10b981' }, { key: 'murojaah', ph: "Muroja'ah", icon: FileText, color: '#8b5cf6' }].map(f => (
+                                                    <div key={f.key} className="flex items-center gap-1 rounded-lg border border-[var(--color-border)]" style={{ height: 32 }}>
+                                                        <div className="w-7 h-full flex items-center justify-center shrink-0 rounded-l-[7px]" style={{ background: f.color + '18' }}>{(() => { const Icon = f.icon; return <Icon style={{ color: f.color }} className="w-3 h-3" /> })()}</div>
+                                                        <ExtraInput placeholder={f.ph} value={ex[f.key] ?? ''} studentId={student.id} fieldKey={f.key} onCommit={handleExtraChange}
+                                                            className="flex-1 w-0 h-full px-1.5 text-[11px] font-bold bg-transparent text-[var(--color-text)] outline-none" />
                                                     </div>
                                                 ))}
                                             </div>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-1.5">
-                                            {[{ key: 'ziyadah', ph: 'Ziyadah', icon: BookOpen, color: '#10b981' }, { key: 'murojaah', ph: "Muroja'ah", icon: FileText, color: '#8b5cf6' }].map(f => (
-                                                <div key={f.key} className="flex items-center gap-1 rounded-lg border border-[var(--color-border)]" style={{ height: 32 }}>
-                                                    <div className="w-7 h-full flex items-center justify-center shrink-0 rounded-l-[7px]" style={{ background: f.color + '18' }}>{(() => { const Icon = f.icon; return <Icon style={{ color: f.color }} className="w-3 h-3" /> })()}</div>
-                                                    <ExtraInput placeholder={f.ph} value={ex[f.key] ?? ''} studentId={student.id} fieldKey={f.key} onCommit={handleExtraChange}
-                                                        className="flex-1 w-0 h-full px-1.5 text-[11px] font-bold bg-transparent text-[var(--color-text)] outline-none" />
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden">
-                                            <div className="w-7 shrink-0 flex items-start justify-center pt-2" style={{ background: '#f59e0b18' }}><ClipboardList style={{ color: "#f59e0b" }} className="w-3 h-3" /></div>
-                                            <ExtraTextarea placeholder="Catatan musyrif..." value={ex.catatan ?? ''} studentId={student.id} fieldKey="catatan" onCommit={handleCatatanChange}
-                                                maxLength={200} rows={2} className="flex-1 w-0 px-2 py-1.5 text-[11px] bg-transparent text-[var(--color-text)] outline-none resize-none leading-tight" />
-                                            <button
-                                                onClick={() => { const c = generateAutoComment(sc, student.id, studentTrend[student.id]); if (!c) return; setExtras(prev => ({ ...prev, [student.id]: { ...prev[student.id], catatan: c } })); setSavedIds(prev => { const n = new Set(prev); n.delete(student.id); return n }); triggerAutoSave(student.id) }}
-                                                title="Generate komentar otomatis" disabled={!avg}
-                                                className="shrink-0 w-8 flex items-center justify-center text-amber-500 hover:text-amber-600 hover:bg-amber-500/10 transition-all disabled:opacity-30" aria-label="Generate komentar otomatis">
-                                                <Zap className="w-3 h-3" />
-                                            </button>
-                                        </div>
+                                        )}
+                                        {rtObj.hasCatatan && (
+                                            <div className="flex rounded-lg border border-[var(--color-border)] overflow-hidden">
+                                                <div className="w-7 shrink-0 flex items-start justify-center pt-2" style={{ background: '#f59e0b18' }}><ClipboardList style={{ color: "#f59e0b" }} className="w-3 h-3" /></div>
+                                                <ExtraTextarea placeholder="Catatan musyrif..." value={ex.catatan ?? ''} studentId={student.id} fieldKey="catatan" onCommit={handleCatatanChange}
+                                                    maxLength={200} rows={2} className="flex-1 w-0 px-2 py-1.5 text-[11px] bg-transparent text-[var(--color-text)] outline-none resize-none leading-tight" />
+                                                <button
+                                                    onClick={() => { const c = generateAutoComment(sc, student.id, studentTrend[student.id], criteria, reportType, classLevel); if (!c) return; setExtras(prev => ({ ...prev, [student.id]: { ...prev[student.id], catatan: c } })); setSavedIds(prev => { const n = new Set(prev); n.delete(student.id); return n }); triggerAutoSave(student.id) }}
+                                                    title="Generate komentar otomatis" disabled={!avg}
+                                                    className="shrink-0 w-8 flex items-center justify-center text-amber-500 hover:text-amber-600 hover:bg-amber-500/10 transition-all disabled:opacity-30" aria-label="Generate komentar otomatis">
+                                                    <Zap className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                        )}
                                         <div className="flex gap-2 pt-1">
                                             <button onClick={() => { setPreviewStudentId(student.id); setStep(3) }} className="flex-1 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 text-[11px] font-black flex items-center justify-center gap-1.5 hover:bg-indigo-500/20 transition-all"><FileText className="w-3 h-3" /> PDF</button>
                                             <button onClick={() => generateAndSendWA(student)} disabled={!student.phone}

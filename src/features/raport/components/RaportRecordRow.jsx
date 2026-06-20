@@ -13,7 +13,7 @@ import { RadarChart, SparklineTrend } from './RaportCharts'
 // Simple SVG replacement for WhatsApp icon
 const WhatsAppIcon = (props) => (
     <svg viewBox="0 0 24 24" fill="currentColor" className={props.className} style={props.style} width={props.width || "1em"} height={props.height || "1em"}>
-        <path d="M12.012 1c-6.067 0-11 4.934-11 11a10.957 10.957 0 001.605 5.679L1 23l5.52-1.748A10.949 10.949 0 0012.012 23c6.067 0 11-4.933 11-11s-4.933-11-11-11zm5.12 15.65c-.218.614-1.077 1.15-1.636 1.218-.557.068-1.229.098-3.003-.618-2.28-.92-3.738-3.23-3.852-3.38-.114-.15-.92-1.227-.92-2.355 0-1.127.59-1.682.802-1.912.213-.23.46-.287.613-.287.154 0 .307.003.44.01.14.007.327-.052.51.393.187.456.64 1.56.697 1.674.057.115.095.249.019.402-.077.153-.153.249-.306.42-.154.173-.326.288-.135.614.19.326.85 1.397 1.82 2.261.97.864 1.787 1.132 2.094 1.266.307.135.48.115.652-.076.173-.192.748-.864.947-1.161.2-.298.4-.249.671-.15.27.097 1.722.812 2.018.96.297.147.494.22.567.346.073.125.073.722-.145 1.336z"/>
+        <path d="M12.012 1c-6.067 0-11 4.934-11 11a10.957 10.957 0 001.605 5.679L1 23l5.52-1.748A10.949 10.949 0 0012.012 23c6.067 0 11-4.933 11-11s-4.933-11-11-11zm5.12 15.65c-.218.614-1.077 1.15-1.636 1.218-.557.068-1.229.098-3.003-.618-2.28-.92-3.738-3.23-3.852-3.38-.114-.15-.92-1.227-.92-2.355 0-1.127.59-1.682.802-1.912.213-.23.46-.287.613-.287.154 0 .307.003.44.01.14.007.327-.052.51.393.187.456.64 1.56.697 1.674.057.115.095.249.019.402-.077.153-.153.249-.306.42-.154.173-.326.288-.135.614.19.326.85 1.397 1.82 2.261.97.864 1.787 1.132 2.094 1.266.307.135.48.115.652-.076.173-.192.748-.864.947-1.161.2-.298.4-.249.671-.15.27.097 1.722.812 2.018.96.297.147.494.22.567.346.073.125.073.722-.145 1.336z" />
     </svg>
 )
 
@@ -51,7 +51,7 @@ export const ScoreCell = memo(({ value, studentId, kriteria, onScoreChange, onKe
                 onFocus={() => setFocused(true)}
                 onBlur={() => { setFocused(false); setHasError(false) }}
                 aria-label={`Nilai ${kriteria.id}`}
-                className="w-11 h-10 text-center text-base font-black rounded-lg outline-none transition-all appearance-none"
+                className="w-9 h-8 text-center text-[13px] font-black rounded-lg outline-none transition-all appearance-none"
                 style={{
                     background: hasError ? '#ef444415' : g ? g.bg : 'var(--color-surface-alt)',
                     color: hasError ? '#ef4444' : g ? g.uiColor : 'var(--color-text-muted)',
@@ -103,7 +103,7 @@ export const ExtraInput = memo(({ value, studentId, fieldKey, onCommit, ...input
                 onBlur={handleBlur}
             />
             {focused && presets && (
-                <div 
+                <div
                     className="absolute left-0 z-[100] w-[260px] bg-white/95 dark:bg-slate-900/98 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-2.5 shadow-2xl flex flex-col gap-1.5 animate-in fade-in zoom-in-95 duration-150"
                     style={{
                         top: 'calc(100% + 6px)'
@@ -122,11 +122,10 @@ export const ExtraInput = memo(({ value, studentId, fieldKey, onCommit, ...input
                                     e.preventDefault()
                                     handleSelectPreset(p)
                                 }}
-                                className={`px-2.5 py-1 rounded-xl text-[9px] font-black tracking-tight border transition-all duration-200 hover:scale-105 active:scale-95 ${
-                                    fieldKey === 'ziyadah'
+                                className={`px-2.5 py-1 rounded-xl text-[9px] font-black tracking-tight border transition-all duration-200 hover:scale-105 active:scale-95 ${fieldKey === 'ziyadah'
                                         ? 'bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white dark:hover:text-white hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/20'
                                         : 'bg-violet-500/10 dark:bg-violet-500/20 border-violet-500/20 text-violet-600 dark:text-violet-400 hover:bg-violet-500 hover:text-white dark:hover:text-white hover:border-violet-500 hover:shadow-lg hover:shadow-violet-500/20'
-                                }`}
+                                    }`}
                             >
                                 {p}
                             </button>
@@ -280,12 +279,12 @@ const StudentRow = memo(({
                         })}
                         {rtObj.hasCatatan && (
                             <>
-                                <div className="flex rounded-md border border-[var(--color-border)] overflow-hidden" style={{ background: 'var(--color-surface)', minHeight: 32 }}>
+                                <div className="flex rounded-md border border-[var(--color-border)] overflow-hidden" style={{ background: 'var(--color-surface)', height: 32 }}>
                                     <div className="w-6 shrink-0 flex items-center justify-center" style={{ background: '#f59e0b18' }}>
                                         <ClipboardList className="w-2.5 h-2.5 text-[#f59e0b]" />
                                     </div>
-                                    <ExtraTextarea placeholder="Catatan untuk Santri..." value={ex.catatan ?? ''} studentId={student.id} fieldKey="catatan" onCommit={onCatatanChange} maxLength={200} rows={2} aria-label="Catatan musyrif" className="flex-1 w-0 px-1.5 py-1.5 text-[11px] bg-transparent text-[var(--color-text)] outline-none resize-none leading-tight" />
-                                    <button onClick={() => { const c = generateAutoComment(sc, student.id, trendData); if (!c) return; onCatatanChange(student.id, 'catatan', c) }} title="Generate komentar otomatis dari nilai" disabled={!avg} className="shrink-0 w-6 flex items-center justify-center text-amber-500 hover:text-amber-600 hover:bg-amber-500/10 transition-all disabled:opacity-30">
+                                    <ExtraInput placeholder="Catatan" value={ex.catatan ?? ''} studentId={student.id} fieldKey="catatan" onCommit={onCatatanChange} aria-label="Catatan musyrif" className="flex-1 w-0 h-full px-1.5 text-[11px] font-bold bg-transparent text-[var(--color-text)] outline-none" />
+                                    <button onClick={() => { const c = generateAutoComment(sc, student.id, trendData, criteria, reportType, classLevel); if (!c) return; onCatatanChange(student.id, 'catatan', c) }} title="Generate komentar otomatis dari nilai" disabled={!avg} className="shrink-0 w-6 flex items-center justify-center text-amber-500 hover:text-amber-600 hover:bg-amber-500/10 transition-all disabled:opacity-30">
                                         <Zap className="w-2.5 h-2.5" />
                                     </button>
                                 </div>
