@@ -1,8 +1,9 @@
 import { useState, useCallback, useRef } from 'react'
 import { supabase } from '@lib/supabase'
 import { logAudit } from '@utils/auditLogger'
-import { BULAN, KRITERIA, STORAGE_BUCKET, GRADE, calcAvg } from '@utils/reports/raportConstants'
-import { buildWaLines, escapeCsvCell } from '@utils/reports/raportHelpers'
+import { BULAN, STORAGE_BUCKET } from '@utils/reports/raportConstants'
+import { buildWaLines, escapeCsvCell, calcAvg } from '@utils/reports/raportHelpers'
+import { RAPORT_TYPES, getClassLevel, getGradePredicate } from '@utils/reports/raportTypeRegistry'
 
 // Helper withTimeout agar html2canvas tidak hang selamanya
 const withTimeout = (promise, ms, label = 'Operasi') =>
@@ -26,7 +27,11 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
         setPrintRenderedCount,
         selectedStudentIds,
         bulanObj,
-        settings
+        settings,
+        reportType,
+        selectedSemester,
+        academicYear,
+        classLevel
     } = core
 
     // ── Local states ──
@@ -37,7 +42,7 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
     const [zipBlast, setZipBlast] = useState(null) // { queue, idx, done, failed, total, active }
     const [exporting, setExporting] = useState(false)
     const [isImportModalOpen, setIsImportModalOpen] = useState(false)
-    const [isExportModalOpen, setIsExportModalOpen] = useState(false)
+    const [isExportModalOpen, setIsExportOpen] = useState(false)
 
     // Abort controllers
     const waBlastAbortRef = useRef(false)
@@ -102,9 +107,10 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
             musyrif,
             pdfUrl,
             waFooter: settings.wa_footer,
+            reportTypeId: reportType
         })
         return lines.join('\n')
-    }, [scores, extras, bulanObj, selectedYear, selectedClass, musyrif, settings])
+    }, [scores, extras, bulanObj, selectedYear, selectedClass, musyrif, settings, reportType])
 
     // ── Send text only ──
     const sendWATextOnly = useCallback(async (student) => {
@@ -178,125 +184,101 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
     // ── Upload to Supabase ──
     const uploadToSupabase = useCallback(async (blob, filename) => {
         const path = `${selectedYear}/${bulanObj?.id_str || selectedMonth}/${filename}`
-        const { error: uploadError } = await supabase.storage.from(STORAGE_BUCKET).upload(path, blob, { contentType: 'application/pdf', upsert: true })
-        if (uploadError) throw new Error(`Upload gagal: ${uploadError.message}`)
-        const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path)
-        return data.publicUrl
-    }, [selectedYear, bulanObj, selectedMonth])
+        const { data, error } = await supabase.storage
+            .from(STORAGE_BUCKET)
+            .upload(path, blob, { contentType: 'application/pdf', cacheControl: '3600', upsert: true })
+
+        if (error) throw error
+        const { data: pub } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path)
+        if (!pub?.publicUrl) throw new Error('Gagal mendapatkan public URL')
+        return pub.publicUrl
+    }, [selectedMonth, selectedYear, bulanObj])
 
     // ── Generate and send WA ──
     const generateAndSendWA = useCallback(async (student) => {
-        if (!student.phone) { addToast('Nomor WA tidak tersedia', 'warning'); return }
+        if (!student.phone) { addToast('Nomor WA wali tidak tersedia', 'warning'); return }
         const phone = student.phone.replace(/\D/g, '').replace(/^0/, '62')
 
-        // Jika PDF sudah di-cache, kirim langsung dengan URL di body teks
+        // Jika cache sudah ada
         if (raportLinks[student.id]) {
-            const cachedUrl = raportLinks[student.id]
-            // URL selalu disertakan dalam teks agar berfungsi di semua paket Fonnte
-            const message = buildWaMessage(student, cachedUrl)
-            const textSent = await sendFonnteMessage(phone, message)
-            // Best-effort: coba kirim sebagai file attachment juga (butuh paket Super+)
-            sendFonnteFile(phone, cachedUrl, decodeURIComponent(cachedUrl.split('/').pop())).catch(() => {})
-            if (textSent) { addToast(`WA terkirim ke wali ${student.name.split(' ')[0]}`, 'success') }
-            else {
-                const tab = window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank')
-                if (!tab) addToast('Popup diblokir browser.', 'warning')
-            }
+            setSendingWA(prev => ({ ...prev, [student.id]: 'done' }))
+            await sendFonnteFile(phone, raportLinks[student.id], `Raport_${student.name.replace(/\s+/g, '_')}.pdf`)
+            addToast(`✅ PDF Raport terkirim ke wali ${student.name.split(' ')[0]}`, 'success')
             return
         }
 
-        setPreviewStudentId(student.id); await new Promise(r => setTimeout(r, 300))
         setSendingWA(prev => ({ ...prev, [student.id]: 'generating' }))
         try {
             const { blob, filename } = await generatePDFBlob(student)
-            setSendingWA(prev => ({ ...prev, [student.id]: 'uploading' }))
-            const url = await uploadToSupabase(blob, filename)
-            setRaportLinks(prev => ({ ...prev, [student.id]: url }))
-            setSendingWA(prev => ({ ...prev, [student.id]: 'done' }))
+            if (zipAbortRef.current || waBlastAbortRef.current) return
 
-            // URL selalu disertakan dalam teks agar berfungsi di semua paket Fonnte
-            const message = buildWaMessage(student, url)
-            const textSent = await sendFonnteMessage(phone, message)
-            // Best-effort: coba kirim sebagai file attachment juga (butuh paket Super+)
-            sendFonnteFile(phone, url, filename).catch(() => {})
-            if (textSent) {
-                addToast(`WA terkirim ke wali ${student.name.split(' ')[0]}`, 'success')
+            setSendingWA(prev => ({ ...prev, [student.id]: 'uploading' }))
+            const publicUrl = await uploadToSupabase(blob, filename)
+            setRaportLinks(prev => ({ ...prev, [student.id]: publicUrl }))
+
+            setSendingWA(prev => ({ ...prev, [student.id]: 'done' }))
+            const sent = await sendFonnteFile(phone, publicUrl, filename)
+            if (sent) {
+                addToast(`✅ PDF Raport terkirim ke wali ${student.name.split(' ')[0]}`, 'success')
             } else {
                 // Fallback to wa.me
+                const message = buildWaMessage(student, publicUrl)
                 const tab = window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank')
-                if (!tab) addToast('Popup diblokir browser.', 'warning')
-                else addToast(`WA dibuka untuk ${student.name.split(' ')[0]}`, 'info')
+                if (!tab) addToast('Popup diblokir.', 'warning')
+                else addToast(`📲 WA dibuka untuk ${student.name.split(' ')[0]}`, 'info')
             }
+        } catch (e) {
+            console.error('WA send error:', e)
+            addToast(`Gagal kirim WA ke ${student.name.split(' ')[0]}: ${e.message}`, 'error')
+            setSendingWA(prev => ({ ...prev, [student.id]: null }))
+        }
+    }, [raportLinks, generatePDFBlob, uploadToSupabase, sendFonnteFile, buildWaMessage, addToast])
 
-            logAudit({
-                action: 'SEND_WA', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
-                recordId: student.id,
-                newData: { student_name: student.name, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear, url }
-            })
-        } catch (err) { addToast(`Gagal: ${err.message}`, 'error'); setSendingWA(prev => ({ ...prev, [student.id]: null })); console.error('generateAndSendWA error:', err) }
-    }, [raportLinks, buildWaMessage, sendFonnteMessage, sendFonnteFile, generatePDFBlob, uploadToSupabase, addToast, selectedClass, selectedMonth, selectedYear, setPreviewStudentId])
-
-    // ── Run WA Blast (Fonnte-powered, no browser tabs) ──
-    const runWaBlast = useCallback(async (queue) => {
-        setWaBlastConfirm(null)
-        waBlastAbortRef.current = false
-        setWaBlast({ queue, idx: 0, done: 0, failed: 0, active: true })
+    // ── Blast WA ──
+    const runWaBlast = useCallback(async (queue, abortRef) => {
         let done = 0, failed = 0
+        setWaBlast({ queue, idx: 0, done: 0, failed: 0, active: true })
         for (let i = 0; i < queue.length; i++) {
-            if (waBlastAbortRef.current) {
-                addToast(`WA Blast dibatalkan — ${done} terkirim, ${queue.length - done - failed} dibatalkan`, 'warning')
-                setWaBlast(prev => prev ? { ...prev, active: false, done, failed } : null)
-                return
-            }
+            if (abortRef.current) break
+            setWaBlast(prev => prev ? { ...prev, idx: i } : null)
             const student = queue[i]
-            setWaBlast(prev => prev ? { ...prev, idx: i, active: true } : null)
             try {
-                if (!student.phone) { failed++; continue }
-                const phone = student.phone.replace(/\D/g, '').replace(/^0/, '62')
+                const phone = student.phone?.replace(/\D/g, '').replace(/^0/, '62')
+                if (!phone) { failed++; continue }
+
                 let url = raportLinks[student.id]
                 if (!url) {
-                    setPreviewStudentId(student.id)
-                    await new Promise(r => setTimeout(r, 400))
                     const { blob, filename } = await generatePDFBlob(student)
+                    if (abortRef.current) break
                     url = await uploadToSupabase(blob, filename)
                     setRaportLinks(prev => ({ ...prev, [student.id]: url }))
-                    setSendingWA(prev => ({ ...prev, [student.id]: 'done' }))
                 }
-                const pdfFilename = decodeURIComponent(url.split('/').pop())
-                // URL selalu disertakan dalam teks agar berfungsi di semua paket Fonnte
-                const message = buildWaMessage(student, url)
-                const textSent = await sendFonnteMessage(phone, message)
-                // Best-effort: coba kirim sebagai file attachment juga (butuh paket Super+)
-                sendFonnteFile(phone, url, pdfFilename).catch(() => {})
-                if (textSent) {
-                    done++
-                } else {
-                    // Fallback: open wa.me tab
-                    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank')
-                    done++
-                }
-                // Delay between messages to avoid rate limiting
-                await new Promise(r => setTimeout(r, 600))
+
+                if (abortRef.current) break
+                const sent = await sendFonnteFile(phone, url, `Raport_${student.name.replace(/\s+/g, '_')}.pdf`)
+                if (sent) done++
+                else failed++
+
+                // Pause 1s to prevent rate limit
+                await new Promise(r => setTimeout(r, 1000))
             } catch (e) { failed++; console.error('WA Blast item error:', e) }
             setWaBlast(prev => prev ? { ...prev, done, failed } : null)
         }
-        setWaBlast(prev => prev ? { ...prev, active: false, done, failed } : null)
-        addToast(`WA Blast selesai: ${done} terkirim, ${failed} gagal`, done > 0 ? 'success' : 'error')
+        setWaBlast(prev => prev ? { ...prev, active: false } : null)
+        addToast(`WA Blast selesai: ${done} terkirim, ${failed} gagal`, 'info')
+    }, [raportLinks, generatePDFBlob, uploadToSupabase, sendFonnteFile, addToast])
 
-        logAudit({
-            action: 'EXPORT', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
-            newData: { format: 'WA_BLAST', count: done, failed_count: failed, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear }
-        })
-    }, [raportLinks, generatePDFBlob, uploadToSupabase, buildWaMessage, sendFonnteMessage, sendFonnteFile, addToast, selectedClass, selectedMonth, selectedYear, setPreviewStudentId])
-
-    // ── Run ZIP Blast ──
-    const runZipBlast = useCallback(async (stuList, archEntry) => {
-        const { default: JSZip } = await import('jszip')
-        zipAbortRef.current = false
-        setZipBlast({ queue: stuList, idx: 0, done: 0, failed: 0, total: stuList.length, active: true })
+    // ── Blast ZIP ──
+    const runZipBlast = useCallback(async (stuList, archEntry = null) => {
+        const [{ default: JSZip }] = await Promise.all([import('jszip')])
         const zip = new JSZip()
         let done = 0, failed = 0
-        const bulanStr = archEntry ? (BULAN.find(b => b.id === archEntry.month)?.id_str || '') : (BULAN.find(b => b.id === selectedMonth)?.id_str || '')
+        const total = stuList.length
+        zipAbortRef.current = false
+        setZipBlast({ queue: stuList, idx: 0, done: 0, failed: 0, total, active: true })
+
+        const rtObj = RAPORT_TYPES[reportType] || RAPORT_TYPES.bulanan
+        const bulanStr = archEntry ? BULAN.find(b => b.id === archEntry.month)?.id_str : (bulanObj?.id_str || String(selectedMonth))
         const yearStr = archEntry ? archEntry.year : selectedYear
         for (let i = 0; i < stuList.length; i++) {
             if (zipAbortRef.current) {
@@ -334,11 +316,11 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
             addToast(`ZIP berhasil: ${done} raport diunduh`, 'success')
 
             logAudit({
-                action: 'EXPORT', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
+                action: 'EXPORT', source: 'OPERATIONAL', tableName: rtObj.dbTable,
                 newData: { format: 'ZIP_ARCHIVE', count: done, failed_count: failed, class_name: archEntry?.class_name || selectedClass?.name, month: archEntry ? archEntry.month : selectedMonth, year: archEntry ? archEntry.year : selectedYear }
             })
         } catch (e) { addToast('Gagal membuat ZIP: ' + e.message, 'error'); setZipBlast(null) }
-    }, [generatePDFBlob, selectedMonth, selectedYear, selectedClass, addToast, setPreviewStudentId])
+    }, [generatePDFBlob, selectedMonth, selectedYear, selectedClass, reportType, bulanObj, addToast, setPreviewStudentId])
 
     // ── Get selected or active students ──
     const getSelectedOrActiveStudents = useCallback((scope) => {
@@ -379,13 +361,11 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
                 return
             }
 
+            const rtObj = RAPORT_TYPES[reportType] || RAPORT_TYPES.bulanan
+            const criteria = rtObj.getCriteria(selectedClass)
+
             const headerMap = {
                 nama: 'Nama',
-                nilai_akhlak: 'Akhlak',
-                nilai_ibadah: 'Ibadah',
-                nilai_kebersihan: 'Kebersihan',
-                nilai_quran: "Al-Qur'an",
-                nilai_bahasa: 'Bahasa',
                 avg: 'Rata-rata',
                 predikat: 'Predikat',
                 berat_badan: 'BB(kg)',
@@ -398,23 +378,21 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
                 hari_pulang: 'Pulang',
                 catatan: 'Catatan'
             }
+            criteria.forEach(k => {
+                headerMap[k.key] = k.id
+            })
 
             const activeColumns = options.columns || []
             const headers = options.includeHeader !== false ? ['No', ...activeColumns.map(col => headerMap[col] || col)] : []
 
             const rows = targetStudents.map((s, i) => {
                 const sc = scores[s.id] || {}, ex = extras[s.id] || {}
-                const avg = calcAvg(sc)
-                const predikat = avg ? GRADE(Number(avg)).id : ''
+                const avg = calcAvg(sc, criteria)
+                const predikat = avg ? getGradePredicate(Number(avg), reportType, classLevel)?.id || '' : ''
 
                 const rowData = [i + 1]
                 activeColumns.forEach(col => {
                     if (col === 'nama') rowData.push(s.name)
-                    else if (col === 'nilai_akhlak') rowData.push(sc.nilai_akhlak ?? '')
-                    else if (col === 'nilai_ibadah') rowData.push(sc.nilai_ibadah ?? '')
-                    else if (col === 'nilai_kebersihan') rowData.push(sc.nilai_kebersihan ?? '')
-                    else if (col === 'nilai_quran') rowData.push(sc.nilai_quran ?? '')
-                    else if (col === 'nilai_bahasa') rowData.push(sc.nilai_bahasa ?? '')
                     else if (col === 'avg') rowData.push(avg ?? '')
                     else if (col === 'predikat') rowData.push(predikat)
                     else if (col === 'berat_badan') rowData.push(ex.berat_badan ?? '')
@@ -426,6 +404,10 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
                     else if (col === 'hari_alpa') rowData.push(ex.hari_alpa ?? '')
                     else if (col === 'hari_pulang') rowData.push(ex.hari_pulang ?? '')
                     else if (col === 'catatan') rowData.push(ex.catatan ?? '')
+                    else {
+                        const val = sc[col]
+                        rowData.push(val !== '' && val !== undefined && val !== null ? Number(val) : '')
+                    }
                 })
                 return rowData
             })
@@ -444,7 +426,7 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
 
             addToast(`CSV berhasil diexport (${targetStudents.length} santri)`, 'success')
             logAudit({
-                action: 'EXPORT', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
+                action: 'EXPORT', source: 'OPERATIONAL', tableName: rtObj.dbTable,
                 newData: { format: 'CSV', count: targetStudents.length, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear, scope }
             })
         } catch (e) {
@@ -453,7 +435,7 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
         } finally {
             setExporting(false)
         }
-    }, [students, scores, extras, selectedClass, selectedMonth, selectedYear, addToast, selectedStudentIds, getSelectedOrActiveStudents])
+    }, [students, scores, extras, selectedClass, selectedMonth, selectedYear, reportType, classLevel, addToast, selectedStudentIds, getSelectedOrActiveStudents])
 
     // ── Handle Export Excel ──
     const handleExportExcelModal = useCallback(async (scope, options) => {
@@ -467,13 +449,11 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
 
             const XLSX = await import('xlsx')
 
+            const rtObj = RAPORT_TYPES[reportType] || RAPORT_TYPES.bulanan
+            const criteria = rtObj.getCriteria(selectedClass)
+
             const headerMap = {
                 nama: 'Nama',
-                nilai_akhlak: 'Akhlak',
-                nilai_ibadah: 'Ibadah',
-                nilai_kebersihan: 'Kebersihan',
-                nilai_quran: "Al-Qur'an",
-                nilai_bahasa: 'Bahasa',
                 avg: 'Rata-rata',
                 predikat: 'Predikat',
                 berat_badan: 'BB(kg)',
@@ -486,23 +466,21 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
                 hari_pulang: 'Pulang',
                 catatan: 'Catatan'
             }
+            criteria.forEach(k => {
+                headerMap[k.key] = k.id
+            })
 
             const activeColumns = options.columns || []
             const headers = options.includeHeader !== false ? ['No', ...activeColumns.map(col => headerMap[col] || col)] : []
 
             const rows = targetStudents.map((s, i) => {
                 const sc = scores[s.id] || {}, ex = extras[s.id] || {}
-                const avg = calcAvg(sc)
-                const predikat = avg ? GRADE(Number(avg)).id : ''
+                const avg = calcAvg(sc, criteria)
+                const predikat = avg ? getGradePredicate(Number(avg), reportType, classLevel)?.id || '' : ''
 
                 const rowData = [i + 1]
                 activeColumns.forEach(col => {
                     if (col === 'nama') rowData.push(s.name)
-                    else if (col === 'nilai_akhlak') rowData.push(sc.nilai_akhlak !== '' && sc.nilai_akhlak !== undefined ? Number(sc.nilai_akhlak) : '')
-                    else if (col === 'nilai_ibadah') rowData.push(sc.nilai_ibadah !== '' && sc.nilai_ibadah !== undefined ? Number(sc.nilai_ibadah) : '')
-                    else if (col === 'nilai_kebersihan') rowData.push(sc.nilai_kebersihan !== '' && sc.nilai_kebersihan !== undefined ? Number(sc.nilai_kebersihan) : '')
-                    else if (col === 'nilai_quran') rowData.push(sc.nilai_quran !== '' && sc.nilai_quran !== undefined ? Number(sc.nilai_quran) : '')
-                    else if (col === 'nilai_bahasa') rowData.push(sc.nilai_bahasa !== '' && sc.nilai_bahasa !== undefined ? Number(sc.nilai_bahasa) : '')
                     else if (col === 'avg') rowData.push(avg ? Number(avg) : '')
                     else if (col === 'predikat') rowData.push(predikat)
                     else if (col === 'berat_badan') rowData.push(ex.berat_badan !== '' && ex.berat_badan !== undefined ? Number(ex.berat_badan) : '')
@@ -514,6 +492,10 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
                     else if (col === 'hari_alpa') rowData.push(ex.hari_alpa !== '' && ex.hari_alpa !== undefined ? Number(ex.hari_alpa) : '')
                     else if (col === 'hari_pulang') rowData.push(ex.hari_pulang !== '' && ex.hari_pulang !== undefined ? Number(ex.hari_pulang) : '')
                     else if (col === 'catatan') rowData.push(ex.catatan ?? '')
+                    else {
+                        const val = sc[col]
+                        rowData.push(val !== '' && val !== undefined && val !== null ? Number(val) : '')
+                    }
                 })
                 return rowData
             })
@@ -529,7 +511,7 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
 
             addToast(`XLSX berhasil diexport (${targetStudents.length} santri)`, 'success')
             logAudit({
-                action: 'EXPORT', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
+                action: 'EXPORT', source: 'OPERATIONAL', tableName: rtObj.dbTable,
                 newData: { format: 'XLSX', count: targetStudents.length, class_name: selectedClass?.name, month: selectedMonth, year: selectedYear, scope }
             })
         } catch (e) {
@@ -538,13 +520,14 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
         } finally {
             setExporting(false)
         }
-    }, [students, scores, extras, selectedClass, bulanObj, selectedYear, addToast, selectedMonth, selectedStudentIds, getSelectedOrActiveStudents])
+    }, [students, scores, extras, selectedClass, bulanObj, selectedYear, reportType, classLevel, addToast, selectedMonth, selectedStudentIds, getSelectedOrActiveStudents])
 
     // ── Handle Export All Classes ──
     const handleExportAllClassesModal = useCallback(async (customFileName) => {
         setExporting(true)
         try {
             const XLSX = await import('xlsx')
+            const rtObj = RAPORT_TYPES[reportType] || RAPORT_TYPES.bulanan
 
             const { data: allCls, error: clsErr } = await supabase.from('classes').select('id, name')
             if (clsErr) throw clsErr
@@ -552,31 +535,51 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
             const { data: allStu, error: stuErr } = await supabase.from('students').select('id, name, class_id').is('deleted_at', null).order('name')
             if (stuErr) throw stuErr
 
-            const { data: allRep, error: repErr } = await supabase.from('student_monthly_reports').select('*').eq('month', selectedMonth).eq('year', selectedYear)
+            // Add month/year or semester filters depending on periodType
+            let query = supabase.from(rtObj.dbTable).select('*')
+            if (rtObj.periodType === 'monthly') {
+                query = query.eq('month', selectedMonth).eq('year', selectedYear)
+            } else {
+                query = query.eq('semester', selectedSemester).eq('year', selectedYear)
+            }
+            const { data: allRep, error: repErr } = await query
             if (repErr) throw repErr
 
             const wb = XLSX.utils.book_new()
-            const headers = ['No', 'Nama', 'Akhlak', 'Ibadah', 'Kebersihan', "Al-Qur'an", 'Bahasa', 'Rata-rata', 'Predikat', 'BB(kg)', 'TB(cm)', 'Ziyadah', "Muroja'ah", 'Hari Sakit', 'Hari Izin', 'Hari Alpa', 'Hari Pulang', 'Catatan']
-
             let sheetAdded = 0
 
             for (const cls of allCls) {
                 const classStudents = allStu.filter(s => s.class_id === cls.id)
                 if (classStudents.length === 0) continue
 
+                const clsLevel = getClassLevel(cls)
+                const criteria = rtObj.getCriteria(cls)
+
+                // Headers
+                const headers = ['No', 'Nama']
+                criteria.forEach(k => {
+                    headers.push(k.id)
+                })
+                headers.push('Rata-rata', 'Predikat', 'BB(kg)', 'TB(cm)', 'Ziyadah', "Muroja'ah", 'Hari Sakit', 'Hari Izin', 'Hari Alpa', 'Hari Pulang', 'Catatan')
+
                 const rows = classStudents.map((s, i) => {
                     const rep = allRep.find(r => r.student_id === s.id) || {}
-                    const sc = { nilai_akhlak: rep.nilai_akhlak, nilai_ibadah: rep.nilai_ibadah, nilai_kebersihan: rep.nilai_kebersihan, nilai_quran: rep.nilai_quran, nilai_bahasa: rep.nilai_bahasa }
-                    const avg = calcAvg(sc)
-                    const predikat = avg ? GRADE(Number(avg)).id : ''
+                    
+                    const sc = {}
+                    criteria.forEach(k => {
+                        sc[k.key] = rep[k.key]
+                    })
+                    const avg = calcAvg(sc, criteria)
+                    const predikat = avg ? getGradePredicate(Number(avg), reportType, clsLevel)?.id || '' : ''
 
-                    return [
-                        i + 1, s.name,
-                        rep.nilai_akhlak !== null && rep.nilai_akhlak !== undefined ? Number(rep.nilai_akhlak) : '',
-                        rep.nilai_ibadah !== null && rep.nilai_ibadah !== undefined ? Number(rep.nilai_ibadah) : '',
-                        rep.nilai_kebersihan !== null && rep.nilai_kebersihan !== undefined ? Number(rep.nilai_kebersihan) : '',
-                        rep.nilai_quran !== null && rep.nilai_quran !== undefined ? Number(rep.nilai_quran) : '',
-                        rep.nilai_bahasa !== null && rep.nilai_bahasa !== undefined ? Number(rep.nilai_bahasa) : '',
+                    const rowData = [
+                        i + 1, s.name
+                    ]
+                    criteria.forEach(k => {
+                        const val = rep[k.key]
+                        rowData.push(val !== null && val !== undefined ? Number(val) : '')
+                    })
+                    rowData.push(
                         avg ? Number(avg) : '', predikat,
                         rep.berat_badan !== null && rep.berat_badan !== undefined ? Number(rep.berat_badan) : '',
                         rep.tinggi_badan !== null && rep.tinggi_badan !== undefined ? Number(rep.tinggi_badan) : '',
@@ -586,15 +589,22 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
                         rep.hari_alpa !== null && rep.hari_alpa !== undefined ? Number(rep.hari_alpa) : '',
                         rep.hari_pulang !== null && rep.hari_pulang !== undefined ? Number(rep.hari_pulang) : '',
                         rep.catatan || '',
-                    ]
+                    )
+                    return rowData
                 })
 
                 const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
-                ws['!cols'] = [
-                    { wch: 4 }, { wch: 28 }, { wch: 8 }, { wch: 8 }, { wch: 12 }, { wch: 10 }, { wch: 8 },
+                
+                // columns width
+                const colWidths = [{ wch: 4 }, { wch: 28 }]
+                criteria.forEach(() => {
+                    colWidths.push({ wch: 10 })
+                })
+                colWidths.push(
                     { wch: 10 }, { wch: 12 }, { wch: 7 }, { wch: 7 }, { wch: 12 }, { wch: 12 },
                     { wch: 10 }, { wch: 9 }, { wch: 9 }, { wch: 10 }, { wch: 30 }
-                ]
+                )
+                ws['!cols'] = colWidths
 
                 const sheetName = (cls.name || 'Kelas').replace(/[\\/?*\[\]]/g, '').substring(0, 31)
                 XLSX.utils.book_append_sheet(wb, ws, sheetName)
@@ -611,7 +621,7 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
 
             addToast(`Semua kelas berhasil diexport (${sheetAdded} sheet)`, 'success')
             logAudit({
-                action: 'EXPORT', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
+                action: 'EXPORT', source: 'OPERATIONAL', tableName: rtObj.dbTable,
                 newData: { format: 'XLSX_ALL_CLASSES', month: selectedMonth, year: selectedYear }
             })
         } catch (e) {
@@ -620,13 +630,13 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
         } finally {
             setExporting(false)
         }
-    }, [selectedMonth, selectedYear, bulanObj, addToast])
+    }, [selectedMonth, selectedYear, reportType, selectedSemester, academicYear, bulanObj, addToast])
 
     return {
         raportLinks, setRaportLinks, sendingWA, setSendingWA,
         waBlastConfirm, setWaBlastConfirm, waBlast, setWaBlast,
         zipBlast, setZipBlast, exporting, setExporting,
-        isImportModalOpen, setIsImportModalOpen, isExportModalOpen, setIsExportOpen: setIsExportModalOpen,
+        isImportModalOpen, setIsImportModalOpen, isExportModalOpen, setIsExportOpen: setIsExportOpen,
         waBlastAbortRef, zipAbortRef,
         buildWaMessage, sendWATextOnly, generatePDFBlob, uploadToSupabase,
         generateAndSendWA, runWaBlast, runZipBlast,

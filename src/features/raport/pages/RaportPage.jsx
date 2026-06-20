@@ -32,6 +32,7 @@ import {
     MAX_SCORE, STORAGE_BUCKET, KRITERIA, GRADE, calcAvg, LABEL, toArabicNum,
     FISIK_FIELDS, HAFALAN_FIELDS, BULAN, CATATAN_TEMPLATES
 } from '@utils/reports/raportConstants'
+import { RAPORT_TYPES } from '@utils/reports/raportTypeRegistry'
 import {
     isComplete, buildWaLines, escapeCsvCell, generateAutoComment
 } from '@utils/reports/raportHelpers'
@@ -119,6 +120,11 @@ export default function RaportPage() {
         saveStudent, resetStudent, resetClass, saveAll, _doSaveAll, copyFromLastMonth,
         bulanObj, selectedClass
     } = core
+
+    const activeRtObj = useMemo(() => RAPORT_TYPES[reportType] || RAPORT_TYPES.bulanan, [reportType])
+    const activeCriteria = useMemo(() => activeRtObj.getCriteria(selectedClass), [activeRtObj, selectedClass])
+    const activeMaxScore = activeRtObj.maxScore || 9
+    const activeDbTable = activeRtObj.dbTable || 'student_monthly_reports'
 
     const years = useMemo(() => [now.getFullYear() - 1, now.getFullYear(), now.getFullYear() + 1], [now])
 
@@ -1609,7 +1615,7 @@ export default function RaportPage() {
                                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 font-black text-[10px] transition-all ${isDone ? 'bg-emerald-500 text-white' : isBoarding ? 'bg-indigo-500/10 text-indigo-600' : 'bg-emerald-500/10 text-emerald-600'}`}>
                                         {cls.name?.charAt(0)}
                                     </div>
- 
+
                                     {/* Main Info Area */}
                                     <div className="min-w-0 flex-1 flex flex-col justify-center gap-0.5">
                                         <div className="flex items-center gap-2">
@@ -1619,7 +1625,7 @@ export default function RaportPage() {
                                             </span>
                                         </div>
                                         <p className="text-[9px] font-bold text-[var(--color-text-muted)] truncate opacity-60 leading-none">{teacher}</p>
- 
+
                                         {/* Slim Progress */}
                                         <div className="flex items-center gap-2 mt-1">
                                             <div className="h-1 flex-1 rounded-full bg-[var(--color-border)]/40 overflow-hidden">
@@ -1631,7 +1637,7 @@ export default function RaportPage() {
                                             <span className="text-[8px] font-black text-indigo-500 w-6 text-right">{pct}%</span>
                                         </div>
                                     </div>
- 
+
                                     {/* Right Side Actions */}
                                     <div className="flex items-center gap-1 shrink-0 ml-1 h-full pl-2 border-l border-[var(--color-border)]/50">
                                         <button
@@ -1841,6 +1847,8 @@ export default function RaportPage() {
                 <LazyRaportInputTable
                     globalSaveIndicator={globalSaveIndicator}
                     loading={loading}
+                    criteria={(() => { const rt = RAPORT_TYPES[reportType] || RAPORT_TYPES.bulanan; return rt.getCriteria(selectedClass) })()}
+                    maxScore={(RAPORT_TYPES[reportType] || RAPORT_TYPES.bulanan).maxScore}
                     students={students}
                     filteredStudents={filteredStudents}
                     scores={scores}
@@ -2202,6 +2210,10 @@ export default function RaportPage() {
                                                     settings={settings}
                                                     pageSize={pageSize}
                                                     catatanArab={catatanArabMap[previewStudent.id]}
+                                                    reportType={reportType}
+                                                    selectedSemester={selectedSemester}
+                                                    academicYear={academicYear}
+                                                    selectedClass={selectedClass}
                                                 />
                                             )}
                                         </div>
@@ -2381,102 +2393,112 @@ export default function RaportPage() {
                                             </div>
 
                                             {/* Kondisi Fisik & Perkembangan Hafalan */}
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                {/* Fisik */}
-                                                <div className="space-y-2">
-                                                    <h5 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Kondisi Fisik</h5>
-                                                    <div className="grid grid-cols-2 gap-2">
-                                                        {FISIK_FIELDS.map(f => (
-                                                            <div key={f.key} className="flex items-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-2.5 h-10">
-                                                                {(() => { const Icon = f.icon; return <Icon style={{ color: f.color }} className="w-3.5 h-3.5 shrink-0 opacity-80" /> })()}
-                                                                <input
-                                                                    type="number"
-                                                                    inputMode="decimal"
-                                                                    placeholder={f.label}
-                                                                    value={editEx(pStudent.id)?.[f.key] ?? ''}
-                                                                    onChange={(e) => handleExtraEdit(f.key, e.target.value)}
-                                                                    className="flex-1 w-0 text-[11px] font-bold bg-transparent text-[var(--color-text)] outline-none"
-                                                                />
-                                                                <span className="text-[9px] text-[var(--color-text-muted)] font-black">{f.unit}</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-
-                                                {/* Hafalan */}
-                                                <div className="space-y-2">
-                                                    <h5 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Perkembangan Hafalan</h5>
-                                                    <div className="grid grid-cols-2 gap-2">
-                                                        {HAFALAN_FIELDS.map(f => (
-                                                            <div key={f.key} className="flex items-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-2.5 h-10">
-                                                                {(() => { const Icon = f.icon; return <Icon style={{ color: f.color }} className="w-3.5 h-3.5 shrink-0 opacity-80" /> })()}
-                                                                <input
-                                                                    type="text"
-                                                                    placeholder={f.ph}
-                                                                    value={editEx(pStudent.id)?.[f.key] ?? ''}
-                                                                    onChange={(e) => handleExtraEdit(f.key, e.target.value)}
-                                                                    className="flex-1 w-0 text-[11px] font-bold bg-transparent text-[var(--color-text)] outline-none"
-                                                                />
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Ketidakhadiran */}
-                                            <div className="space-y-2">
-                                                <h5 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Ketidakhadiran</h5>
-                                                <div className="grid grid-cols-4 gap-2">
-                                                    {[
-                                                        { key: 'hari_sakit', label: 'Sakit', color: '#ef4444' },
-                                                        { key: 'hari_izin', label: 'Izin', color: '#3b82f6' },
-                                                        { key: 'hari_alpa', label: 'Alpa', color: '#f59e0b' },
-                                                        { key: 'hari_pulang', label: 'Pulang', color: '#10b981' }
-                                                    ].map(item => (
-                                                        <div key={item.key} className="flex flex-col p-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-center">
-                                                            <span className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-wider mb-1">{item.label}</span>
-                                                            <div className="flex items-center justify-center gap-1">
-                                                                <input
-                                                                    type="number"
-                                                                    min={0}
-                                                                    value={editEx(pStudent.id)?.[item.key] ?? ''}
-                                                                    onChange={(e) => handleExtraEdit(item.key, e.target.value)}
-                                                                    className="w-10 h-7 text-center text-[11px] font-black rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] outline-none"
-                                                                    placeholder="0"
-                                                                />
-                                                                <span className="text-[9px] text-[var(--color-text-muted)] font-bold">Hari</span>
+                                            {(activeRtObj.hasFisik || activeRtObj.hasHafalan) && (
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    {/* Fisik */}
+                                                    {activeRtObj.hasFisik && (
+                                                        <div className="space-y-2">
+                                                            <h5 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Kondisi Fisik</h5>
+                                                            <div className="grid grid-cols-2 gap-2">
+                                                                {FISIK_FIELDS.filter(f => f.key === 'berat_badan' || f.key === 'tinggi_badan').map(f => (
+                                                                    <div key={f.key} className="flex items-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-2.5 h-10">
+                                                                        {(() => { const Icon = f.icon; return <Icon style={{ color: f.color }} className="w-3.5 h-3.5 shrink-0 opacity-80" /> })()}
+                                                                        <input
+                                                                            type="number"
+                                                                            inputMode="decimal"
+                                                                            placeholder={f.label}
+                                                                            value={editEx(pStudent.id)?.[f.key] ?? ''}
+                                                                            onChange={(e) => handleExtraEdit(f.key, e.target.value)}
+                                                                            className="flex-1 w-0 text-[11px] font-bold bg-transparent text-[var(--color-text)] outline-none"
+                                                                        />
+                                                                        <span className="text-[9px] text-[var(--color-text-muted)] font-black">{f.unit}</span>
+                                                                    </div>
+                                                                ))}
                                                             </div>
                                                         </div>
-                                                    ))}
+                                                    )}
+
+                                                    {/* Hafalan */}
+                                                    {activeRtObj.hasHafalan && (
+                                                        <div className="space-y-2">
+                                                            <h5 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Perkembangan Hafalan</h5>
+                                                            <div className="grid grid-cols-2 gap-2">
+                                                                {HAFALAN_FIELDS.map(f => (
+                                                                    <div key={f.key} className="flex items-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-2.5 h-10">
+                                                                        {(() => { const Icon = f.icon; return <Icon style={{ color: f.color }} className="w-3.5 h-3.5 shrink-0 opacity-80" /> })()}
+                                                                        <input
+                                                                            type="text"
+                                                                            placeholder={f.ph}
+                                                                            value={editEx(pStudent.id)?.[f.key] ?? ''}
+                                                                            onChange={(e) => handleExtraEdit(f.key, e.target.value)}
+                                                                            className="flex-1 w-0 text-[11px] font-bold bg-transparent text-[var(--color-text)] outline-none"
+                                                                        />
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            </div>
+                                            )}
+
+                                            {/* Ketidakhadiran */}
+                                            {activeRtObj.hasAttendance && (
+                                                <div className="space-y-2">
+                                                    <h5 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Ketidakhadiran</h5>
+                                                    <div className="grid grid-cols-4 gap-2">
+                                                        {[
+                                                            { key: 'hari_sakit', label: 'Sakit', color: '#ef4444' },
+                                                            { key: 'hari_izin', label: 'Izin', color: '#3b82f6' },
+                                                            { key: 'hari_alpa', label: 'Alpa', color: '#f59e0b' },
+                                                            { key: 'hari_pulang', label: 'Pulang', color: '#10b981' }
+                                                        ].map(item => (
+                                                            <div key={item.key} className="flex flex-col p-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-center">
+                                                                <span className="text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-wider mb-1">{item.label}</span>
+                                                                <div className="flex items-center justify-center gap-1">
+                                                                    <input
+                                                                        type="number"
+                                                                        min={0}
+                                                                        value={editEx(pStudent.id)?.[item.key] ?? ''}
+                                                                        onChange={(e) => handleExtraEdit(item.key, e.target.value)}
+                                                                        className="w-10 h-7 text-center text-[11px] font-black rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] outline-none"
+                                                                        placeholder="0"
+                                                                    />
+                                                                    <span className="text-[9px] text-[var(--color-text-muted)] font-bold">Hari</span>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
 
                                             {/* Catatan Musyrif */}
-                                            <div className="space-y-2">
-                                                <div className="flex items-center justify-between">
-                                                    <h5 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Catatan Musyrif</h5>
-                                                    <button
-                                                        onClick={() => {
-                                                            const c = generateAutoComment(editSc(pStudent.id), pStudent.id, []);
-                                                            if (c) handleExtraEdit('catatan', c);
-                                                        }}
-                                                        className="h-6 px-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 text-[8px] font-black flex items-center gap-1 transition-all active:scale-95"
-                                                    >
-                                                        <Zap className="w-3 h-3" />
-                                                        Generate Catatan
-                                                    </button>
+                                            {activeRtObj.hasCatatan && (
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <h5 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">Catatan Musyrif</h5>
+                                                        <button
+                                                            onClick={() => {
+                                                                const c = generateAutoComment(editSc(pStudent.id), pStudent.id, []);
+                                                                if (c) handleExtraEdit('catatan', c);
+                                                            }}
+                                                            className="h-6 px-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 text-[8px] font-black flex items-center gap-1 transition-all active:scale-95"
+                                                        >
+                                                            <Zap className="w-3 h-3" />
+                                                            Generate Catatan
+                                                        </button>
+                                                    </div>
+                                                    <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] overflow-hidden">
+                                                        <textarea
+                                                            placeholder="Tulis catatan perkembangan di sini..."
+                                                            value={editEx(pStudent.id)?.catatan ?? ''}
+                                                            onChange={(e) => handleExtraEdit('catatan', e.target.value)}
+                                                            maxLength={200}
+                                                            rows={3}
+                                                            className="w-full p-3 text-[11px] bg-transparent text-[var(--color-text)] outline-none resize-none leading-relaxed"
+                                                        />
+                                                    </div>
                                                 </div>
-                                                <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] overflow-hidden">
-                                                    <textarea
-                                                        placeholder="Tulis catatan perkembangan di sini..."
-                                                        value={editEx(pStudent.id)?.catatan ?? ''}
-                                                        onChange={(e) => handleExtraEdit('catatan', e.target.value)}
-                                                        maxLength={200}
-                                                        rows={3}
-                                                        className="w-full p-3 text-[11px] bg-transparent text-[var(--color-text)] outline-none resize-none leading-relaxed"
-                                                    />
-                                                </div>
-                                            </div>
+                                            )}
 
                                             <div className="flex gap-3 pt-2">
                                                 <button onClick={saveArchiveEdit} disabled={archiveEditSaving} className="flex-1 h-10 rounded-xl bg-emerald-500 text-white text-xs font-black shadow-lg shadow-emerald-500/10 hover:bg-emerald-600 disabled:opacity-60 transition-all active:scale-95 flex items-center justify-center gap-2">
@@ -2578,6 +2600,10 @@ export default function RaportPage() {
                                                         lang={lang}
                                                         settings={settings}
                                                         pageSize={pageSize}
+                                                        reportType={entry.report_type || 'bulanan'}
+                                                        selectedSemester={entry.semester || 1}
+                                                        academicYear={entry.academic_year || ''}
+                                                        selectedClass={pClass}
                                                     />
                                                 </div>
                                             </div>
@@ -2655,6 +2681,11 @@ export default function RaportPage() {
     const printMusyrif = archivePreview ? archivePreview.musyrif : musyrif
     const printClass = archivePreview ? archivePreview.className : selectedClass?.name
     const printLang = archivePreview ? archivePreview.lang : lang
+    const printReportType = archivePreview ? (archivePreview.entry?.report_type || 'bulanan') : reportType
+    const printSemester = archivePreview ? (archivePreview.entry?.semester || 1) : selectedSemester
+    const printAcademicYear = archivePreview ? (archivePreview.entry?.academic_year || '') : academicYear
+    const printSelectedClass = archivePreview ? selectedClass : selectedClass // Wait, if archivePreview, we don't have the full selectedClass object but className/level is enough. Let's pass printClass string or reconstructed object if needed. Wait, in RaportPrintCard, selectedClass is used to get ClassLevel (getClassLevel(classObj)). getClassLevel handles either string or object! So printSelectedClass can be: archivePreview ? archivePreview.className : selectedClass. Let's do that!
+    const printSelectedClassResolved = archivePreview ? archivePreview.className : selectedClass
 
     // ── Fullscreen resolved preview variables
     const isArchiveMode = step === 4 && archivePreview
@@ -2676,6 +2707,10 @@ export default function RaportPage() {
     const fsMus = isArchiveMode ? archivePreview.musyrif : musyrif
     const fsClass = isArchiveMode ? archivePreview.className : selectedClass?.name
     const fsCatatanArab = isArchiveMode ? null : catatanArabMap[fsStudent?.id]
+    const fsReportType = isArchiveMode ? (archivePreview.entry?.report_type || 'bulanan') : reportType
+    const fsSemester = isArchiveMode ? (archivePreview.entry?.semester || 1) : selectedSemester
+    const fsAcademicYear = isArchiveMode ? (archivePreview.entry?.academic_year || '') : academicYear
+    const fsSelectedClass = isArchiveMode ? archivePreview.className : selectedClass
 
 
     const stepLabels = ['Pilih Kelas', 'Setup Periode', 'Input Nilai', 'Preview & Cetak']
@@ -2818,7 +2853,7 @@ export default function RaportPage() {
                                 <Lightbulb className="w-3 h-3" />
                                 Tutorial
                             </button>
-                            
+
                         </>
                     }
                 />
@@ -2940,10 +2975,16 @@ export default function RaportPage() {
                             onClose={() => setIsImportModalOpen(false)}
                             selectedMonth={selectedMonth}
                             selectedYear={selectedYear}
+                            selectedSemester={selectedSemester}
+                            academicYear={academicYear}
                             musyrif={musyrif}
                             profile={profile}
                             onSuccess={loadStudents}
                             activeClassName={selectedClass?.name}
+                            criteria={activeCriteria}
+                            reportType={reportType}
+                            maxScore={activeMaxScore}
+                            dbTable={activeDbTable}
                         />
                     )}
                 </Suspense>
@@ -2974,7 +3015,7 @@ export default function RaportPage() {
                 {printQueue.length > 0 && (
                     <div ref={printContainerRef} style={{ position: 'fixed', left: '-9999px', top: 0, visibility: 'hidden', pointerEvents: 'none' }}>
                         {printStudents.filter(s => printQueue.includes(s.id)).map(s => (
-                            <RaportPrintCard key={s.id} student={s} scores={printScores[s.id]} extra={printExtras[s.id]} bulanObj={printBulan} tahun={printYear} musyrif={printMusyrif} className={printClass} lang={printLang} settings={settings} pageSize={pageSize} catatanArab={catatanArabMap[s.id]} studentIndex={printStudents.findIndex(x => x.id === s.id) + 1} onRendered={() => setPrintRenderedCount(c => c + 1)} />
+                            <RaportPrintCard key={s.id} student={s} scores={printScores[s.id]} extra={printExtras[s.id]} bulanObj={printBulan} tahun={printYear} musyrif={printMusyrif} className={printClass} lang={printLang} settings={settings} pageSize={pageSize} catatanArab={catatanArabMap[s.id]} studentIndex={printStudents.findIndex(x => x.id === s.id) + 1} onRendered={() => setPrintRenderedCount(c => c + 1)} reportType={printReportType} selectedSemester={printSemester} academicYear={printAcademicYear} selectedClass={printSelectedClassResolved} />
                         ))}
                     </div>
                 )}
@@ -3504,6 +3545,10 @@ export default function RaportPage() {
                                                         pageSize={pageSize}
                                                         catatanArab={fsCatatanArab}
                                                         studentIndex={fsStudentsList.findIndex(s => s.id === fsStudent?.id) + 1}
+                                                         reportType={fsReportType}
+                                                         selectedSemester={fsSemester}
+                                                         academicYear={fsAcademicYear}
+                                                         selectedClass={fsSelectedClass}
                                                     />
                                                 )}
                                             </div>

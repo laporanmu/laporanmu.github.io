@@ -1,21 +1,21 @@
 import React, { memo } from 'react'
 import { KRITERIA, MAX_SCORE, GRADE, calcAvg } from '@utils/reports/raportConstants'
 
-export const RadarChart = memo(({ scores, size = 80 }) => {
-    const vals = KRITERIA.map(k => Number(scores?.[k.key]) || 0)
+export const RadarChart = memo(({ scores, size = 80, criteria = KRITERIA, maxScore = MAX_SCORE }) => {
+    const vals = criteria.map(k => Number(scores?.[k.key]) || 0)
     const cx = size / 2, cy = size / 2, r = size * 0.36
-    const angle = (i) => (i * 2 * Math.PI / KRITERIA.length) - Math.PI / 2
-    const pt = (i, v) => [cx + (v / MAX_SCORE) * r * Math.cos(angle(i)), cy + (v / MAX_SCORE) * r * Math.sin(angle(i))]
+    const angle = (i) => (i * 2 * Math.PI / criteria.length) - Math.PI / 2
+    const pt = (i, v) => [cx + (v / maxScore) * r * Math.cos(angle(i)), cy + (v / maxScore) * r * Math.sin(angle(i))]
     const bgPt = (i) => [cx + r * Math.cos(angle(i)), cy + r * Math.sin(angle(i))]
     const polyPts = vals.map((v, i) => pt(i, v).join(',')).join(' ')
-    const avg = calcAvg(scores || {})
+    const avg = calcAvg(scores || {}, criteria)
     
     return (
         <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} aria-hidden="true" className="overflow-visible">
             {[0.33, 0.67, 1].map((sc, ri) => (
                 <polygon 
                     key={ri} 
-                    points={KRITERIA.map((_, i) => { 
+                    points={criteria.map((_, i) => { 
                         const [x, y] = bgPt(i)
                         return [cx + (x - cx) * sc, cy + (y - cy) * sc].join(',') 
                     }).join(' ')} 
@@ -24,14 +24,14 @@ export const RadarChart = memo(({ scores, size = 80 }) => {
                     strokeWidth="0.6" 
                 />
             ))}
-            {KRITERIA.map((_, i) => { 
+            {criteria.map((_, i) => { 
                 const [x, y] = bgPt(i)
                 return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="var(--color-border)" strokeWidth="0.5" /> 
             })}
             <polygon points={polyPts} fill="rgba(99,102,241,0.18)" stroke="#6366f1" strokeWidth="1.2" strokeLinejoin="round" />
             {vals.map((v, i) => { 
                 const [x, y] = pt(i, v)
-                return <circle key={i} cx={x} cy={y} r="1.8" fill={KRITERIA[i].color} /> 
+                return <circle key={i} cx={x} cy={y} r="1.8" fill={criteria[i]?.color || '#6366f1'} /> 
             })}
             {avg && (
                 <>
@@ -43,10 +43,10 @@ export const RadarChart = memo(({ scores, size = 80 }) => {
     )
 })
 
-export const SparklineTrend = memo(({ trendData }) => {
+export const SparklineTrend = memo(({ trendData, criteria = KRITERIA }) => {
     if (!trendData || trendData.length < 2) return null
     const avgs = trendData.map(t => {
-        const vals = KRITERIA.map(k => t.scores[k.key]).filter(v => v !== null && v !== undefined)
+        const vals = criteria.map(k => t.scores[k.key]).filter(v => v !== null && v !== undefined)
         return vals.length ? vals.reduce((a, b) => a + Number(b), 0) / vals.length : null
     }).filter(v => v !== null)
     

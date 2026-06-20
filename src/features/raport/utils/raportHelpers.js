@@ -28,7 +28,10 @@ export const escapeCsvCell = (val) => {
  */
 export const calcAvg = (scores, criteria) => {
     if (!scores || !criteria || !criteria.length) return null
-    const vals = criteria.map(k => scores[k.key]).filter(v => v !== '' && v !== null && v !== undefined)
+    const vals = criteria
+        .filter(k => !k.isPractical)
+        .map(k => scores[k.key])
+        .filter(v => v !== '' && v !== null && v !== undefined)
     if (!vals.length) return null
     return (vals.reduce((a, b) => a + Number(b), 0) / vals.length).toFixed(1)
 }
@@ -62,7 +65,7 @@ export const buildWaLines = ({
     const scoreLines = criteria.map(k => {
         const v = sc[k.key]
         const hasScore = v !== '' && v !== null && v !== undefined
-        const gr = hasScore ? getGradePredicate(Number(v), reportTypeId, classLevel) : null
+        const gr = hasScore ? getGradePredicate(Number(v), reportTypeId, classLevel, k.key) : null
         return `- ${k.id}: *${hasScore ? v : '—'}*${gr ? ` (${gr.id || gr.label})` : ''}`
     })
 

@@ -3,8 +3,9 @@ import {
     Loader2, CheckCircle2, Save, FileText, X,
     ClipboardList, Zap, Lightbulb, Languages, Star, Heart
 } from 'lucide-react'
+import { getGradePredicate, RAPORT_TYPES } from '@utils/reports/raportTypeRegistry'
 import {
-    MAX_SCORE, KRITERIA, GRADE, FISIK_FIELDS, HAFALAN_FIELDS,
+    FISIK_FIELDS, HAFALAN_FIELDS,
     CATATAN_TEMPLATES, calcAvg, HAFALAN_PRESETS
 } from '@utils/reports/raportConstants'
 import { RadarChart, SparklineTrend } from './RaportCharts'
@@ -18,18 +19,18 @@ const WhatsAppIcon = (props) => (
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-export const ScoreCell = memo(({ value, studentId, kriteria, onScoreChange, onKeyDown, si, ki, cellRefs }) => {
+export const ScoreCell = memo(({ value, studentId, kriteria, onScoreChange, onKeyDown, si, ki, cellRefs, maxScore, reportType, classLevel }) => {
     const [focused, setFocused] = useState(false)
     const [hasError, setHasError] = useState(false)
     const val = value !== '' && value !== null && value !== undefined ? Number(value) : ''
-    const g = val !== '' ? GRADE(val) : null
+    const g = val !== '' ? getGradePredicate(val, reportType, classLevel, kriteria.key) : null
 
     const handleChange = (e) => {
         const raw = e.target.value.replace(/[^0-9]/g, '')
         if (raw === '') { setHasError(false); onScoreChange(studentId, kriteria.key, ''); return }
         const num = Number(raw)
-        if (num < 0 || num > MAX_SCORE) {
-            setHasError(true); onScoreChange(studentId, kriteria.key, Math.min(MAX_SCORE, Math.max(0, num)))
+        if (num < 0 || num > maxScore) {
+            setHasError(true); onScoreChange(studentId, kriteria.key, Math.min(maxScore, Math.max(0, num)))
             setTimeout(() => setHasError(false), 1200)
         } else {
             setHasError(false); onScoreChange(studentId, kriteria.key, num)
@@ -43,7 +44,7 @@ export const ScoreCell = memo(({ value, studentId, kriteria, onScoreChange, onKe
                 type="text"
                 inputMode="decimal"
                 min={0}
-                max={MAX_SCORE}
+                max={maxScore}
                 value={val}
                 onChange={handleChange}
                 onKeyDown={e => onKeyDown(e, si, ki)}
@@ -183,7 +184,11 @@ const studentRowAreEqual = (prev, next) => {
         prev.onKeyDown === next.onKeyDown &&
         prev.onTemplateToggle === next.onTemplateToggle &&
         prev.onTemplateApply === next.onTemplateApply &&
-        prev.onTranslitToggle === next.onTranslitToggle
+        prev.onTranslitToggle === next.onTranslitToggle &&
+        prev.criteria === next.criteria &&
+        prev.maxScore === next.maxScore &&
+        prev.reportType === next.reportType &&
+        prev.classLevel === next.classLevel
     )
 }
 
@@ -192,9 +197,18 @@ const StudentRow = memo(({
     bulkMode, lang, trendData, prevScores, templateOpen, catatanArab, sendingWAStatus,
     onScoreChange, onExtraChange, onCatatanChange, onSave, onWA, onPDF, onReset,
     onBulkToggle, onKeyDown, onTemplateToggle, onTemplateApply, onTranslitToggle,
-    generateAutoComment, cellRefs
+    generateAutoComment, cellRefs,
+    criteria = [], maxScore, reportType, classLevel
 }) => {
-    const avg = calcAvg(sc)
+    const rtObj = RAPORT_TYPES[reportType] || RAPORT_TYPES.bulanan
+    const activeFisikFields = FISIK_FIELDS.filter(f => {
+        if (f.key === 'berat_badan' || f.key === 'tinggi_badan') {
+            return rtObj.hasFisik
+        }
+        return rtObj.hasAttendance
+    })
+    const avg = calcAvg(sc, criteria)
+    const g = avg ? getGradePredicate(Number(avg), reportType, classLevel) : null
     return (
         <tr className={`border-t border-[var(--color-border)] transition-colors group table-row-lazy ${isChecked ? 'bg-indigo-500/5' : si % 2 === 0 ? 'bg-[var(--color-surface)]' : 'bg-[var(--color-surface-alt)]'}`}>
             {bulkMode && (
@@ -204,25 +218,25 @@ const StudentRow = memo(({
             )}
             <td className={`px-0 py-3 sticky left-0 z-10 transition-colors ${isChecked ? 'bg-indigo-500/5' : si % 2 === 0 ? 'bg-[var(--color-surface)]' : 'bg-[var(--color-surface-alt)]'}`} style={{ borderRight: '1px solid var(--color-border)' }}>
                 <div className="flex flex-col items-center justify-center text-center gap-1.5">
-                    <RadarChart scores={sc} size={32} />
+                    <RadarChart scores={sc} size={32} criteria={criteria} maxScore={maxScore} />
                     <div className="min-w-0">
                         <div className="text-[12px] font-black text-[var(--color-text)] leading-tight whitespace-normal break-words uppercase tracking-tight">{student.name}</div>
                         <div className="flex items-center justify-center gap-1 mt-0.5 flex-wrap">
-                            {avg ? <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md" style={{ background: GRADE(Number(avg)).bg, color: GRADE(Number(avg)).color }}>{avg}</span> : <span className="text-[8px] text-[var(--color-text-muted)] font-bold">isi nilai</span>}
+                            {avg ? <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md" style={{ background: g?.bg || 'var(--color-surface-alt)', color: g?.uiColor || 'var(--color-text)' }}>{avg}</span> : <span className="text-[8px] text-[var(--color-text-muted)] font-bold">isi nilai</span>}
                             {isSaving && <Loader2 className="w-2 h-2 text-amber-500 animate-spin" />}
                             {!isSaving && isSaved && <CheckCircle2 className="w-2 h-2 text-emerald-500" />}
                             {!isSaving && !isSaved && isDirty && <span className="text-[8px] font-black text-amber-500 flex items-center gap-0.5"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" /></span>}
-                            {trendData?.length >= 2 && <SparklineTrend trendData={trendData} />}
+                            {trendData?.length >= 2 && <SparklineTrend trendData={trendData} criteria={criteria} />}
                         </div>
                     </div>
                 </div>
             </td>
-            {KRITERIA.map((k, ki) => {
+            {criteria.map((k, ki) => {
                 const prevVal = prevScores?.[k.key], curVal = sc[k.key], hasDelta = (prevVal != null && curVal !== '' && curVal != null), delta = hasDelta ? Number(curVal) - Number(prevVal) : 0
                 return (
                     <td key={k.key} className="py-2 text-center" style={{ verticalAlign: 'middle' }}>
                         <div className="flex flex-col items-center justify-center">
-                            <ScoreCell value={sc[k.key]} studentId={student.id} kriteria={k} onScoreChange={onScoreChange} onKeyDown={onKeyDown} si={si} ki={ki} cellRefs={cellRefs} />
+                            <ScoreCell value={sc[k.key]} studentId={student.id} kriteria={k} onScoreChange={onScoreChange} onKeyDown={onKeyDown} si={si} ki={ki} cellRefs={cellRefs} maxScore={maxScore} reportType={reportType} classLevel={classLevel} />
                             <div style={{ height: 10, fontSize: 8, fontWeight: 900, lineHeight: 1, marginTop: 2 }} className="flex items-center justify-center">
                                 {hasDelta && delta > 0 && <span style={{ color: '#10b981' }} title={`Bulan lalu: ${prevVal}`}>▲{delta}</span>}
                                 {hasDelta && delta < 0 && <span style={{ color: '#ef4444' }} title={`Bulan lalu: ${prevVal}`}>▼{Math.abs(delta)}</span>}
@@ -232,57 +246,65 @@ const StudentRow = memo(({
                     </td>
                 )
             })}
-            <td className="px-2 py-3" style={{ verticalAlign: 'middle' }}>
-                <div className="grid grid-cols-2 gap-1.5">
-                    {FISIK_FIELDS.map(f => {
-                        const IconComp = f.icon
-                        return (
-                            <div key={f.key} className="flex items-center gap-1 rounded-md border border-[var(--color-border)] overflow-hidden" style={{ background: 'var(--color-surface)', height: 32 }}>
-                                <div className="w-6 h-full flex items-center justify-center shrink-0" style={{ background: f.color + '18' }}>
-                                    <IconComp className="w-2.5 h-2.5" style={{ color: f.color }} />
+            {(rtObj.hasFisik || rtObj.hasAttendance) && (
+                <td className="px-2 py-3" style={{ verticalAlign: 'middle' }}>
+                    <div className="grid grid-cols-2 gap-1.5">
+                        {activeFisikFields.map(f => {
+                            const IconComp = f.icon
+                            return (
+                                <div key={f.key} className="flex items-center gap-1 rounded-md border border-[var(--color-border)] overflow-hidden" style={{ background: 'var(--color-surface)', height: 32 }}>
+                                    <div className="w-6 h-full flex items-center justify-center shrink-0" style={{ background: f.color + '18' }}>
+                                        <IconComp className="w-2.5 h-2.5" style={{ color: f.color }} />
+                                    </div>
+                                    <ExtraInput type="number" inputMode="decimal" placeholder="—" value={ex[f.key] ?? ''} studentId={student.id} fieldKey={f.key} onCommit={onExtraChange} aria-label={f.label} className="flex-1 w-0 h-full text-[11px] font-bold text-left px-1.5 bg-transparent text-[var(--color-text)] outline-none appearance-none" />
+                                    <span className="text-[9px] text-[var(--color-text-muted)] font-bold pr-1 shrink-0">{f.unit}</span>
                                 </div>
-                                <ExtraInput type="number" inputMode="decimal" placeholder="—" value={ex[f.key] ?? ''} studentId={student.id} fieldKey={f.key} onCommit={onExtraChange} aria-label={f.label} className="flex-1 w-0 h-full text-[11px] font-bold text-left px-1.5 bg-transparent text-[var(--color-text)] outline-none appearance-none" />
-                                <span className="text-[9px] text-[var(--color-text-muted)] font-bold pr-1 shrink-0">{f.unit}</span>
-                            </div>
-                        )
-                    })}
-                </div>
-            </td>
-            <td className="px-2 py-3" style={{ verticalAlign: 'middle' }}>
-                <div className="flex flex-col gap-1.5">
-                    {HAFALAN_FIELDS.map(f => {
-                        const IconComp = f.icon
-                        return (
-                            <div key={f.key} className="flex items-center gap-1 rounded-md border border-[var(--color-border)]" style={{ background: 'var(--color-surface)', height: 32 }}>
-                                <div className="w-6 h-full flex items-center justify-center shrink-0 rounded-l-[5px]" style={{ background: f.color + '18' }}>
-                                    <IconComp className="w-2.5 h-2.5" style={{ color: f.color }} />
-                                </div>
-                                <ExtraInput placeholder={f.ph} value={ex[f.key] ?? ''} studentId={student.id} fieldKey={f.key} onCommit={onExtraChange} aria-label={f.ph} className="flex-1 w-0 h-full px-1 text-[11px] font-bold bg-transparent text-[var(--color-text)] outline-none" />
-                            </div>
-                        )
-                    })}
-                    <div className="flex rounded-md border border-[var(--color-border)] overflow-hidden" style={{ background: 'var(--color-surface)', minHeight: 32 }}>
-                        <div className="w-6 shrink-0 flex items-center justify-center" style={{ background: '#f59e0b18' }}>
-                            <ClipboardList className="w-2.5 h-2.5 text-[#f59e0b]" />
-                        </div>
-                        <ExtraTextarea placeholder="Catatan untuk Santri..." value={ex.catatan ?? ''} studentId={student.id} fieldKey="catatan" onCommit={onCatatanChange} maxLength={200} rows={2} aria-label="Catatan musyrif" className="flex-1 w-0 px-1.5 py-1.5 text-[11px] bg-transparent text-[var(--color-text)] outline-none resize-none leading-tight" />
-                        <button onClick={() => { const c = generateAutoComment(sc, student.id, trendData); if (!c) return; onCatatanChange(student.id, 'catatan', c) }} title="Generate komentar otomatis dari nilai" disabled={!avg} className="shrink-0 w-6 flex items-center justify-center text-amber-500 hover:text-amber-600 hover:bg-amber-500/10 transition-all disabled:opacity-30">
-                            <Zap className="w-2.5 h-2.5" />
-                        </button>
+                            )
+                        })}
                     </div>
-                    <div className="relative">
-                        <button onClick={() => onTemplateToggle(student.id)} className={`w-full h-6 rounded-md border text-[8px] font-black flex items-center justify-center gap-1 transition-all ${templateOpen ? 'bg-amber-500/15 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
-                            <Lightbulb className="w-2 h-2" /> Template Catatan
-                        </button>
-                        {templateOpen && (
-                            <div className="absolute left-0 right-0 z-30 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-xl overflow-hidden" style={{ ...(si < 2 ? { top: 'calc(100% + 4px)' } : { bottom: 'calc(100% + 4px)' }), minWidth: 200 }}>
-                                <p className="text-[7px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-2.5 pt-2 pb-1">Pilih template catatan</p>
-                                {CATATAN_TEMPLATES.map((tmpl, ti) => (<button key={ti} onMouseDown={() => onTemplateApply(student.id, tmpl)} className="w-full text-left px-2.5 py-1.5 text-[10px] text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all leading-snug border-t border-[var(--color-border)]/40 first:border-t-0">{tmpl}</button>))}
-                            </div>
+                </td>
+            )}
+            {(rtObj.hasHafalan || rtObj.hasCatatan) && (
+                <td className="px-2 py-3" style={{ verticalAlign: 'middle' }}>
+                    <div className="flex flex-col gap-1.5">
+                        {rtObj.hasHafalan && HAFALAN_FIELDS.map(f => {
+                            const IconComp = f.icon
+                            return (
+                                <div key={f.key} className="flex items-center gap-1 rounded-md border border-[var(--color-border)]" style={{ background: 'var(--color-surface)', height: 32 }}>
+                                    <div className="w-6 h-full flex items-center justify-center shrink-0 rounded-l-[5px]" style={{ background: f.color + '18' }}>
+                                        <IconComp className="w-2.5 h-2.5" style={{ color: f.color }} />
+                                    </div>
+                                    <ExtraInput placeholder={f.ph} value={ex[f.key] ?? ''} studentId={student.id} fieldKey={f.key} onCommit={onExtraChange} aria-label={f.ph} className="flex-1 w-0 h-full px-1 text-[11px] font-bold bg-transparent text-[var(--color-text)] outline-none" />
+                                </div>
+                            )
+                        })}
+                        {rtObj.hasCatatan && (
+                            <>
+                                <div className="flex rounded-md border border-[var(--color-border)] overflow-hidden" style={{ background: 'var(--color-surface)', minHeight: 32 }}>
+                                    <div className="w-6 shrink-0 flex items-center justify-center" style={{ background: '#f59e0b18' }}>
+                                        <ClipboardList className="w-2.5 h-2.5 text-[#f59e0b]" />
+                                    </div>
+                                    <ExtraTextarea placeholder="Catatan untuk Santri..." value={ex.catatan ?? ''} studentId={student.id} fieldKey="catatan" onCommit={onCatatanChange} maxLength={200} rows={2} aria-label="Catatan musyrif" className="flex-1 w-0 px-1.5 py-1.5 text-[11px] bg-transparent text-[var(--color-text)] outline-none resize-none leading-tight" />
+                                    <button onClick={() => { const c = generateAutoComment(sc, student.id, trendData); if (!c) return; onCatatanChange(student.id, 'catatan', c) }} title="Generate komentar otomatis dari nilai" disabled={!avg} className="shrink-0 w-6 flex items-center justify-center text-amber-500 hover:text-amber-600 hover:bg-amber-500/10 transition-all disabled:opacity-30">
+                                        <Zap className="w-2.5 h-2.5" />
+                                    </button>
+                                </div>
+                                <div className="relative">
+                                    <button onClick={() => onTemplateToggle(student.id)} className={`w-full h-6 rounded-md border text-[8px] font-black flex items-center justify-center gap-1 transition-all ${templateOpen ? 'bg-amber-500/15 border-amber-500/30 text-amber-600' : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
+                                        <Lightbulb className="w-2.5 h-2.5" /> Template Catatan
+                                    </button>
+                                    {templateOpen && (
+                                        <div className="absolute left-0 right-0 z-30 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-xl overflow-hidden" style={{ ...(si < 2 ? { top: 'calc(100% + 4px)' } : { bottom: 'calc(100% + 4px)' }), minWidth: 200 }}>
+                                            <p className="text-[7px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-2.5 pt-2 pb-1">Pilih template catatan</p>
+                                            {CATATAN_TEMPLATES.map((tmpl, ti) => (<button key={ti} onMouseDown={() => onTemplateApply(student.id, tmpl)} className="w-full text-left px-2.5 py-1.5 text-[10px] text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all leading-snug border-t border-[var(--color-border)]/40 first:border-t-0">{tmpl}</button>))}
+                                        </div>
+                                    )}
+                                </div>
+                            </>
                         )}
                     </div>
-                </div>
-            </td>
+                </td>
+            )}
             <td className={`px-2 py-3 sticky right-0 z-10 transition-colors ${si % 2 === 0 ? 'bg-[var(--color-surface)]' : 'bg-[var(--color-surface-alt)]'}`} style={{ verticalAlign: 'middle', borderLeft: '1px solid var(--color-border)', borderRight: '1px solid var(--color-border)' }}>
                 <div className="flex flex-col gap-1.5">
                     <button onClick={() => onSave(student.id)} disabled={isSaving} className="w-full h-8 rounded-lg flex items-center justify-center gap-1.5 text-[11px] font-black transition-all disabled:opacity-50" style={{ background: isSaved ? '#10b98115' : isDirty ? '#6366f115' : 'var(--color-surface-alt)', color: isSaved ? '#10b981' : isDirty ? '#6366f1' : 'var(--color-text-muted)', border: '1px solid', borderColor: isSaved ? '#10b98130' : isDirty ? '#6366f130' : 'var(--color-border)' }}>

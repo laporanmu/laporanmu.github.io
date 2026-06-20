@@ -14,15 +14,34 @@ import {
     GRADE as GRADE_BULANAN
 } from './raportConstants'
 
-// 1. Kriteria Pondok Lisan
-export const KRITERIA_PONDOK_LISAN = [
-    { key: 'tajwid', id: 'Tajwid', ar: 'التجويد', icon: FileText, color: '#10b981' },
-    { key: 'hafalan', id: 'Hafalan', ar: 'الحفظ', icon: BookOpen, color: '#8b5cf6' },
-    { key: 'qiraah', id: "Qira'ah", ar: 'القراءة', icon: Bookmark, color: '#3b82f6' },
-    { key: 'nahwu', id: 'Nahwu', ar: 'النحو', icon: ScaleIcon, color: '#f59e0b' },
-    { key: 'shorof', id: 'Shorof', ar: 'الصرف', icon: FileDigit, color: '#06b6d4' },
-    { key: 'muhadatsah', id: 'Muhadatsah', ar: 'المحادثة', icon: MessageSquare, color: '#ec4899' },
-    { key: 'imla', id: "Imla'", ar: 'الإملاء', icon: PenTool, color: '#6366f1' },
+// 1. Kriteria Pondok Lisan SMP & SMA
+export const KRITERIA_PONDOK_LISAN_SMP = [
+    { key: 'doa', id: 'Doa Harian', ar: 'الدعاء اليومي', icon: Heart, color: '#ef4444' },
+    { key: 'wafa', id: 'Wafa', ar: 'تلاوة القرآن', icon: BookOpen, color: '#10b981' },
+    { key: 'h_arbain', id: 'Hadits Arbain', ar: 'حديث الأربعين النووي', icon: Award, color: '#f59e0b' },
+    { key: 'h_biru', id: 'Hadits Pilihan', ar: 'الحديث اليومي', icon: Bookmark, color: '#6366f1' },
+    { key: 'd_sholat', id: 'Doa Sholat', ar: 'الذكر والدعاء بعد الصلاة', icon: Compass, color: '#06b6d4' },
+    { key: 'pagi_petang', id: 'Pagi Petang', ar: 'ذكر الصباح والمساء', icon: Star, color: '#f59e0b' },
+    { key: 'juz_30', id: 'Juz 30', ar: 'تحفيظ القرآن الكريم جزء ٣٠', icon: FileText, color: '#8b5cf6' },
+    { key: 'juz_29', id: 'Juz 29', ar: 'تحفيظ القرآن الكريم جزء ٢٩', icon: FileText, color: '#8b5cf6' },
+    { key: 'juz_28', id: 'Juz 28', ar: 'تحفيظ القرآن الكريم جزء ٢٨', icon: FileText, color: '#8b5cf6' },
+    { key: 'juz_27', id: 'Juz 27', ar: 'تحفيظ القرآن الكريم جزء ٢٧', icon: FileText, color: '#8b5cf6' },
+    { key: 'juz_26', id: 'Juz 26', ar: 'تحفيظ القرآن الكريم جزء ٢٦', icon: FileText, color: '#8b5cf6' },
+    { key: 'praktek', id: 'Praktek Ibadah', ar: 'الاختبار التطبيقي', icon: HeartPulse, color: '#10b981', isPractical: true }
+]
+
+export const KRITERIA_PONDOK_LISAN_SMA = [
+    { key: 'doa', id: 'Doa Harian', ar: 'الدعاء اليومي', icon: Heart, color: '#ef4444' },
+    { key: 'wafa', id: 'Wafa', ar: 'تلاوة القرآن', icon: BookOpen, color: '#10b981' },
+    { key: 'h_arbain', id: 'Hadits Arbain', ar: 'حديث الأربعين النووي', icon: Award, color: '#f59e0b' },
+    { key: 'h_biru', id: 'Hadits Pilihan', ar: 'الحديث اليومي', icon: Bookmark, color: '#6366f1' },
+    { key: 'd_sholat', id: 'Doa Sholat', ar: 'الذكر والدعاء setelah Sholat', icon: Compass, color: '#06b6d4' },
+    { key: 'pagi_petang', id: 'Pagi Petang', ar: 'ذكر الصباح والمساء', icon: Star, color: '#f59e0b' },
+    { key: 'juz_30', id: 'Juz 30', ar: 'تحفيظ القرآن الكريم جزء ٣٠', icon: FileText, color: '#8b5cf6' },
+    { key: 'juz_29', id: 'Juz 29', ar: 'تحفيظ القرآن الكريم جزء ٢٩', icon: FileText, color: '#8b5cf6' },
+    { key: 'juz_28', id: 'Juz 28', ar: 'تحفيظ القرآن الكريم جزء ٢٨', icon: FileText, color: '#8b5cf6' },
+    { key: 'juz_27', id: 'Juz 27', ar: 'تحفيظ القرآن الكريم جزء ٢٧', icon: FileText, color: '#8b5cf6' },
+    { key: 'juz_26', id: 'Juz 26', ar: 'تحفيظ القرآن الكريم جزء ٢٦', icon: FileText, color: '#8b5cf6' }
 ]
 
 // 2. Kriteria Pondok Mapel - SMP
@@ -72,21 +91,21 @@ export const getClassLevel = (classObj) => {
     if (!classObj) return 'SMP'
     const name = (typeof classObj === 'string' ? classObj : (classObj.name || '')).toLowerCase()
     const grade = typeof classObj === 'string' ? '' : String(classObj.grade || '')
-    
+
     // SMA indicators
-    if (grade === '10' || grade === '11' || grade === '12' || 
+    if (grade === '10' || grade === '11' || grade === '12' ||
         grade.includes('X') || grade.includes('XI') || grade.includes('XII')) {
         return 'SMA'
     }
     if (name.includes('sma') || name.includes('aliyah') || name.includes('ma ') || name.endsWith(' ma') || name.includes('aliyah') || name.includes(' ulya')) {
         return 'SMA'
     }
-    
+
     return 'SMP'
 }
 
 // Dynamic Predicate Grading Systems
-export const getGradePredicate = (score, reportTypeId, classLevel = 'SMP') => {
+export const getGradePredicate = (score, reportTypeId, classLevel = 'SMP', criterionKey = '') => {
     const val = Number(score)
     if (isNaN(val)) return { label: '—', id: '—', color: '#6b7280' }
 
@@ -102,6 +121,13 @@ export const getGradePredicate = (score, reportTypeId, classLevel = 'SMP') => {
         return { label: 'د / D', id: 'Kurang', bg: '#ef444415', border: '#ef444440', uiColor: '#ef4444', color: '#ef4444', letter: 'D' }
     }
 
+    // Special Practical grading for SMP Lisan
+    if (reportTypeId === 'pondok_lisan' && criterionKey === 'praktek') {
+        if (val >= 90) return { label: 'أ', id: 'A', bg: '#10b98115', border: '#10b98140', uiColor: '#10b981', color: '#000', letter: 'أ' }
+        if (val >= 80) return { label: 'ب', id: 'B', bg: '#3b82f615', border: '#3b82f640', uiColor: '#3b82f6', color: '#000', letter: 'ب' }
+        return { label: 'ج', id: 'C', bg: '#f59e0b15', border: '#f59e0b40', uiColor: '#f59e0b', color: '#000', letter: 'ج' }
+    }
+
     // Pondok Lisan or Pondok Mapel
     if (classLevel === 'SMA') {
         // SMA grading: KKM 50. Below 50 is weak/poor (ضعيف)
@@ -111,7 +137,7 @@ export const getGradePredicate = (score, reportTypeId, classLevel = 'SMP') => {
         if (val >= 50) return { label: 'مقبول', id: 'Cukup', bg: '#f59e0b15', border: '#f59e0b40', uiColor: '#f59e0b', color: '#000', letter: 'د' }
         return { label: 'ضعيف', id: 'Kurang', bg: '#ef444415', border: '#ef444440', uiColor: '#ef4444', color: '#ef4444', letter: 'هـ' }
     } else {
-        // SMP grading: Below 50 is failed (راسب)
+        // SMP grading: Below 50 is failed (راsb)
         if (val >= 90) return { label: 'ممتاز', id: 'Istimewa', bg: '#10b98115', border: '#10b98140', uiColor: '#10b981', color: '#000', letter: 'أ' }
         if (val >= 80) return { label: 'جيد جدا', id: 'Sangat Baik', bg: '#3b82f615', border: '#3b82f640', uiColor: '#3b82f6', color: '#000', letter: 'ب' }
         if (val >= 60) return { label: 'جيد', id: 'Baik', bg: '#6366f115', border: '#6366f140', uiColor: '#6366f1', color: '#000', letter: 'ج' }
@@ -148,7 +174,10 @@ export const RAPORT_TYPES = {
         dbTable: 'student_semester_reports',
         defaultLang: 'ar',
         maxScore: 100,
-        getCriteria: () => KRITERIA_PONDOK_LISAN,
+        getCriteria: (classObj) => {
+            const level = getClassLevel(classObj)
+            return level === 'SMA' ? KRITERIA_PONDOK_LISAN_SMA : KRITERIA_PONDOK_LISAN_SMP
+        },
         hasFisik: false,
         hasHafalan: false,
         hasAttendance: false,
@@ -157,7 +186,7 @@ export const RAPORT_TYPES = {
     pondok_mapel: {
         id: 'pondok_mapel',
         name: 'Raport Pondok (Mapel)',
-        arName: 'نتيجة المواد الدراسie',
+        arName: 'نتيجة المواد الدراسية',
         icon: 'BookOpen',
         color: 'amber',
         periodType: 'semester',

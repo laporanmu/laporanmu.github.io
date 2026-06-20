@@ -488,6 +488,10 @@ export default function Step4Archive({
                                                                 lang={lang}
                                                                 settings={settings}
                                                                 pageSize={pageSize}
+                                                                reportType={entry.report_type || 'bulanan'}
+                                                                selectedSemester={entry.semester}
+                                                                academicYear={entry.academic_year}
+                                                                selectedClass={pClass}
                                                             />
                                                         </div>
                                                     </div>

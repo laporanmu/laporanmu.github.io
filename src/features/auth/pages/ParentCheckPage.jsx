@@ -884,6 +884,7 @@ export default function ParentCheckPage() {
                                 lang="id"
                                 settings={settings}
                                 onRendered={() => setPrintRenderedCount(c => c + 1)}
+                                reportType="bulanan"
                             />
                         </div>
                     )}

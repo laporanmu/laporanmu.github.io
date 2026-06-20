@@ -16,20 +16,21 @@ import BulkActionBar from './BulkActionBar'
 import { RadarChart } from './RaportCharts'
 
 import {
-    KRITERIA, GRADE, BULAN, FISIK_FIELDS, HAFALAN_FIELDS, MAX_SCORE, calcAvg
+    BULAN, FISIK_FIELDS, HAFALAN_FIELDS, calcAvg
 } from '@utils/reports/raportConstants'
+import { getGradePredicate, getClassLevel, RAPORT_TYPES } from '@utils/reports/raportTypeRegistry'
 import { isComplete, generateAutoComment } from '@utils/reports/raportHelpers'
 import { supabase } from '@lib/supabase'
 
 const ROW_HEIGHT = 188
 
-const DesktopSkeleton = () => (
+const DesktopSkeleton = ({ criteria = [] }) => (
     <div className="overflow-x-auto rounded-xl border border-[var(--color-border)] fade-in animate-in duration-300">
         <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 910, tableLayout: 'fixed' }}>
             <colgroup>
                 <col style={{ width: 36 }} />
                 <col style={{ width: 140 }} />
-                {KRITERIA.map(k => <col key={k.key} style={{ width: 55 }} />)}
+                {(criteria || []).map(k => <col key={k.key} style={{ width: 55 }} />)}
                 <col style={{ width: 170 }} />
                 <col style={{ width: 160 }} />
                 <col style={{ width: 130 }} />
@@ -42,7 +43,7 @@ const DesktopSkeleton = () => (
                     <th style={{ padding: '10px 0' }} className="text-center sticky left-0 bg-[var(--color-surface-alt)] border-r border-[var(--color-border)]">
                         <div className="w-16 h-3 bg-[var(--color-border)] rounded animate-pulse mx-auto" />
                     </th>
-                    {KRITERIA.map(k => (
+                    {(criteria || []).map(k => (
                         <th key={k.key} style={{ padding: '10px 4px' }} className="text-center">
                             <div className="w-8 h-3 bg-[var(--color-border)] rounded animate-pulse mx-auto" />
                         </th>
@@ -73,7 +74,7 @@ const DesktopSkeleton = () => (
                                 </div>
                             </div>
                         </td>
-                        {KRITERIA.map(k => (
+                        {(criteria || []).map(k => (
                             <td key={k.key} className="p-3 text-center">
                                 <div className="w-10 h-8 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-lg animate-pulse mx-auto" />
                             </td>
@@ -138,6 +139,8 @@ const MobileSkeleton = () => (
 export default function RaportInputTable({
     // Context States
     globalSaveIndicator,
+    criteria,
+    maxScore,
     reportType,
     setReportType,
     isAcademicRaport,
@@ -217,26 +220,31 @@ export default function RaportInputTable({
     openPrintWindow,
     cellRefs
 }) {
+    const classLevel = getClassLevel(selectedClass)
+    const rtObj = RAPORT_TYPES[reportType] || RAPORT_TYPES.bulanan
+    const getGrade = (val) => getGradePredicate(val, reportType, classLevel)
+
     const [isBulkModalOpen, setIsBulkModalOpen] = useState(false)
 
     const classStats = React.useMemo(() => {
+        const activeCriteria = criteria || []
         let overallSum = 0
         let overallCount = 0
         let completeCount = 0
 
         const criteriaSums = {}
         const criteriaCounts = {}
-        KRITERIA.forEach(k => {
+        activeCriteria.forEach(k => {
             criteriaSums[k.key] = 0
             criteriaCounts[k.key] = 0
         })
 
         students.forEach(s => {
             const sc = scores[s.id] || {}
-            if (isComplete(sc)) {
+            if (isComplete(sc, activeCriteria)) {
                 completeCount++
             }
-            KRITERIA.forEach(k => {
+            activeCriteria.forEach(k => {
                 const val = sc[k.key]
                 if (val !== '' && val !== null && val !== undefined) {
                     const num = Number(val)
@@ -249,7 +257,7 @@ export default function RaportInputTable({
         })
         const overallAverage = overallCount > 0 ? (overallSum / overallCount).toFixed(1) : '—'
 
-        const criteriaAverages = KRITERIA.map(k => {
+        const criteriaAverages = activeCriteria.map(k => {
             const cnt = criteriaCounts[k.key]
             const avg = cnt > 0 ? (criteriaSums[k.key] / cnt).toFixed(1) : '—'
             return {
@@ -265,7 +273,7 @@ export default function RaportInputTable({
             total: students.length,
             incomplete: students.length - completeCount
         }
-    }, [students, scores])
+    }, [students, scores, criteria])
 
     return (
         <div className="space-y-4">
@@ -400,7 +408,7 @@ export default function RaportInputTable({
 
                     <button
                         onClick={() => {
-                            const withPhone = students.filter(s => s.phone && isComplete(scores[s.id] || {}))
+                            const withPhone = students.filter(s => s.phone && isComplete(scores[s.id] || {}, criteria))
                             if (withPhone.length) setWaBlastConfirm({ queue: withPhone })
                         }}
                         className="h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 flex items-center justify-center transition-all hover:bg-emerald-500/20"
@@ -722,7 +730,7 @@ export default function RaportInputTable({
                             </button>
 
                             <button onClick={() => {
-                                const withPhone = students.filter(s => s.phone && isComplete(scores[s.id] || {}))
+                                const withPhone = students.filter(s => s.phone && isComplete(scores[s.id] || {}, criteria))
                                 if (withPhone.length) setWaBlastConfirm({ queue: withPhone })
                             }} className="h-9 px-2.5 rounded-xl bg-green-500/10 border border-green-500/20 text-green-600 text-[9px] font-black flex items-center justify-center gap-1 transition-all hover:bg-green-500/20 flex-grow min-w-[36px] shrink-0" title="Blast WhatsApp Nilai">
                                 <WhatsAppIcon className="w-3 h-3" /> <span className="hidden lg:inline">Blast WA</span>
@@ -810,7 +818,7 @@ export default function RaportInputTable({
                         const selected = students.filter(s => bulkSelected.has(s.id))
                         if (!selected.length) return
                         const hasAnyData = (sc, ex) =>
-                            KRITERIA.some(k => sc[k.key] !== '' && sc[k.key] !== null && sc[k.key] !== undefined) ||
+                            criteria.some(k => sc[k.key] !== '' && sc[k.key] !== null && sc[k.key] !== undefined) ||
                             [ex.berat_badan, ex.tinggi_badan, ex.ziyadah, ex.murojaah,
                             ex.hari_sakit, ex.hari_izin, ex.hari_alpa, ex.hari_pulang, ex.catatan
                             ].some(v => v !== '' && v !== null && v !== undefined)
@@ -846,12 +854,12 @@ export default function RaportInputTable({
                         finally { setSavingAll(false) }
                     }}
                     onWA={() => {
-                        const withPhone = students.filter(s => bulkSelected.has(s.id) && s.phone && isComplete(scores[s.id] || {}))
+                        const withPhone = students.filter(s => bulkSelected.has(s.id) && s.phone && isComplete(scores[s.id] || {}, criteria))
                         if (!withPhone.length) { addToast('Tidak ada santri terpilih dengan WA & nilai lengkap', 'warning'); return }
                         setWaBlastConfirm({ queue: withPhone })
                     }}
                     onExport={() => {
-                        const toExport = students.filter(s => bulkSelected.has(s.id) && isComplete(scores[s.id] || {}))
+                        const toExport = students.filter(s => bulkSelected.has(s.id) && isComplete(scores[s.id] || {}, criteria))
                         if (!toExport.length) { addToast('Tidak ada santri terpilih dengan nilai lengkap', 'warning'); return }
                         runZipBlast(toExport, null)
                     }}
@@ -986,7 +994,7 @@ export default function RaportInputTable({
                         <div>
                             <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2">Nilai Akademik</p>
                             <div className="grid grid-cols-5 gap-2">
-                                {KRITERIA.map(k => (
+                                {criteria.map(k => (
                                     <div key={k.key} className="flex flex-col gap-1 flex-1 min-w-0">
                                         <span className="text-[8px] font-black uppercase tracking-tight text-center truncate" style={{ color: k.color }}>
                                             {k.id}
@@ -999,12 +1007,12 @@ export default function RaportInputTable({
                                             <input
                                                 type="number"
                                                 min={0}
-                                                max={MAX_SCORE}
+                                                max={maxScore}
                                                 placeholder="—"
                                                 value={bulkValues[k.key] ?? ''}
                                                 onChange={e => setBulkValues(prev => ({
                                                     ...prev,
-                                                    [k.key]: e.target.value === '' ? '' : Math.min(MAX_SCORE, Math.max(0, Number(e.target.value)))
+                                                    [k.key]: e.target.value === '' ? '' : Math.min(maxScore, Math.max(0, Number(e.target.value)))
                                                 }))}
                                                 className="w-full h-10 text-center text-sm font-black bg-[var(--color-surface)] outline-none transition-all appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                 style={{
@@ -1019,51 +1027,21 @@ export default function RaportInputTable({
                         </div>
 
                         {/* Section 2: Fisik & Kehadiran */}
-                        <div>
-                            <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2">Fisik & Kehadiran</p>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                {[
-                                    { key: 'berat_badan', label: 'Berat Badan', unit: 'kg', icon: Scale, color: '#6366f1' },
-                                    { key: 'tinggi_badan', label: 'Tinggi Badan', unit: 'cm', icon: Ruler, color: '#06b6d4' },
-                                    { key: 'hari_sakit', label: 'Sakit', unit: 'hari', icon: HeartPulse, color: '#ef4444' },
-                                    { key: 'hari_izin', label: 'Izin', unit: 'hari', icon: AlertCircle, color: '#f59e0b' },
-                                    { key: 'hari_alpa', label: 'Alpa', unit: 'hari', icon: AlertCircle, color: '#ef4444' },
-                                    { key: 'hari_pulang', label: 'Pulang', unit: 'kali', icon: DoorOpen, color: '#8b5cf6' }
-                                ].map(f => (
-                                    <div key={f.key} className="flex flex-col gap-1 min-w-0">
-                                        <span className="text-[8px] font-black uppercase tracking-tight text-[var(--color-text-muted)]">
-                                            {f.label}
-                                        </span>
-                                        <div className="flex items-center gap-1 rounded-xl border border-[var(--color-border)] overflow-hidden bg-[var(--color-surface-alt)] focus-within:border-violet-500 focus-within:ring-2 focus-within:ring-violet-500/10 transition-all" style={{ height: 38 }}>
-                                            <div className="w-8 h-full flex items-center justify-center shrink-0" style={{ background: f.color + '18' }}>
-                                                {(() => { const Icon = f.icon; return <Icon style={{ color: f.color }} className="w-3 h-3" /> })()}
-                                            </div>
-                                            <input
-                                                type="number"
-                                                min={0}
-                                                placeholder="—"
-                                                value={bulkValues[f.key] ?? ''}
-                                                onChange={e => setBulkValues(prev => ({
-                                                    ...prev,
-                                                    [f.key]: e.target.value === '' ? '' : Math.max(0, Number(e.target.value))
-                                                }))}
-                                                className="flex-1 w-0 h-full text-[11px] font-bold text-left px-2 bg-transparent text-[var(--color-text)] outline-none appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                            />
-                                            <span className="text-[8px] font-black text-[var(--color-text-muted)] pr-2.5 opacity-65 uppercase">{f.unit}</span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Section 3: Hafalan & Catatan */}
-                        <div>
-                            <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2">Hafalan & Catatan</p>
-                            <div className="space-y-2.5">
-                                <div className="grid grid-cols-2 gap-2">
+                        {(rtObj.hasFisik || rtObj.hasAttendance) && (
+                            <div>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2">Fisik & Kehadiran</p>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                     {[
-                                        { key: 'ziyadah', label: 'Ziyadah (Target Hafalan)', icon: BookOpen, color: '#10b981' },
-                                        { key: 'murojaah', label: "Muroja'ah (Lancar)", icon: FileText, color: '#8b5cf6' }
+                                        ...(rtObj.hasFisik ? [
+                                            { key: 'berat_badan', label: 'Berat Badan', unit: 'kg', icon: Scale, color: '#6366f1' },
+                                            { key: 'tinggi_badan', label: 'Tinggi Badan', unit: 'cm', icon: Ruler, color: '#06b6d4' }
+                                        ] : []),
+                                        ...(rtObj.hasAttendance ? [
+                                            { key: 'hari_sakit', label: 'Sakit', unit: 'hari', icon: HeartPulse, color: '#ef4444' },
+                                            { key: 'hari_izin', label: 'Izin', unit: 'hari', icon: AlertCircle, color: '#f59e0b' },
+                                            { key: 'hari_alpa', label: 'Alpa', unit: 'hari', icon: AlertCircle, color: '#ef4444' },
+                                            { key: 'hari_pulang', label: 'Pulang', unit: 'kali', icon: DoorOpen, color: '#8b5cf6' }
+                                        ] : [])
                                     ].map(f => (
                                         <div key={f.key} className="flex flex-col gap-1 min-w-0">
                                             <span className="text-[8px] font-black uppercase tracking-tight text-[var(--color-text-muted)]">
@@ -1074,48 +1052,90 @@ export default function RaportInputTable({
                                                     {(() => { const Icon = f.icon; return <Icon style={{ color: f.color }} className="w-3 h-3" /> })()}
                                                 </div>
                                                 <input
-                                                    type="text"
+                                                    type="number"
+                                                    min={0}
                                                     placeholder="—"
                                                     value={bulkValues[f.key] ?? ''}
                                                     onChange={e => setBulkValues(prev => ({
                                                         ...prev,
-                                                        [f.key]: e.target.value
+                                                        [f.key]: e.target.value === '' ? '' : Math.max(0, Number(e.target.value))
                                                     }))}
-                                                    className="flex-1 w-0 h-full px-2 text-[11px] font-bold bg-transparent text-[var(--color-text)] outline-none"
+                                                    className="flex-1 w-0 h-full text-[11px] font-bold text-left px-2 bg-transparent text-[var(--color-text)] outline-none appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                 />
+                                                <span className="text-[8px] font-black text-[var(--color-text-muted)] pr-2.5 opacity-65 uppercase">{f.unit}</span>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
-                                <div className="flex flex-col gap-1">
-                                    <span className="text-[8px] font-black uppercase tracking-tight text-[var(--color-text-muted)]">
-                                        Catatan Perkembangan
-                                    </span>
-                                    <div className="flex rounded-xl border border-[var(--color-border)] overflow-hidden bg-[var(--color-surface-alt)] focus-within:border-violet-500 focus-within:ring-2 focus-within:ring-violet-500/10 transition-all">
-                                        <div className="w-8 shrink-0 flex items-center justify-center border-r border-[var(--color-border)]/50" style={{ background: '#f59e0b12' }}>
-                                            <ClipboardList style={{ color: "#f59e0b" }} className="w-3 h-3" />
+                            </div>
+                        )}
+
+                        {/* Section 3: Hafalan & Catatan */}
+                        {(rtObj.hasHafalan || rtObj.hasCatatan) && (
+                            <div>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2">Hafalan & Catatan</p>
+                                <div className="space-y-2.5">
+                                    {rtObj.hasHafalan && (
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {[
+                                                { key: 'ziyadah', label: 'Ziyadah (Target Hafalan)', icon: BookOpen, color: '#10b981' },
+                                                { key: 'murojaah', label: "Muroja'ah (Lancar)", icon: FileText, color: '#8b5cf6' }
+                                            ].map(f => (
+                                                <div key={f.key} className="flex flex-col gap-1 min-w-0">
+                                                    <span className="text-[8px] font-black uppercase tracking-tight text-[var(--color-text-muted)]">
+                                                        {f.label}
+                                                    </span>
+                                                    <div className="flex items-center gap-1 rounded-xl border border-[var(--color-border)] overflow-hidden bg-[var(--color-surface-alt)] focus-within:border-violet-500 focus-within:ring-2 focus-within:ring-violet-500/10 transition-all" style={{ height: 38 }}>
+                                                        <div className="w-8 h-full flex items-center justify-center shrink-0" style={{ background: f.color + '18' }}>
+                                                            {(() => { const Icon = f.icon; return <Icon style={{ color: f.color }} className="w-3 h-3" /> })()}
+                                                        </div>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="—"
+                                                            value={bulkValues[f.key] ?? ''}
+                                                            onChange={e => setBulkValues(prev => ({
+                                                                ...prev,
+                                                                [f.key]: e.target.value
+                                                            }))}
+                                                            className="flex-1 w-0 h-full px-2 text-[11px] font-bold bg-transparent text-[var(--color-text)] outline-none"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
-                                        <textarea
-                                            rows={2}
-                                            placeholder="Tulis catatan yang ingin diterapkan secara massal..."
-                                            value={bulkValues.catatan ?? ''}
-                                            onChange={e => setBulkValues(prev => ({
-                                                ...prev,
-                                                catatan: e.target.value
-                                            }))}
-                                            className="flex-1 w-0 px-2.5 py-2 text-[11px] font-medium bg-transparent text-[var(--color-text)] outline-none resize-none leading-normal"
-                                        />
-                                    </div>
+                                    )}
+                                    {rtObj.hasCatatan && (
+                                        <div className="flex flex-col gap-1">
+                                            <span className="text-[8px] font-black uppercase tracking-tight text-[var(--color-text-muted)]">
+                                                Catatan Perkembangan
+                                            </span>
+                                            <div className="flex rounded-xl border border-[var(--color-border)] overflow-hidden bg-[var(--color-surface-alt)] focus-within:border-violet-500 focus-within:ring-2 focus-within:ring-violet-500/10 transition-all">
+                                                <div className="w-8 shrink-0 flex items-center justify-center border-r border-[var(--color-border)]/50" style={{ background: '#f59e0b12' }}>
+                                                    <ClipboardList style={{ color: "#f59e0b" }} className="w-3 h-3" />
+                                                </div>
+                                                <textarea
+                                                    rows={2}
+                                                    placeholder="Tulis catatan yang ingin diterapkan secara massal..."
+                                                    value={bulkValues.catatan ?? ''}
+                                                    onChange={e => setBulkValues(prev => ({
+                                                        ...prev,
+                                                        catatan: e.target.value
+                                                    }))}
+                                                    className="flex-1 w-0 px-2.5 py-2 text-[11px] font-medium bg-transparent text-[var(--color-text)] outline-none resize-none leading-normal"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 </Modal>
 
                 {/* Desktop Table View */}
                 <div className="hidden md:block">
                     {loading ? (
-                        <DesktopSkeleton />
+                        <DesktopSkeleton criteria={criteria} />
                     ) : filteredStudents.length === 0 ? (
                         <div className="py-10 flex items-center justify-center rounded-xl border border-dashed border-[var(--color-border)]">
                             <EmptyState
@@ -1140,7 +1160,11 @@ export default function RaportInputTable({
                             <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 910, tableLayout: 'fixed' }}>
                                 <colgroup>
                                     <col style={{ width: 36 }} />
-                                    <col style={{ width: 140 }} />{KRITERIA.map(k => <col key={k.key} style={{ width: 55 }} />)}<col style={{ width: 170 }} /><col style={{ width: 160 }} /><col style={{ width: 130 }} />
+                                    <col style={{ width: 140 }} />
+                                    {criteria.map(k => <col key={k.key} style={{ width: 55 }} />)}
+                                    {(rtObj.hasFisik || rtObj.hasAttendance) && <col style={{ width: 170 }} />}
+                                    {(rtObj.hasHafalan || rtObj.hasCatatan) && <col style={{ width: 160 }} />}
+                                    <col style={{ width: 130 }} />
                                 </colgroup>
                                 <thead className="sticky top-0 z-20">
                                     <tr style={{ background: 'none' }}>
@@ -1153,9 +1177,28 @@ export default function RaportInputTable({
                                             />
                                         </th>
                                         <th className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] sticky left-0 z-10" style={{ background: 'var(--color-surface-alt)', padding: '10px 0', textAlign: 'center', verticalAlign: 'middle', borderRight: '1px solid var(--color-border)', boxShadow: 'inset 0 -1px 0 var(--color-border)' }}>Santri</th>
-                                        {KRITERIA.map(k => (<th key={k.key} style={{ padding: '10px 4px', textAlign: 'center', verticalAlign: 'middle', background: 'var(--color-surface-alt)', boxShadow: 'inset 0 -1px 0 var(--color-border)' }}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><span style={{ direction: 'rtl', fontSize: 14, fontWeight: 900, color: k.color, lineHeight: 1, whiteSpace: 'nowrap', fontFamily: 'serif' }}>{k.arShort}</span><span style={{ fontSize: 8, fontWeight: 800, color: 'var(--color-text-muted)', letterSpacing: 1, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{k.id}</span></div></th>))}
-                                        <th style={{ padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle', background: 'var(--color-surface-alt)', boxShadow: 'inset 0 -1px 0 var(--color-border)' }}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><span style={{ fontSize: 10, fontWeight: 900, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Fisik</span><span style={{ fontSize: 8, color: 'var(--color-text-muted)', opacity: 0.55, fontWeight: 600 }}>BB · TB · Skt · Izin · Alpa · Plg</span></div></th>
-                                        <th style={{ padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle', background: 'var(--color-surface-alt)', boxShadow: 'inset 0 -1px 0 var(--color-border)' }}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><span style={{ fontSize: 10, fontWeight: 900, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Hafalan & Catatan</span></div></th>
+                                        {criteria.map(k => (<th key={k.key} style={{ padding: '10px 4px', textAlign: 'center', verticalAlign: 'middle', background: 'var(--color-surface-alt)', boxShadow: 'inset 0 -1px 0 var(--color-border)' }}><div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}><span style={{ direction: 'rtl', fontSize: 14, fontWeight: 900, color: k.color, lineHeight: 1, whiteSpace: 'nowrap', fontFamily: 'serif' }}>{k.arShort}</span><span style={{ fontSize: 8, fontWeight: 800, color: 'var(--color-text-muted)', letterSpacing: 1, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{k.id}</span></div></th>))}
+                                        {(rtObj.hasFisik || rtObj.hasAttendance) && (
+                                            <th style={{ padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle', background: 'var(--color-surface-alt)', boxShadow: 'inset 0 -1px 0 var(--color-border)' }}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                                                    <span style={{ fontSize: 10, fontWeight: 900, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>
+                                                        {rtObj.hasFisik && rtObj.hasAttendance ? 'Fisik & Kehadiran' : rtObj.hasFisik ? 'Fisik' : 'Kehadiran'}
+                                                    </span>
+                                                    <span style={{ fontSize: 8, color: 'var(--color-text-muted)', opacity: 0.55, fontWeight: 600 }}>
+                                                        {rtObj.hasFisik && rtObj.hasAttendance ? 'BB · TB · Skt · Izin · Alpa · Plg' : rtObj.hasFisik ? 'BB · TB' : 'Skt · Izin · Alpa · Plg'}
+                                                    </span>
+                                                </div>
+                                            </th>
+                                        )}
+                                        {(rtObj.hasHafalan || rtObj.hasCatatan) && (
+                                            <th style={{ padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle', background: 'var(--color-surface-alt)', boxShadow: 'inset 0 -1px 0 var(--color-border)' }}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                                                    <span style={{ fontSize: 10, fontWeight: 900, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>
+                                                        {rtObj.hasHafalan && rtObj.hasCatatan ? 'Hafalan & Catatan' : rtObj.hasHafalan ? 'Hafalan' : 'Catatan'}
+                                                    </span>
+                                                </div>
+                                            </th>
+                                        )}
                                         <th className="sticky right-0 z-10" style={{ padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle', fontSize: 10, fontWeight: 900, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 1, background: 'var(--color-surface-alt)', borderLeft: '1px solid var(--color-border)', borderRight: '1px solid var(--color-border)', boxShadow: 'inset 0 -1px 0 var(--color-border)' }}>Aksi</th>
                                     </tr>
                                 </thead>
@@ -1174,9 +1217,13 @@ export default function RaportInputTable({
                                                 student={student} si={si} sc={sc} ex={ex}
                                                 isSaved={savedIds.has(student.id)}
                                                 isSaving={!!saving[student.id]}
-                                                isDirty={!savedIds.has(student.id) && (KRITERIA.some(k => sc[k.key] !== '' && sc[k.key] !== null) || Object.values(ex).some(v => v !== '' && v !== null))}
+                                                isDirty={!savedIds.has(student.id) && (criteria.some(k => sc[k.key] !== '' && sc[k.key] !== null) || Object.values(ex).some(v => v !== '' && v !== null))}
                                                 isChecked={bulkSelected.has(student.id)}
                                                 bulkMode={true} lang={lang}
+                                                criteria={criteria}
+                                                maxScore={maxScore}
+                                                reportType={reportType}
+                                                classLevel={classLevel}
                                                 trendData={studentTrend[student.id]}
                                                 prevScores={prevMonthScores[student.id]}
                                                 templateOpen={templateOpenId === student.id}
@@ -1228,9 +1275,9 @@ export default function RaportInputTable({
                         const student = filteredStudents[safeIdx]
                         if (!student) return null
                         const sc = scores[student.id] || {}, ex = extras[student.id] || {}
-                        const avg = calcAvg(sc), isSaved = savedIds.has(student.id), isSaving = saving[student.id]
-                        const isDirty = !isSaved && KRITERIA.some(k => sc[k.key] !== '' && sc[k.key] !== null && sc[k.key] !== undefined)
-                        const complete = isComplete(sc)
+                        const avg = calcAvg(sc, criteria), isSaved = savedIds.has(student.id), isSaving = saving[student.id]
+                        const isDirty = !isSaved && criteria.some(k => sc[k.key] !== '' && sc[k.key] !== null && sc[k.key] !== undefined)
+                        const complete = isComplete(sc, criteria)
                         const goTo = (idx) => setMobileActiveIdx(Math.max(0, Math.min(filteredStudents.length - 1, idx)))
                         let _touchStartX = 0
                         const onTouchStart = (e) => { _touchStartX = e.touches[0].clientX }
@@ -1253,8 +1300,8 @@ export default function RaportInputTable({
                                             <p className="text-[12px] font-black text-[var(--color-text)] truncate">{student.name}</p>
                                             <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                                                 {avg ? (
-                                                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md" style={{ background: GRADE(Number(avg)).bg, color: GRADE(Number(avg)).uiColor }}>
-                                                        {avg} — {GRADE(Number(avg)).id}
+                                                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md" style={{ background: getGrade(Number(avg)).bg, color: getGrade(Number(avg)).uiColor }}>
+                                                        {avg} — {getGrade(Number(avg)).id}
                                                     </span>
                                                 ) : (
                                                     <span className="text-[8px] text-[var(--color-text-muted)]">Belum diisi</span>
@@ -1281,14 +1328,14 @@ export default function RaportInputTable({
                                         <div>
                                             <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1.5">Nilai Kriteria</p>
                                             <div className="grid grid-cols-5 gap-1.5">
-                                                {KRITERIA.map(k => (
+                                                {criteria.map(k => (
                                                     <div key={k.key} className="flex flex-col items-center gap-0.5">
                                                         <span className="text-[7px] font-black uppercase tracking-wide" style={{ color: k.color }}>{k.id.slice(0, 3)}</span>
-                                                        <input type="number" inputMode="decimal" min={0} max={MAX_SCORE} placeholder="—"
+                                                        <input type="number" inputMode="decimal" min={0} max={maxScore} placeholder="—"
                                                             value={sc[k.key] ?? ''}
-                                                            onChange={e => { const v = e.target.value === '' ? '' : Math.min(MAX_SCORE, Math.max(0, Number(e.target.value))); setScores(prev => ({ ...prev, [student.id]: { ...prev[student.id], [k.key]: v } })); setSavedIds(prev => { const n = new Set(prev); n.delete(student.id); return n }); triggerAutoSave(student.id) }}
+                                                            onChange={e => { const v = e.target.value === '' ? '' : Math.min(maxScore, Math.max(0, Number(e.target.value))); setScores(prev => ({ ...prev, [student.id]: { ...prev[student.id], [k.key]: v } })); setSavedIds(prev => { const n = new Set(prev); n.delete(student.id); return n }); triggerAutoSave(student.id) }}
                                                             className="w-full h-10 text-center text-base font-black rounded-xl outline-none transition-all appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                            style={{ background: sc[k.key] !== '' && sc[k.key] != null ? GRADE(Number(sc[k.key])).bg : 'var(--color-surface-alt)', color: sc[k.key] !== '' && sc[k.key] != null ? GRADE(Number(sc[k.key])).uiColor : 'var(--color-text-muted)', border: `2px solid ${sc[k.key] !== '' && sc[k.key] != null ? GRADE(Number(sc[k.key])).border : 'var(--color-border)'}` }} />
+                                                            style={{ background: sc[k.key] !== '' && sc[k.key] != null ? getGrade(Number(sc[k.key])).bg : 'var(--color-surface-alt)', color: sc[k.key] !== '' && sc[k.key] != null ? getGrade(Number(sc[k.key])).uiColor : 'var(--color-text-muted)', border: `2px solid ${sc[k.key] !== '' && sc[k.key] != null ? getGrade(Number(sc[k.key])).border : 'var(--color-border)'}` }} />
                                                     </div>
                                                 ))}
                                             </div>
@@ -1372,7 +1419,7 @@ export default function RaportInputTable({
                 <div className="hidden md:grid grid-cols-5 gap-2">
                     {classStats.criteriaAverages.map(k => {
                         const avg = k.average
-                        const g = avg !== '—' ? GRADE(Number(avg)) : null
+                        const g = avg !== '—' ? getGrade(Number(avg)) : null
                         return (
                             <div key={k.key} className="p-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-center">
                                 <div className="text-[8px] font-black uppercase tracking-widest mb-1" style={{ color: k.color }}>

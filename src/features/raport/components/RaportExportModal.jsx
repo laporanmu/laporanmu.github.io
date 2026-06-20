@@ -7,34 +7,6 @@ import {
 } from 'lucide-react'
 import { Modal } from '@shared/components'
 
-const COLUMN_DEFS = [
-    { key: 'nama', label: 'Nama Santri', icon: User },
-    { key: 'nilai_akhlak', label: 'Nilai Akhlak', icon: Star },
-    { key: 'nilai_ibadah', label: 'Nilai Ibadah', icon: Heart },
-    { key: 'nilai_kebersihan', label: 'Nilai Kebersihan', icon: Brush },
-    { key: 'nilai_quran', label: 'Nilai Al-Qur\'an', icon: BookOpen },
-    { key: 'nilai_bahasa', label: 'Nilai Bahasa', icon: Languages },
-    { key: 'avg', label: 'Rata-rata', icon: PieChart },
-    { key: 'predikat', label: 'Predikat', icon: ArrowDownAZ },
-    { key: 'berat_badan', label: 'Berat Badan', icon: Scale },
-    { key: 'tinggi_badan', label: 'Tinggi Badan', icon: Ruler },
-    { key: 'ziyadah', label: 'Ziyadah', icon: BookOpen },
-    { key: 'murojaah', label: 'Muroja\'ah', icon: FileText },
-    { key: 'hari_sakit', label: 'Absen Sakit', icon: HeartPulse },
-    { key: 'hari_izin', label: 'Absen Izin', icon: AlertCircle },
-    { key: 'hari_alpa', label: 'Absen Alpa', icon: AlertTriangle },
-    { key: 'hari_pulang', label: 'Absen Pulang', icon: DoorOpen },
-    { key: 'catatan', label: 'Catatan Musyrif', icon: FileText },
-]
-
-const PRESETS = [
-    { id: 'all', label: 'Lengkap', cols: ['nama', 'nilai_akhlak', 'nilai_ibadah', 'nilai_kebersihan', 'nilai_quran', 'nilai_bahasa', 'avg', 'predikat', 'berat_badan', 'tinggi_badan', 'ziyadah', 'murojaah', 'hari_sakit', 'hari_izin', 'hari_alpa', 'hari_pulang', 'catatan'] },
-    { id: 'academic', label: 'Akademik Only', cols: ['nama', 'nilai_akhlak', 'nilai_ibadah', 'nilai_kebersihan', 'nilai_quran', 'nilai_bahasa', 'avg', 'predikat'] },
-    { id: 'physical', label: 'Kesehatan & Fisik', cols: ['nama', 'berat_badan', 'tinggi_badan'] },
-    { id: 'attendance', label: 'Absensi/Kehadiran', cols: ['nama', 'hari_sakit', 'hari_izin', 'hari_alpa', 'hari_pulang'] },
-    { id: 'evaluation', label: 'Tahfidz & Catatan', cols: ['nama', 'ziyadah', 'murojaah', 'catatan'] },
-]
-
 export default function RaportExportModal({
     isOpen,
     onClose,
@@ -49,8 +21,64 @@ export default function RaportExportModal({
     handleExportAllClasses,
     handleExportZip,
     handlePrintAll,
-    addToast
+    addToast,
+    criteria = [],
+    reportType
 }) {
+    const COLUMN_DEFS = useMemo(() => {
+        const cols = [
+            { key: 'nama', label: 'Nama Santri', icon: User }
+        ]
+        
+        // Dynamic criteria columns
+        if (criteria && criteria.length > 0) {
+            criteria.forEach(k => {
+                cols.push({
+                    key: k.key,
+                    label: `Nilai ${k.id}`,
+                    icon: k.icon || Star
+                })
+            })
+        } else {
+            // fallback to bulanan columns if empty
+            cols.push(
+                { key: 'nilai_akhlak', label: 'Nilai Akhlak', icon: Star },
+                { key: 'nilai_ibadah', label: 'Nilai Ibadah', icon: Heart },
+                { key: 'nilai_kebersihan', label: 'Nilai Kebersihan', icon: Brush },
+                { key: 'nilai_quran', label: 'Nilai Al-Qur\'an', icon: BookOpen },
+                { key: 'nilai_bahasa', label: 'Nilai Bahasa', icon: Languages }
+            )
+        }
+
+        // Common computed and extra columns
+        cols.push(
+            { key: 'avg', label: 'Rata-rata', icon: PieChart },
+            { key: 'predikat', label: 'Predikat', icon: ArrowDownAZ },
+            { key: 'berat_badan', label: 'Berat Badan', icon: Scale },
+            { key: 'tinggi_badan', label: 'Tinggi Badan', icon: Ruler },
+            { key: 'ziyadah', label: 'Ziyadah', icon: BookOpen },
+            { key: 'murojaah', label: 'Muroja\'ah', icon: FileText },
+            { key: 'hari_sakit', label: 'Absen Sakit', icon: HeartPulse },
+            { key: 'hari_izin', label: 'Absen Izin', icon: AlertCircle },
+            { key: 'hari_alpa', label: 'Absen Alpa', icon: AlertTriangle },
+            { key: 'hari_pulang', label: 'Absen Pulang', icon: DoorOpen },
+            { key: 'catatan', label: 'Catatan Musyrif', icon: FileText }
+        )
+
+        return cols
+    }, [criteria])
+
+    const PRESETS = useMemo(() => {
+        const critKeys = (criteria && criteria.length > 0) ? criteria.map(k => k.key) : ['nilai_akhlak', 'nilai_ibadah', 'nilai_kebersihan', 'nilai_quran', 'nilai_bahasa']
+        return [
+            { id: 'all', label: 'Lengkap', cols: ['nama', ...critKeys, 'avg', 'predikat', 'berat_badan', 'tinggi_badan', 'ziyadah', 'murojaah', 'hari_sakit', 'hari_izin', 'hari_alpa', 'hari_pulang', 'catatan'] },
+            { id: 'academic', label: 'Akademik Only', cols: ['nama', ...critKeys, 'avg', 'predikat'] },
+            { id: 'physical', label: 'Kesehatan & Fisik', cols: ['nama', 'berat_badan', 'tinggi_badan'] },
+            { id: 'attendance', label: 'Absensi/Kehadiran', cols: ['nama', 'hari_sakit', 'hari_izin', 'hari_alpa', 'hari_pulang'] },
+            { id: 'evaluation', label: 'Tahfidz & Catatan', cols: ['nama', 'ziyadah', 'murojaah', 'catatan'] },
+        ]
+    }, [criteria])
+
     const defaultFileName = useMemo(() => {
         const monthStr = selectedMonthName ? `_${selectedMonthName}` : ''
         const classStr = activeClassName ? `_${activeClassName}` : '_Semua_Kelas'
@@ -68,10 +96,12 @@ export default function RaportExportModal({
     useEffect(() => {
         if (isOpen) {
             setFileName(defaultFileName)
-            setExportColumns(PRESETS[0].cols)
+            if (PRESETS[0]) {
+                setExportColumns(PRESETS[0].cols)
+            }
             setExportScope(selectedStudentIds.length > 0 ? 'selected' : 'filtered')
         }
-    }, [isOpen, defaultFileName, selectedStudentIds])
+    }, [isOpen, defaultFileName, selectedStudentIds, PRESETS])
 
     useEffect(() => {
         if (exporting && containerRef.current) {
@@ -89,7 +119,7 @@ export default function RaportExportModal({
             return sortedCols === presetSorted
         })
         return active ? active.id : null
-    }, [exportColumns])
+    }, [exportColumns, PRESETS])
 
     const columnButtons = useMemo(() => {
         return COLUMN_DEFS.map(({ key, label, icon }) => {

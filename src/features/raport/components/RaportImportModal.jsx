@@ -28,26 +28,69 @@ import { Modal, RichSelect } from '@shared/components'
 import { supabase } from '@lib/supabase'
 import { useToast } from '@context'
 
-const SYSTEM_COLS = [
-    { key: 'name', label: 'Nama Siswa', required: true, desc: 'Untuk mencocokkan dengan database siswa' },
-    { key: 'nilai_akhlak', label: 'Nilai Akhlak', required: false, desc: 'Rentang nilai 0 - 9' },
-    { key: 'nilai_ibadah', label: 'Nilai Ibadah', required: false, desc: 'Rentang nilai 0 - 9' },
-    { key: 'nilai_kebersihan', label: 'Nilai Kebersihan', required: false, desc: 'Rentang nilai 0 - 9' },
-    { key: 'nilai_quran', label: 'Nilai Al-Qur\'an', required: false, desc: 'Rentang nilai 0 - 9' },
-    { key: 'nilai_bahasa', label: 'Nilai Bahasa', required: false, desc: 'Rentang nilai 0 - 9' },
-    { key: 'berat_badan', label: 'Berat Badan (kg)', required: false, desc: 'Angka berat badan' },
-    { key: 'tinggi_badan', label: 'Tinggi Badan (cm)', required: false, desc: 'Angka tinggi badan' },
-    { key: 'ziyadah', label: 'Ziyadah', required: false, desc: 'Catatan tambahan hafalan baru' },
-    { key: 'murojaah', label: 'Muroja\'ah', required: false, desc: 'Catatan tambahan pengulangan hafalan' },
-    { key: 'hari_sakit', label: 'Sakit (Hari)', required: false, desc: 'Jumlah hari absen sakit' },
-    { key: 'hari_izin', label: 'Izin (Hari)', required: false, desc: 'Jumlah hari absen izin' },
-    { key: 'hari_alpa', label: 'Alpa (Hari)', required: false, desc: 'Jumlah hari absen alpa' },
-    { key: 'hari_pulang', label: 'Pulang (Hari)', required: false, desc: 'Jumlah hari absen pulang' },
-    { key: 'catatan', label: 'Catatan Musyrif', required: false, desc: 'Evaluasi perkembangan santri' },
-]
-
-export default function RaportImportModal({ isOpen, onClose, selectedMonth, selectedYear, musyrif, profile, onSuccess, activeClassName }) {
+export default function RaportImportModal({
+    isOpen,
+    onClose,
+    selectedMonth,
+    selectedYear,
+    selectedSemester,
+    academicYear,
+    musyrif,
+    profile,
+    onSuccess,
+    activeClassName,
+    criteria = [],
+    reportType = 'bulanan',
+    maxScore = 9,
+    dbTable = 'student_monthly_reports'
+}) {
     const { addToast } = useToast()
+
+    const SYSTEM_COLS = useMemo(() => {
+        const cols = [
+            { key: 'name', label: 'Nama Siswa', required: true, desc: 'Untuk mencocokkan dengan database siswa' }
+        ]
+
+        if (criteria && criteria.length > 0) {
+            criteria.forEach(k => {
+                cols.push({
+                    key: k.key,
+                    label: `Nilai ${k.id}`,
+                    required: false,
+                    desc: `Rentang nilai 0 - ${maxScore}`
+                })
+            })
+        } else {
+            cols.push(
+                { key: 'nilai_akhlak', label: 'Nilai Akhlak', required: false, desc: 'Rentang nilai 0 - 9' },
+                { key: 'nilai_ibadah', label: 'Nilai Ibadah', required: false, desc: 'Rentang nilai 0 - 9' },
+                { key: 'nilai_kebersihan', label: 'Nilai Kebersihan', required: false, desc: 'Rentang nilai 0 - 9' },
+                { key: 'nilai_quran', label: 'Nilai Al-Qur\'an', required: false, desc: 'Rentang nilai 0 - 9' },
+                { key: 'nilai_bahasa', label: 'Nilai Bahasa', required: false, desc: 'Rentang nilai 0 - 9' }
+            )
+        }
+
+        cols.push(
+            { key: 'berat_badan', label: 'Berat Badan (kg)', required: false, desc: 'Angka berat badan' },
+            { key: 'tinggi_badan', label: 'Tinggi Badan (cm)', required: false, desc: 'Angka tinggi badan' },
+            { key: 'ziyadah', label: 'Ziyadah', required: false, desc: 'Catatan tambahan hafalan baru' },
+            { key: 'murojaah', label: 'Muroja\'ah', required: false, desc: 'Catatan tambahan pengulangan hafalan' },
+            { key: 'hari_sakit', label: 'Sakit (Hari)', required: false, desc: 'Jumlah hari absen sakit' },
+            { key: 'hari_izin', label: 'Izin (Hari)', required: false, desc: 'Jumlah hari absen izin' },
+            { key: 'hari_alpa', label: 'Alpa (Hari)', required: false, desc: 'Jumlah hari absen alpa' },
+            { key: 'hari_pulang', label: 'Pulang (Hari)', required: false, desc: 'Jumlah hari absen pulang' },
+            { key: 'catatan', label: 'Catatan Musyrif', required: false, desc: 'Evaluasi perkembangan santri' }
+        )
+
+        return cols
+    }, [criteria, maxScore])
+
+    const scoreFields = useMemo(() => {
+        if (criteria && criteria.length > 0) {
+            return criteria.map(k => k.key)
+        }
+        return ['nilai_akhlak', 'nilai_ibadah', 'nilai_kebersihan', 'nilai_quran', 'nilai_bahasa']
+    }, [criteria])
     const [importStep, setImportStep] = useState(1)
     const [importFileName, setImportFileName] = useState('')
     const [importDragOver, setImportDragOver] = useState(false)
@@ -252,19 +295,18 @@ export default function RaportImportModal({ isOpen, onClose, selectedMonth, sele
                     })
                 }
 
-                // Validasi Nilai (0-9)
-                const scoreFields = ['nilai_akhlak', 'nilai_ibadah', 'nilai_kebersihan', 'nilai_quran', 'nilai_bahasa']
+                // Validasi Nilai
                 scoreFields.forEach(f => {
                     const val = rowData[f]
                     if (val !== '' && val !== undefined && val !== null) {
                         const num = Number(val)
-                        if (isNaN(num) || num < 0 || num > 9 || !Number.isInteger(num)) {
+                        if (isNaN(num) || num < 0 || num > maxScore) {
                             rowData._hasError = true
                             issues.push({
                                 row: i + 1,
                                 sheet: sheetName,
                                 level: 'error',
-                                messages: [`Nilai ${f.replace('nilai_', '').toUpperCase()} (${val}) harus berupa angka bulat antara 0 - 9`]
+                                messages: [`Nilai ${f.replace('nilai_', '').toUpperCase()} (${val}) harus berupa angka antara 0 - ${maxScore}`]
                             })
                         }
                     }
@@ -295,11 +337,13 @@ export default function RaportImportModal({ isOpen, onClose, selectedMonth, sele
         // Deteksi duplikat pada Supabase (optional preview)
         if (previewRows.length > 0) {
             try {
-                const { data: dbReps } = await supabase
-                    .from('student_monthly_reports')
-                    .select('student_id')
-                    .eq('month', selectedMonth)
-                    .eq('year', selectedYear)
+                let query = supabase.from(dbTable).select('student_id')
+                if (reportType === 'bulanan') {
+                    query = query.eq('month', selectedMonth).eq('year', selectedYear)
+                } else {
+                    query = query.eq('report_type', reportType).eq('semester', selectedSemester).eq('academic_year', academicYear)
+                }
+                const { data: dbReps } = await query
 
                 const existingMap = new Set((dbReps || []).map(r => r.student_id))
                 previewRows.forEach(row => {
@@ -310,7 +354,7 @@ export default function RaportImportModal({ isOpen, onClose, selectedMonth, sele
                             row: row._rowNum,
                             sheet: row._sheetName,
                             level: 'dupe',
-                            messages: [`Raport untuk ${row._resolvedName || row.name} bulan ini sudah ada di server. Data lama akan tertimpa.`]
+                            messages: [`Raport untuk ${row._resolvedName || row.name} bulan/semester ini sudah ada di server. Data lama akan tertimpa.`]
                         })
                     }
                 })
@@ -353,13 +397,12 @@ export default function RaportImportModal({ isOpen, onClose, selectedMonth, sele
                 hasError = true
             }
 
-            // Validasi Nilai (0-9)
-            const scoreFields = ['nilai_akhlak', 'nilai_ibadah', 'nilai_kebersihan', 'nilai_quran', 'nilai_bahasa']
+            // Validasi Nilai
             scoreFields.forEach(f => {
                 const val = f === colKey ? newValue : row[f]
                 if (val !== '' && val !== undefined && val !== null) {
                     const num = Number(val)
-                    if (isNaN(num) || num < 0 || num > 9 || !Number.isInteger(num)) {
+                    if (isNaN(num) || num < 0 || num > maxScore) {
                         hasError = true
                     }
                 }
@@ -399,16 +442,15 @@ export default function RaportImportModal({ isOpen, onClose, selectedMonth, sele
                 issues.push({ row: row._rowNum, sheet: row._sheetName, level: 'error', messages: [`Siswa "${row.name}" tidak ditemukan di database kelas "${row._sheetName}"`] })
             }
 
-            // Validasi Nilai (0-9)
-            const scoreFields = ['nilai_akhlak', 'nilai_ibadah', 'nilai_kebersihan', 'nilai_quran', 'nilai_bahasa']
+            // Validasi Nilai
             scoreFields.forEach(f => {
                 const val = row[f]
                 if (val !== '' && val !== undefined && val !== null) {
                     const num = Number(val)
-                    if (isNaN(num) || num < 0 || num > 9 || !Number.isInteger(num)) {
+                    if (isNaN(num) || num < 0 || num > maxScore) {
                         issues.push({
                             row: row._rowNum, sheet: row._sheetName, level: 'error',
-                            messages: [`Nilai ${f.replace('nilai_', '').toUpperCase()} (${val}) harus berupa angka bulat antara 0 - 9`]
+                            messages: [`Nilai ${f.replace('nilai_', '').toUpperCase()} (${val}) harus berupa angka antara 0 - ${maxScore}`]
                         })
                     }
                 }
@@ -432,7 +474,7 @@ export default function RaportImportModal({ isOpen, onClose, selectedMonth, sele
             if (row._isDupe) {
                 issues.push({
                     row: row._rowNum, sheet: row._sheetName, level: 'dupe',
-                    messages: [`Raport untuk ${row._resolvedName || row.name} bulan ini sudah ada di server. Data lama akan tertimpa.`]
+                    messages: [`Raport untuk ${row._resolvedName || row.name} bulan/semester ini sudah ada di server. Data lama akan tertimpa.`]
                 })
             }
         })
@@ -480,35 +522,66 @@ export default function RaportImportModal({ isOpen, onClose, selectedMonth, sele
         try {
             const getNum = (val) => (val === '' || val === undefined || val === null) ? null : Number(val)
 
-            const payloads = validRows.map(r => ({
-                student_id: r._studentId,
-                month: selectedMonth,
-                year: selectedYear,
-                musyrif_name: musyrif || null,
-                updated_by: profile?.id ?? null,
-                updated_by_name: profile?.name ?? null,
-                nilai_akhlak: getNum(r.nilai_akhlak),
-                nilai_ibadah: getNum(r.nilai_ibadah),
-                nilai_kebersihan: getNum(r.nilai_kebersihan),
-                nilai_quran: getNum(r.nilai_quran),
-                nilai_bahasa: getNum(r.nilai_bahasa),
-                berat_badan: getNum(r.berat_badan),
-                tinggi_badan: getNum(r.tinggi_badan),
-                ziyadah: r.ziyadah || null,
-                murojaah: r.murojaah || null,
-                hari_sakit: getNum(r.hari_sakit) || 0,
-                hari_izin: getNum(r.hari_izin) || 0,
-                hari_alpa: getNum(r.hari_alpa) || 0,
-                hari_pulang: getNum(r.hari_pulang) || 0,
-                catatan: r.catatan || null
-            }))
+            const payloads = validRows.map(r => {
+                const sc = {}
+                scoreFields.forEach(f => {
+                    sc[f] = r[f] !== '' && r[f] !== undefined && r[f] !== null ? Number(r[f]) : null
+                })
+
+                if (reportType === 'bulanan') {
+                    return {
+                        student_id: r._studentId,
+                        month: selectedMonth,
+                        year: selectedYear,
+                        musyrif_name: musyrif || null,
+                        updated_by: profile?.id ?? null,
+                        updated_by_name: profile?.name ?? null,
+                        ...sc,
+                        berat_badan: getNum(r.berat_badan),
+                        tinggi_badan: getNum(r.tinggi_badan),
+                        ziyadah: r.ziyadah || null,
+                        murojaah: r.murojaah || null,
+                        hari_sakit: getNum(r.hari_sakit) || 0,
+                        hari_izin: getNum(r.hari_izin) || 0,
+                        hari_alpa: getNum(r.hari_alpa) || 0,
+                        hari_pulang: getNum(r.hari_pulang) || 0,
+                        catatan: r.catatan || null
+                    }
+                } else {
+                    return {
+                        student_id: r._studentId,
+                        report_type: reportType,
+                        semester: selectedSemester,
+                        academic_year: academicYear,
+                        musyrif_name: musyrif || null,
+                        updated_by: profile?.id ?? null,
+                        updated_by_name: profile?.name ?? null,
+                        scores: sc,
+                        extras: {
+                            berat_badan: getNum(r.berat_badan),
+                            tinggi_badan: getNum(r.tinggi_badan),
+                            ziyadah: r.ziyadah || null,
+                            murojaah: r.murojaah || null,
+                            hari_sakit: getNum(r.hari_sakit) || 0,
+                            hari_izin: getNum(r.hari_izin) || 0,
+                            hari_alpa: getNum(r.hari_alpa) || 0,
+                            hari_pulang: getNum(r.hari_pulang) || 0,
+                            catatan: r.catatan || null
+                        }
+                    }
+                }
+            })
+
+            const conflictColumns = reportType === 'bulanan'
+                ? 'student_id,month,year'
+                : 'student_id,report_type,semester,academic_year'
 
             const CHUNK = 50
             for (let i = 0; i < payloads.length; i += CHUNK) {
                 const chunk = payloads.slice(i, i + CHUNK)
                 const { error } = await supabase
-                    .from('student_monthly_reports')
-                    .upsert(chunk, { onConflict: 'student_id,month,year' })
+                    .from(dbTable)
+                    .upsert(chunk, { onConflict: conflictColumns })
 
                 if (error) throw error
                 setImportProgress({ done: Math.min(i + CHUNK, payloads.length), total: payloads.length })
@@ -518,7 +591,7 @@ export default function RaportImportModal({ isOpen, onClose, selectedMonth, sele
 
             // Log audit
             logAudit({
-                action: 'INSERT', source: 'OPERATIONAL', tableName: 'student_monthly_reports',
+                action: 'INSERT', source: 'OPERATIONAL', tableName: dbTable,
                 newData: { method: 'MODAL_IMPORT_XLS', count: payloads.length, file_name: importFileName }
             })
 
@@ -534,18 +607,41 @@ export default function RaportImportModal({ isOpen, onClose, selectedMonth, sele
     const handleDownloadTemplate = async () => {
         try {
             const XLSX = await import('xlsx')
-            const headers = ['No', 'Nama', 'Akhlak', 'Ibadah', 'Kebersihan', "Al-Qur'an", 'Bahasa', 'Rata-rata', 'Predikat', 'BB(kg)', 'TB(cm)', 'Ziyadah', "Muroja'ah", 'Hari Sakit', 'Hari Izin', 'Hari Alpa', 'Hari Pulang', 'Catatan']
+            const headers = ['No', 'Nama']
+            if (criteria && criteria.length > 0) {
+                criteria.forEach(k => {
+                    headers.push(k.id)
+                })
+            } else {
+                headers.push('Akhlak', 'Ibadah', 'Kebersihan', "Al-Qur'an", 'Bahasa')
+            }
+            headers.push('Rata-rata', 'Predikat', 'BB(kg)', 'TB(cm)', 'Ziyadah', "Muroja'ah", 'Hari Sakit', 'Hari Izin', 'Hari Alpa', 'Hari Pulang', 'Catatan')
+
             const data = [
-                [1, 'Budi Santoso', 8, 9, 8, 9, 7, '', '', 45, 155, 'Juz 30 Selesai', 'Murojaah lancar', 0, 1, 0, 2, 'Perkembangan baik.'],
-                [2, 'Siti Aminah', 9, 9, 9, 9, 8, '', '', 42, 152, 'Juz 29 Hal 2', 'Lancar', 1, 0, 0, 2, 'Sangat rajin dan taat.']
+                [1, 'Budi Santoso'],
+                [2, 'Siti Aminah']
             ]
+
+            if (criteria && criteria.length > 0) {
+                criteria.forEach(() => {
+                    const is100Scale = maxScore > 10
+                    data[0].push(is100Scale ? 80 : 8)
+                    data[1].push(is100Scale ? 90 : 9)
+                })
+            } else {
+                data[0].push(8, 9, 8, 9, 7)
+                data[1].push(9, 9, 9, 9, 8)
+            }
+
+            data[0].push('', '', 45, 155, 'Juz 30 Selesai', 'Murojaah lancar', 0, 1, 0, 2, 'Perkembangan baik.')
+            data[1].push('', '', 42, 152, 'Juz 29 Hal 2', 'Lancar', 1, 0, 0, 2, 'Sangat rajin dan taat.')
 
             const ws = XLSX.utils.aoa_to_sheet([headers, ...data])
             ws['!cols'] = headers.map(() => ({ wch: 15 }))
 
             const wb = XLSX.utils.book_new()
             const sheetName = activeClassName || '10A Boarding Putra'
-            XLSX.utils.book_append_sheet(wb, ws, sheetName) // Default sheet name matching class name
+            XLSX.utils.book_append_sheet(wb, ws, sheetName)
 
             XLSX.writeFile(wb, 'Template Import Raport.xlsx')
             addToast('Template Excel berhasil diunduh', 'success')
@@ -585,15 +681,15 @@ export default function RaportImportModal({ isOpen, onClose, selectedMonth, sele
             )
         }
 
-        const isCentered = ['nilai_akhlak', 'nilai_ibadah', 'nilai_kebersihan', 'nilai_quran', 'nilai_bahasa', 'berat_badan', 'tinggi_badan', 'hari_sakit', 'hari_izin', 'hari_alpa', 'hari_pulang'].includes(colKey)
-        const isScore = ['nilai_akhlak', 'nilai_ibadah', 'nilai_kebersihan', 'nilai_quran', 'nilai_bahasa'].includes(colKey)
+        const isCentered = [...scoreFields, 'berat_badan', 'tinggi_badan', 'hari_sakit', 'hari_izin', 'hari_alpa', 'hari_pulang'].includes(colKey)
+        const isScore = scoreFields.includes(colKey)
         const isEmpty = value === '' || value === undefined || value === null
 
         // Check if has error specifically for this cell
         let cellHasError = false
         if (isScore && !isEmpty) {
             const num = Number(value)
-            if (isNaN(num) || num < 0 || num > 9 || !Number.isInteger(num)) cellHasError = true
+            if (isNaN(num) || num < 0 || num > maxScore) cellHasError = true
         }
 
         return (
@@ -952,11 +1048,17 @@ export default function RaportImportModal({ isOpen, onClose, selectedMonth, sele
                                             <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]/50 sticky top-0 z-10">
                                                 <th className="px-2 py-2 text-left text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[8%]">Sheet</th>
                                                 <th className="px-2 py-2 text-left text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[12%]">Nama Santri</th>
-                                                <th className="px-2 py-2 text-center text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[6%]">Akhlak</th>
-                                                <th className="px-2 py-2 text-center text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[6%]">Ibadah</th>
-                                                <th className="px-2 py-2 text-center text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[6%]">Bersih</th>
-                                                <th className="px-2 py-2 text-center text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[6%]">Quran</th>
-                                                <th className="px-2 py-2 text-center text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[6%]">Bahasa</th>
+                                                {criteria && criteria.length > 0 ? criteria.map(k => (
+                                                    <th key={k.key} className="px-2 py-2 text-center text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[6%]">{k.id}</th>
+                                                )) : (
+                                                    <>
+                                                        <th className="px-2 py-2 text-center text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[6%]">Akhlak</th>
+                                                        <th className="px-2 py-2 text-center text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[6%]">Ibadah</th>
+                                                        <th className="px-2 py-2 text-center text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[6%]">Bersih</th>
+                                                        <th className="px-2 py-2 text-center text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[6%]">Quran</th>
+                                                        <th className="px-2 py-2 text-center text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[6%]">Bahasa</th>
+                                                    </>
+                                                )}
                                                 <th className="px-2 py-2 text-center text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[6%]">BB(kg)</th>
                                                 <th className="px-2 py-2 text-center text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[6%]">TB(cm)</th>
                                                 <th className="px-2 py-2 text-left text-[8px] font-black uppercase tracking-tighter text-[var(--color-text-muted)] w-[10%]">Ziyadah</th>
@@ -980,11 +1082,17 @@ export default function RaportImportModal({ isOpen, onClose, selectedMonth, sele
                                                             <td className="px-2 py-1 font-bold text-[var(--color-text)] text-[10px] truncate text-left">
                                                                 <EditableCell rowIdx={i} colKey="name" value={r.name} />
                                                             </td>
-                                                            <td className="px-2 py-1 text-[10px]"><EditableCell rowIdx={i} colKey="nilai_akhlak" value={r.nilai_akhlak} /></td>
-                                                            <td className="px-2 py-1 text-[10px]"><EditableCell rowIdx={i} colKey="nilai_ibadah" value={r.nilai_ibadah} /></td>
-                                                            <td className="px-2 py-1 text-[10px]"><EditableCell rowIdx={i} colKey="nilai_kebersihan" value={r.nilai_kebersihan} /></td>
-                                                            <td className="px-2 py-1 text-[10px]"><EditableCell rowIdx={i} colKey="nilai_quran" value={r.nilai_quran} /></td>
-                                                            <td className="px-2 py-1 text-[10px]"><EditableCell rowIdx={i} colKey="nilai_bahasa" value={r.nilai_bahasa} /></td>
+                                                            {criteria && criteria.length > 0 ? criteria.map(k => (
+                                                                <td key={k.key} className="px-2 py-1 text-[10px]"><EditableCell rowIdx={i} colKey={k.key} value={r[k.key]} /></td>
+                                                            )) : (
+                                                                <>
+                                                                    <td className="px-2 py-1 text-[10px]"><EditableCell rowIdx={i} colKey="nilai_akhlak" value={r.nilai_akhlak} /></td>
+                                                                    <td className="px-2 py-1 text-[10px]"><EditableCell rowIdx={i} colKey="nilai_ibadah" value={r.nilai_ibadah} /></td>
+                                                                    <td className="px-2 py-1 text-[10px]"><EditableCell rowIdx={i} colKey="nilai_kebersihan" value={r.nilai_kebersihan} /></td>
+                                                                    <td className="px-2 py-1 text-[10px]"><EditableCell rowIdx={i} colKey="nilai_quran" value={r.nilai_quran} /></td>
+                                                                    <td className="px-2 py-1 text-[10px]"><EditableCell rowIdx={i} colKey="nilai_bahasa" value={r.nilai_bahasa} /></td>
+                                                                </>
+                                                            )}
                                                             <td className="px-2 py-1 text-[10px]"><EditableCell rowIdx={i} colKey="berat_badan" value={r.berat_badan} /></td>
                                                             <td className="px-2 py-1 text-[10px]"><EditableCell rowIdx={i} colKey="tinggi_badan" value={r.tinggi_badan} /></td>
                                                             <td className="px-2 py-1 text-[10px] text-left"><EditableCell rowIdx={i} colKey="ziyadah" value={r.ziyadah} /></td>
