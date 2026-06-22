@@ -123,8 +123,8 @@ export const ExtraInput = memo(({ value, studentId, fieldKey, onCommit, ...input
                                     handleSelectPreset(p)
                                 }}
                                 className={`px-2.5 py-1 rounded-xl text-[9px] font-black tracking-tight border transition-all duration-200 hover:scale-105 active:scale-95 ${fieldKey === 'ziyadah'
-                                        ? 'bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white dark:hover:text-white hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/20'
-                                        : 'bg-violet-500/10 dark:bg-violet-500/20 border-violet-500/20 text-violet-600 dark:text-violet-400 hover:bg-violet-500 hover:text-white dark:hover:text-white hover:border-violet-500 hover:shadow-lg hover:shadow-violet-500/20'
+                                    ? 'bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white dark:hover:text-white hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/20'
+                                    : 'bg-violet-500/10 dark:bg-violet-500/20 border-violet-500/20 text-violet-600 dark:text-violet-400 hover:bg-violet-500 hover:text-white dark:hover:text-white hover:border-violet-500 hover:shadow-lg hover:shadow-violet-500/20'
                                     }`}
                             >
                                 {p}
