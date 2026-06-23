@@ -14,7 +14,10 @@
   "dorms.statUnassigned": "طلاب غير موزعون",
   "dorms.statCleanliness": "متوسط النظافة",
   "dorms.statMusyrif": "رقابة المشرفين",
+  "dorms.statTotalStudents": "إجمالي الطلاب",
+  "dorms.statTotalRooms": "إجمالي الغرف",
   "dorms.suffixSantri": " طالب",
+  "dorms.suffixRooms": " غرفة",
   "dorms.suffixPoin": " نقطة",
   "dorms.tabPlotting": "توزيع الغرف",
   "dorms.tabPlottingShort": "التوزيع",
@@ -153,6 +156,7 @@
   "dorms.bulkAssign.cancel": "إلغاء",
   "dorms.bulkAssign.save": "حفظ التوزيع الجماعي",
   "dorms.bulkAssign.selectTargetRoom": "اختر الغرفة المستهدفة",
+  "dorms.bulkAssign.selectedStudentsTitle": "الطلاب المختارون",
 
   "dorms.confirm.evict.title": "إخلاء من الغرفة",
   "dorms.confirm.evict.description": "سيتم إخلاء توزيع غرفة الطالب",

@@ -242,7 +242,7 @@ export function useDormsData(addToast) {
             setLoading(true)
             const { data: stdData, error: stdErr } = await supabase
                 .from('students')
-                .select('id, name, metadata, class_id, classes(id, name)')
+                .select('id, name, metadata, class_id, classes(id, name), gender')
                 .is('deleted_at', null)
                 .order('name')
 

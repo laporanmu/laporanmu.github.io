@@ -14,7 +14,10 @@
   "dorms.statUnassigned": "Unassigned Students",
   "dorms.statCleanliness": "Avg Cleanliness",
   "dorms.statMusyrif": "Musyrif Control",
+  "dorms.statTotalStudents": "Total Students",
+  "dorms.statTotalRooms": "Total Rooms",
   "dorms.suffixSantri": " Students",
+  "dorms.suffixRooms": " Rooms",
   "dorms.suffixPoin": " Points",
   "dorms.tabPlotting": "Room Plotting",
   "dorms.tabPlottingShort": "Plotting",
@@ -153,6 +156,7 @@
   "dorms.bulkAssign.cancel": "Cancel",
   "dorms.bulkAssign.save": "Save Bulk Assignment",
   "dorms.bulkAssign.selectTargetRoom": "Select Target Room",
+  "dorms.bulkAssign.selectedStudentsTitle": "Selected Students",
 
   "dorms.confirm.evict.title": "Evict from Room",
   "dorms.confirm.evict.description": "Student room allocation will be cleared",

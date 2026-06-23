@@ -119,19 +119,58 @@ export default function DormTabCleanliness({
                                         </span>
                                     </div>
                                     <p className="text-[10.5px] text-[var(--color-text-muted)]">{audit.notes}</p>
-                                    <div className="flex items-center gap-3 text-[9px] text-[var(--color-text-muted)] opacity-60 font-semibold pt-1">
-                                        <span>{t('dorms.cleanliness.dateLabel')}: {audit.date}</span>
-                                        <span>•</span>
-                                        <span>{t('dorms.cleanliness.aspectKerapian')}: {tNum(audit.aspects?.kerapian)}</span>
-                                        <span>•</span>
-                                        <span>{t('dorms.cleanliness.aspectKebersihan')}: {tNum(audit.aspects?.kebersihan)}</span>
+                                    
+                                    <div className="flex flex-wrap items-center gap-2 pt-1.5">
+                                        <span className="text-[9px] text-[var(--color-text-muted)] font-semibold shrink-0">
+                                            {t('dorms.cleanliness.dateLabel')}: {audit.date}
+                                        </span>
+                                        <span className="text-[9px] text-[var(--color-text-muted)] opacity-40 shrink-0">•</span>
+                                        
+                                        {/* Kerapian */}
+                                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-[var(--color-surface-alt)]/60 border border-[var(--color-border)]/40 text-[9px] font-bold">
+                                            <span className="text-[var(--color-text-muted)]">{t('dorms.cleanliness.aspectKerapian')}:</span>
+                                            <span className="text-[var(--color-text)]">{tNum(audit.aspects?.kerapian || 0)}</span>
+                                            <div className="w-8 h-1 bg-[var(--color-border)] rounded-full overflow-hidden shrink-0">
+                                                <div 
+                                                    className="h-full bg-blue-500 rounded-full" 
+                                                    style={{ width: `${audit.aspects?.kerapian || 0}%` }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Kebersihan */}
+                                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-[var(--color-surface-alt)]/60 border border-[var(--color-border)]/40 text-[9px] font-bold">
+                                            <span className="text-[var(--color-text-muted)]">{t('dorms.cleanliness.aspectKebersihan')}:</span>
+                                            <span className="text-[var(--color-text)]">{tNum(audit.aspects?.kebersihan || 0)}</span>
+                                            <div className="w-8 h-1 bg-[var(--color-border)] rounded-full overflow-hidden shrink-0">
+                                                <div 
+                                                    className="h-full bg-emerald-500 rounded-full" 
+                                                    style={{ width: `${audit.aspects?.kebersihan || 0}%` }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Keharuman */}
+                                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-[var(--color-surface-alt)]/60 border border-[var(--color-border)]/40 text-[9px] font-bold">
+                                            <span className="text-[var(--color-text-muted)]">Keharuman:</span>
+                                            <span className="text-[var(--color-text)]">{tNum(audit.aspects?.keharuman || 0)}</span>
+                                            <div className="w-8 h-1 bg-[var(--color-border)] rounded-full overflow-hidden shrink-0">
+                                                <div 
+                                                    className="h-full bg-purple-500 rounded-full" 
+                                                    style={{ width: `${audit.aspects?.keharuman || 0}%` }}
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
                                 <div className="flex items-center gap-4 justify-between sm:justify-end border-t sm:border-t-0 border-[var(--color-border)] pt-3 sm:pt-0">
                                     <div className="text-right sm:pr-2">
                                         <p className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)]">{t('dorms.cleanliness.avgScore')}</p>
-                                        <p className="text-xl font-black text-[var(--color-primary)] mt-0.5">{tNum(audit.score)} <span className="text-[10px] font-bold text-[var(--color-text-muted)]">/ {tNum(100)}</span></p>
+                                        <div className="flex items-center gap-1.5 justify-end mt-0.5">
+                                            <p className="text-xl font-black text-[var(--color-primary)]">{tNum(audit.score)} <span className="text-[10px] font-bold text-[var(--color-text-muted)]">/ {tNum(100)}</span></p>
+                                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${audit.score >= 80 ? 'bg-emerald-500' : 'bg-rose-500 animate-pulse'}`} title={audit.score >= 80 ? 'Memenuhi Standar' : 'Di Bawah Standar'} />
+                                        </div>
                                     </div>
                                     <button
                                         onClick={() => handleOpenDeleteAuditModal(audit)}
@@ -169,11 +208,14 @@ export default function DormTabCleanliness({
                     ) : (() => {
                         const best = audits.reduce((prev, curr) => (curr.score > prev.score ? curr : prev), audits[0])
                         return (
-                            <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-2xl p-4 text-center">
-                                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">{t('dorms.cleanliness.bestTitle')}</p>
+                            <div className="relative bg-gradient-to-br from-amber-500/10 via-yellow-500/5 to-transparent border border-amber-500/20 rounded-2xl p-4 text-center overflow-hidden">
+                                <div className="absolute -right-3 -top-3 w-16 h-16 bg-amber-500/10 rounded-full blur-xl pointer-events-none" />
+                                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest flex items-center justify-center gap-1">
+                                    <span>🏆</span> {t('dorms.cleanliness.bestTitle')}
+                                </p>
                                 <p className="text-xl font-black text-[var(--color-text)] mt-1.5">{t('dorms.import.rowNameDorm').replace('{room}', best.room)}</p>
                                 <p className="text-[11px] text-[var(--color-text-muted)] mt-1">{best.notes || t('dorms.cleanliness.bestRoomDesc')}</p>
-                                <div className="w-fit mx-auto mt-4 bg-emerald-500 text-white font-black text-xs px-3.5 py-1.5 rounded-xl shadow-lg shadow-emerald-500/20">
+                                <div className="w-fit mx-auto mt-4 bg-gradient-to-r from-amber-500 to-yellow-500 text-white font-black text-xs px-4 py-1.5 rounded-xl shadow-md shadow-amber-500/20">
                                     {t('dorms.cleanliness.bestPoints').replace('{score}', tNum(best.score))}
                                 </div>
                             </div>

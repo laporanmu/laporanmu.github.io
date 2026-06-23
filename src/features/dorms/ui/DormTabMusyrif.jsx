@@ -31,6 +31,27 @@ export default function DormTabMusyrif({
                         </button>
                     </div>
 
+                    {/* Routine Checklist Progress */}
+                    {(() => {
+                        const completedCount = musyrifTasks.filter(t => t.completed).length
+                        const totalCount = musyrifTasks.length
+                        const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
+                        return (
+                            <div className="mb-4 p-3 rounded-2xl bg-[var(--color-surface-alt)]/40 border border-[var(--color-border)]">
+                                <div className="flex items-center justify-between text-[9.5px] font-black uppercase tracking-wider text-[var(--color-text-muted)] mb-1.5">
+                                    <span>Progress Tugas Harian</span>
+                                    <span className="text-[var(--color-primary)]">{completedCount} / {totalCount} Selesai ({percent}%)</span>
+                                </div>
+                                <div className="w-full h-2 bg-[var(--color-border)]/50 rounded-full overflow-hidden">
+                                    <div 
+                                        className="h-full bg-gradient-to-r from-[var(--color-primary)] to-indigo-500 rounded-full transition-all duration-300"
+                                        style={{ width: `${percent}%` }}
+                                    />
+                                </div>
+                            </div>
+                        )
+                    })()}
+
                     <div className="space-y-2">
                         {musyrifTasks.map(task => (
                             <div
@@ -80,19 +101,36 @@ export default function DormTabMusyrif({
                         {shiftLogs.length === 0 ? (
                             <p className="text-[11px] text-[var(--color-text-muted)] text-center py-8">{t('dorms.musyrif.noLogs')}</p>
                         ) : (
-                            shiftLogs.map(log => (
-                                <div key={log.id} className="p-3.5 rounded-2xl bg-[var(--color-surface-alt)]/65 border border-[var(--color-border)] space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-[11px] font-black text-[var(--color-text)]">{log.musyrifName}</span>
-                                        <span className="text-[8px] font-black uppercase tracking-widest text-[var(--color-text-muted)] opacity-60 bg-[var(--color-surface)] px-1.5 py-0.5 rounded">{log.shift}</span>
+                            shiftLogs.map(log => {
+                                const hasIssues = log.issues && log.issues !== 'Nihil' && log.issues !== 'nihil'
+                                return (
+                                    <div 
+                                        key={log.id} 
+                                        className={`p-3.5 rounded-2xl border transition-all space-y-2 ${
+                                            hasIssues 
+                                                ? 'bg-rose-550/[0.03] border-rose-500/20 bg-rose-50/5 dark:bg-rose-950/5' 
+                                                : 'bg-[var(--color-surface-alt)]/65 border-[var(--color-border)]'
+                                        }`}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[11px] font-black text-[var(--color-text)] flex items-center gap-1">
+                                                {hasIssues && <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse shrink-0" />}
+                                                {log.musyrifName}
+                                            </span>
+                                            <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${
+                                                hasIssues
+                                                    ? 'text-rose-600 bg-rose-500/10'
+                                                    : 'text-[var(--color-text-muted)] opacity-60 bg-[var(--color-surface)]'
+                                            }`}>{log.shift}</span>
+                                        </div>
+                                        <div className="text-[10px] space-y-1 text-[var(--color-text-muted)] leading-relaxed">
+                                            <p><strong>{t('dorms.musyrif.notes')}:</strong> {log.notes}</p>
+                                            <p><strong>{t('dorms.musyrif.findings')}:</strong> <span className={hasIssues ? 'text-rose-500 font-bold' : ''}>{log.issues === 'Nihil' ? t('dorms.musyrif.findingsNihil') : log.issues}</span></p>
+                                        </div>
+                                        <div className="text-[8px] text-[var(--color-text-muted)] opacity-50 text-right">{log.date}</div>
                                     </div>
-                                    <div className="text-[10px] space-y-1 text-[var(--color-text-muted)] leading-relaxed">
-                                        <p><strong>{t('dorms.musyrif.notes')}:</strong> {log.notes}</p>
-                                        <p><strong>{t('dorms.musyrif.findings')}:</strong> <span className={log.issues !== 'Nihil' ? 'text-red-500 font-bold' : ''}>{log.issues === 'Nihil' ? t('dorms.musyrif.findingsNihil') : log.issues}</span></p>
-                                    </div>
-                                    <div className="text-[8px] text-[var(--color-text-muted)] opacity-50 text-right">{log.date}</div>
-                                </div>
-                            ))
+                                )
+                            })
                         )}
                     </div>
                 </div>

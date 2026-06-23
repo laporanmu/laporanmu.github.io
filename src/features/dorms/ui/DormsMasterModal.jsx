@@ -25,6 +25,7 @@ export default function DormsMasterModal({
             description={editingDorm ? t('dorms.master.descEdit').replace('{id}', editingDorm.id) : t('dorms.master.descAdd')}
             icon={Bed}
             size="md"
+            mobileVariant="bottom-sheet"
             footer={
                 <div className="flex items-center justify-between gap-2 w-full">
                     <button

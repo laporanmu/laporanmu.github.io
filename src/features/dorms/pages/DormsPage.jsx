@@ -13,27 +13,27 @@ import {
 // Custom Hook
 import { useDormsData } from '@features/dorms/hooks/useDormsData'
 
-// Modals
-import DormsAssignModal from '@features/dorms/components/DormsAssignModal'
-import DormsExportModal from '@features/dorms/components/DormsExportModal'
-import DormsImportModal from '@features/dorms/components/DormsImportModal'
-import DormsBulkAssignModal from '@features/dorms/components/DormsBulkAssignModal'
-import { DormsInventoryModal, DormsInventoryFormModal } from '@features/dorms/components/DormsInventoryModal'
-import DormsAuditModal from '@features/dorms/components/DormsAuditModal'
-import DormsLogModal from '@features/dorms/components/DormsLogModal'
-import DormsMasterModal from '@features/dorms/components/DormsMasterModal'
+// UI — Modals
+import DormsAssignModal from '@features/dorms/ui/DormsAssignModal'
+import DormsExportModal from '@features/dorms/ui/DormsExportModal'
+import DormsImportModal from '@features/dorms/ui/DormsImportModal'
+import DormsBulkAssignModal from '@features/dorms/ui/DormsBulkAssignModal'
+import { DormsInventoryModal, DormsInventoryFormModal } from '@features/dorms/ui/DormsInventoryModal'
+import DormsAuditModal from '@features/dorms/ui/DormsAuditModal'
+import DormsLogModal from '@features/dorms/ui/DormsLogModal'
+import DormsMasterModal from '@features/dorms/ui/DormsMasterModal'
 import {
     ConfirmEvictModal,
     ConfirmDeleteDormModal,
     ConfirmDeleteAuditModal,
     ConfirmDeleteInventoryModal
-} from '@features/dorms/components/DormsConfirmModals'
+} from '@features/dorms/ui/DormsConfirmModals'
 
-// Tabs
-import DormTabPlotting from '@features/dorms/tabs/DormTabPlotting'
-import DormTabCleanliness from '@features/dorms/tabs/DormTabCleanliness'
-import DormTabMusyrif from '@features/dorms/tabs/DormTabMusyrif'
-import DormTabKelola from '@features/dorms/tabs/DormTabKelola'
+// UI — Tabs
+import DormTabPlotting from '@features/dorms/ui/DormTabPlotting'
+import DormTabCleanliness from '@features/dorms/ui/DormTabCleanliness'
+import DormTabMusyrif from '@features/dorms/ui/DormTabMusyrif'
+import DormTabKelola from '@features/dorms/ui/DormTabKelola'
 
 // Utilities
 import { getPortalContainer } from '@features/dorms/utils/dormUtils'
@@ -182,79 +182,61 @@ export default function DormsPage() {
                 {/* --- STATS CAROUSEL / STAT CARDS --- */}
                 <StatsCarousel count={4} className="mb-5">
                     <StatCard
-                        onClick={() => { setActiveTab('plotting'); data.setSelectedRoomTab('Assigned'); }}
-                        isActive={activeTab === 'plotting' && data.selectedRoomTab !== 'Unassigned'}
+                        onClick={() => { setActiveTab('plotting'); data.setSelectedRoomTab('All'); }}
+                        isActive={activeTab === 'plotting' && data.selectedRoomTab === 'All'}
+                        icon={Users}
+                        label={t('dorms.statTotalStudents')}
+                        value={data.stats.totalCount}
+                        suffix={t('dorms.suffixSantri')}
+                        color="indigo"
+                    />
+
+                    <StatCard
+                        onClick={() => { setActiveTab('kelola_kamar'); }}
+                        isActive={activeTab === 'kelola_kamar'}
                         icon={Bed}
+                        label={t('dorms.statTotalRooms')}
+                        value={data.dorms.length}
+                        suffix={t('dorms.suffixRooms')}
+                        color="emerald"
+                    />
+
+                    <StatCard
+                        onClick={() => { setActiveTab('plotting'); data.setSelectedRoomTab('Assigned'); }}
+                        isActive={activeTab === 'plotting' && data.selectedRoomTab === 'Assigned'}
+                        icon={CheckSquare}
                         label={t('dorms.statPlotting')}
                         value={data.stats.assignedCount}
+                        suffix={t('dorms.suffixSantri')}
                         color="primary"
                     />
 
                     <StatCard
                         onClick={() => { setActiveTab('plotting'); data.setSelectedRoomTab('Unassigned'); }}
                         isActive={activeTab === 'plotting' && data.selectedRoomTab === 'Unassigned'}
-                        icon={Users}
+                        icon={ShieldAlert}
                         label={t('dorms.statUnassigned')}
                         value={data.stats.unassignedCount}
                         suffix={t('dorms.suffixSantri')}
                         color="amber"
                     />
-
-                    <StatCard
-                        onClick={() => setActiveTab('kebersihan')}
-                        isActive={activeTab === 'kebersihan'}
-                        icon={Star}
-                        label={t('dorms.statCleanliness')}
-                        value={data.stats.avgCleanliness}
-                        suffix={t('dorms.suffixPoin')}
-                        color="emerald"
-                    />
-
-                    <StatCard
-                        onClick={() => setActiveTab('musyrif')}
-                        isActive={activeTab === 'musyrif'}
-                        icon={ClipboardList}
-                        label={t('dorms.statMusyrif')}
-                        value={data.stats.taskProgress}
-                        suffix="%"
-                        color="indigo"
-                        progressValue={data.stats.taskProgress}
-                    />
                 </StatsCarousel>
 
                 {/* --- NAVIGATION TABS --- */}
-                <div className="grid grid-cols-4 sm:flex gap-1 sm:gap-1.5 p-1 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] w-full sm:w-fit shrink-0">
+                <div className="flex gap-1 sm:gap-1.5 p-1 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] w-full sm:w-fit overflow-x-auto scrollbar-hide shrink-0">
                     <button
                         onClick={() => setActiveTab('plotting')}
-                        className={`py-2 sm:py-0 sm:h-9 px-1 sm:px-6 rounded-xl text-[9px] sm:text-[11px] font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 shrink-0 ${activeTab === 'plotting' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                        className={`flex-1 sm:flex-none h-9 px-6 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'plotting' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                     >
                         <Bed className="w-3.5 h-3.5 shrink-0" />
-                        <span className="sm:hidden text-[8px] xs:text-[9px] tracking-tight xs:tracking-wider">{t('dorms.tabPlottingShort')}</span>
-                        <span className="hidden sm:inline">{t('dorms.tabPlotting')}</span>
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('kebersihan')}
-                        className={`py-2 sm:py-0 sm:h-9 px-1 sm:px-6 rounded-xl text-[9px] sm:text-[11px] font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 shrink-0 ${activeTab === 'kebersihan' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
-                    >
-                        <Sparkles className="w-3.5 h-3.5 animate-pulse shrink-0" />
-                        <span className="sm:hidden text-[8px] xs:text-[9px] tracking-tight xs:tracking-wider">{t('dorms.tabCleanlinessShort')}</span>
-                        <span className="hidden sm:inline">{t('dorms.tabCleanliness')}</span>
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('musyrif')}
-                        className={`py-2 sm:py-0 sm:h-9 px-1 sm:px-6 rounded-xl text-[9px] sm:text-[11px] font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 shrink-0 ${activeTab === 'musyrif' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
-                    >
-                        <CheckSquare className="w-3.5 h-3.5 shrink-0" />
-                        <span className="sm:hidden text-[8px] xs:text-[9px] tracking-tight xs:tracking-wider">{t('dorms.tabMusyrifShort')}</span>
-                        <span className="hidden sm:inline">{t('dorms.tabMusyrif')}</span>
+                        <span>{t('dorms.tabPlotting')}</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('kelola_kamar')}
-                        className={`py-2 sm:py-0 sm:h-9 px-1 sm:px-6 rounded-xl text-[9px] sm:text-[11px] font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 shrink-0 ${activeTab === 'kelola_kamar' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                        className={`flex-1 sm:flex-none h-9 px-6 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'kelola_kamar' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                     >
                         <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
-                        <span className="sm:hidden text-[8px] xs:text-[9px] tracking-tight xs:tracking-wider">{t('dorms.tabManageShort')}</span>
-                        <span className="hidden sm:inline">{t('dorms.tabManage')}</span>
+                        <span>{t('dorms.tabManage')}</span>
                     </button>
                 </div>
 
@@ -300,32 +282,6 @@ export default function DormsPage() {
                         setIsBulkAssignModalOpen={data.setIsBulkAssignModalOpen}
                         setSelectedBulkRoom={data.setSelectedBulkRoom}
                         students={data.students}
-                    />
-                )}
-
-                {activeTab === 'kebersihan' && (
-                    <DormTabCleanliness
-                        setIsAuditModalOpen={data.setIsAuditModalOpen}
-                        auditRoomFilter={data.auditRoomFilter}
-                        setAuditRoomFilter={data.setAuditRoomFilter}
-                        dorms={data.dorms}
-                        auditDateFrom={data.auditDateFrom}
-                        setAuditDateFrom={data.setAuditDateFrom}
-                        auditDateTo={data.auditDateTo}
-                        setAuditDateTo={data.setAuditDateTo}
-                        filteredAudits={data.filteredAudits}
-                        audits={data.audits}
-                        handleOpenDeleteAuditModal={data.handleOpenDeleteAuditModal}
-                    />
-                )}
-
-                {activeTab === 'musyrif' && (
-                    <DormTabMusyrif
-                        resetAllTasks={data.resetAllTasks}
-                        musyrifTasks={data.musyrifTasks}
-                        toggleTask={data.toggleTask}
-                        setIsLogModalOpen={data.setIsLogModalOpen}
-                        shiftLogs={data.shiftLogs}
                     />
                 )}
 
@@ -414,6 +370,8 @@ export default function DormsPage() {
                 isOpen={data.isBulkAssignModalOpen}
                 onClose={() => data.setIsBulkAssignModalOpen(false)}
                 selectedCount={data.selectedIds.length}
+                selectedStudents={(data.students || []).filter(s => (data.selectedIds || []).includes(s.id))}
+                onRemoveStudent={(id) => data.setSelectedIds(prev => prev.filter(x => x !== id))}
                 selectedRoom={data.selectedBulkRoom}
                 setSelectedRoom={data.setSelectedBulkRoom}
                 dorms={data.dorms}
@@ -509,6 +467,9 @@ export default function DormsPage() {
                 onClose={() => data.setIsConfirmDeleteInventoryOpen(false)}
                 inventoryToDelete={data.inventoryToDelete}
                 onConfirm={data.handleConfirmDeleteInventory}
+                pendingInventoryDorm={data.pendingInventoryDorm}
+                setInventoryModalDorm={data.setInventoryModalDorm}
+                setPendingInventoryDorm={data.setPendingInventoryDorm}
             />
         </DashboardLayout>
     )

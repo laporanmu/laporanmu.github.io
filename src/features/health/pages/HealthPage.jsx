@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '@lib/supabase'
 import { useToast, useLanguage } from '@context'
 import DashboardLayout from '@core/layouts/DashboardLayout'
@@ -18,12 +19,19 @@ import {
     Calendar, User, Clock, AlertCircle, Bed,
     ArrowRightLeft, FileSpreadsheet, Download,
     Check, Pill, FileText, CheckCircle2, Star,
-    Printer, Sparkles
+    Printer, Sparkles, Eye, EyeOff, Sliders
 } from 'lucide-react'
 
 // Local storage keys for fallback persistence
 const LS_HEALTH_LOGS = 'laporanmu_health_logs'
 const LS_HEALTH_MEDS = 'laporanmu_health_medicines'
+
+const maskInfo = (str, vis = 3) => {
+    if (!str) return '—'
+    const s = String(str)
+    if (s.length <= vis) return s.charAt(0) + '*'.repeat(s.length - 1)
+    return s.slice(0, vis) + '*'.repeat(s.length - vis)
+}
 
 export default function HealthPage() {
     const { addToast } = useToast()
@@ -31,6 +39,35 @@ export default function HealthPage() {
 
     // Tab state
     const [activeTab, setActiveTab] = useState('medical') // 'medical' | 'resting' | 'inventory'
+    const [isPrivacyMode, setIsPrivacyMode] = useState(false)
+
+    // Dropdown menu (Cetak / Export) state
+    const [isDataMenuOpen, setIsDataMenuOpen] = useState(false)
+    const [dataMenuRect, setDataMenuRect] = useState(null)
+    const [dataMenuMounted, setDataMenuMounted] = useState(false)
+    const dataMenuBtnRef = useRef(null)
+
+    // Mount/unmount dropdown with animation delay
+    useEffect(() => {
+        if (isDataMenuOpen) {
+            setDataMenuMounted(true)
+        } else {
+            const t = setTimeout(() => setDataMenuMounted(false), 200)
+            return () => clearTimeout(t)
+        }
+    }, [isDataMenuOpen])
+
+    // Close dropdown on outside click
+    useEffect(() => {
+        if (!isDataMenuOpen) return
+        const handler = (e) => {
+            if (dataMenuBtnRef.current && !dataMenuBtnRef.current.contains(e.target) && !e.target.closest('#portal-health-header-menu')) {
+                setIsDataMenuOpen(false)
+            }
+        }
+        document.addEventListener('mousedown', handler)
+        return () => document.removeEventListener('mousedown', handler)
+    }, [isDataMenuOpen])
 
     // Data states
     const [logs, setLogs] = useState([])
@@ -102,7 +139,10 @@ export default function HealthPage() {
             btnRecordAdd: { id: 'Tambah Catatan', en: 'Add Medical Record', ar: 'إضافة سجل طبي' },
             btnMedAdd: { id: 'Tambah Obat', en: 'Add New Medicine', ar: 'إضافة دواء جديد' },
             emptyTitle: { id: 'Tidak Ada Data Medis', en: 'No Medical Records Found', ar: 'لا توجد سجلات طبية' },
-            emptyDesc: { id: 'Belum ada rekam medis yang dicatat atau data tidak sesuai dengan filter.', en: 'No medical records have been recorded or matching the current filters.', ar: 'لم يتم تسجيل أي سجل طبي أو لا توجد نتائج مطابقة للتصفية.' }
+            emptyDesc: { id: 'Belum ada rekam medis yang dicatat atau data tidak sesuai dengan filter.', en: 'No medical records have been recorded or matching the current filters.', ar: 'لم يتم تسجيل أي سجل طبي أو لا توجد نتائج مطابقة للتصفية.' },
+            privacyModeOn: { id: 'Matikan Mode Privasi', en: 'Disable Privacy Mode', ar: 'تعطيل وضع الخصوصية' },
+            privacyModeOff: { id: 'Aktifkan Mode Privasi', en: 'Enable Privacy Mode', ar: 'تفعيل وضع الخصوصية' },
+            privacy: { id: 'Privasi', en: 'Privacy', ar: 'الخصوصية' }
         }
         return trans[key]?.[language] || trans[key]?.id || key
     }
@@ -914,6 +954,136 @@ export default function HealthPage() {
                     breadcrumbs={['UKS & Poskestren']}
                     title={tp('title')}
                     subtitle={tp('desc')}
+                    actions={
+                        <div className="flex items-center gap-2">
+                            {/* Dropdown: Cetak / Ekspor */}
+                            {activeTab === 'medical' && (
+                                <div className="relative">
+                                    <button
+                                        ref={dataMenuBtnRef}
+                                        onClick={() => {
+                                            if (!isDataMenuOpen) {
+                                                setDataMenuRect(dataMenuBtnRef.current?.getBoundingClientRect())
+                                            }
+                                            setIsDataMenuOpen(v => !v)
+                                        }}
+                                        className={`h-9 w-9 rounded-xl border flex items-center justify-center transition-all ${
+                                            isDataMenuOpen
+                                                ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]'
+                                                : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-border)]'
+                                        }`}
+                                        title="Opsi Cetak & Ekspor"
+                                    >
+                                        <Sliders className="w-4 h-4" />
+                                    </button>
+
+                                    {dataMenuMounted && dataMenuRect && createPortal(
+                                        <>
+                                            <div
+                                                className={`fixed inset-0 z-[9990] bg-black/[0.08] transition-opacity duration-200 ${isDataMenuOpen ? 'opacity-100' : 'opacity-0'}`}
+                                                onClick={() => setIsDataMenuOpen(false)}
+                                            />
+                                            <div
+                                                id="portal-health-header-menu"
+                                                className={`fixed z-[9991] w-56 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl p-2 transition-[opacity,transform] duration-200 ease-out origin-top-right ${
+                                                    isDataMenuOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2'
+                                                }`}
+                                                style={{ top: dataMenuRect.bottom + 8, left: Math.max(10, dataMenuRect.right - 224) }}
+                                            >
+                                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">Opsi Data</p>
+                                                <button
+                                                    onClick={() => { setIsDataMenuOpen(false); handlePrintLogs(); }}
+                                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group text-left"
+                                                >
+                                                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                        <Printer className="w-4 h-4" />
+                                                    </div>
+                                                    <div className="text-left">
+                                                        <p className="text-[11px] font-black leading-tight">Cetak Jurnal Medis</p>
+                                                        <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">pdf / kertas</p>
+                                                    </div>
+                                                </button>
+                                                <div className="h-px bg-[var(--color-border)] my-1" />
+                                                <button
+                                                    onClick={() => { setIsDataMenuOpen(false); handleExportCSV(); }}
+                                                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--color-surface-alt)] text-[var(--color-text)] transition-all group text-left"
+                                                >
+                                                    <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                        <Download className="w-4 h-4" />
+                                                    </div>
+                                                    <div className="text-left">
+                                                        <p className="text-[11px] font-black leading-tight">Unduh Data Rekam Medis</p>
+                                                        <p className="text-[9px] opacity-40 font-bold uppercase tracking-wider">xlsx / csv</p>
+                                                    </div>
+                                                </button>
+                                            </div>
+                                        </>,
+                                        document.body
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Privasi — di tengah, selalu tampil */}
+                            <button
+                                onClick={() => setIsPrivacyMode(v => !v)}
+                                className={`h-9 px-3 rounded-xl border flex items-center gap-2 transition-all ${
+                                    isPrivacyMode
+                                        ? 'bg-amber-500/10 border-amber-500/30 text-amber-600'
+                                        : 'bg-[var(--color-surface-alt)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+                                }`}
+                                title={isPrivacyMode ? tp('privacyModeOn') : tp('privacyModeOff')}
+                            >
+                                {isPrivacyMode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">{tp('privacy')}</span>
+                            </button>
+                            {activeTab === 'medical' && (
+                                <button
+                                    onClick={() => {
+                                        setActiveLog(null)
+                                        setFormLog({
+                                            student_id: '',
+                                            date: new Date().toISOString().split('T')[0],
+                                            time: new Date().toTimeString().split(' ')[0].slice(0, 5),
+                                            complaint: '',
+                                            diagnosis: '',
+                                            treatment: '',
+                                            medicine_id: '',
+                                            medicine_qty: 1,
+                                            status: 'UKS'
+                                        })
+                                        setSelectedMeds([
+                                            { medicine_id: '', qty: 1 }
+                                        ])
+                                        setIsRecordModalOpen(true)
+                                    }}
+                                    className="h-9 px-4 sm:px-5 rounded-xl transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest bg-[var(--color-primary)] text-white hover:scale-[1.02] active:scale-95 shadow-md shadow-[var(--color-primary)]/20 border border-white/10"
+                                >
+                                    <Plus className="w-3.5 h-3.5" />
+                                    <span>{tp('btnRecordAdd')}</span>
+                                </button>
+                            )}
+                            {activeTab === 'inventory' && (
+                                <button
+                                    onClick={() => {
+                                        setActiveMed(null)
+                                        setFormMed({
+                                            name: '',
+                                            category: 'Analgesik / Antipiretik',
+                                            stock: 50,
+                                            unit: 'tablet',
+                                            min_stock: 15,
+                                            description: ''
+                                        })
+                                        setIsMedModalOpen(true)
+                                    }}
+                                    className="h-9 px-4 sm:px-5 rounded-xl transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest bg-emerald-600 text-white hover:scale-[1.02] active:scale-95 shadow-md shadow-emerald-600/20 border border-white/10"
+                                >
+                                    <Plus className="w-3.5 h-3.5" />
+                                    <span>{tp('btnMedAdd')}</span>
+                                </button>
+                            )}
+                        </div>
+                    }
                 />
 
                 {/* ─── HIGH-DENSITY STATISTICS CAROUSEL ─── */}
@@ -950,28 +1120,28 @@ export default function HealthPage() {
                     />
                 </StatsCarousel>
 
-                {/* ─── PREMIUM TABS NAVIGATION (CAPSULE / SEGMENT CONTROL) ─── */}
-                <div className="flex gap-1.5 p-1 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] w-fit overflow-x-auto scrollbar-hide">
+                {/* ─── NAVIGATION TABS ─── */}
+                <div className="flex gap-1 sm:gap-1.5 p-1 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] w-full sm:w-fit overflow-x-auto scrollbar-hide shrink-0">
                     <button
                         onClick={() => { setActiveTab('medical'); setSearchQuery(''); }}
-                        className={`h-9 px-4 sm:px-6 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'medical' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                        className={`flex-1 sm:flex-none h-9 px-6 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'medical' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                     >
-                        <FileText className="w-3.5 h-3.5" />
-                        {tp('tabMedical')}
+                        <FileText className="w-3.5 h-3.5 shrink-0" />
+                        <span>{tp('tabMedical')}</span>
                     </button>
                     <button
                         onClick={() => { setActiveTab('resting'); setSearchQuery(''); }}
-                        className={`h-9 px-4 sm:px-6 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'resting' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                        className={`flex-1 sm:flex-none h-9 px-6 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'resting' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                     >
-                        <Bed className="w-3.5 h-3.5" />
-                        {tp('tabResting')} ({tNum(restingStudents.length)})
+                        <Bed className="w-3.5 h-3.5 shrink-0" />
+                        <span>{tp('tabResting')} ({tNum(restingStudents.length)})</span>
                     </button>
                     <button
                         onClick={() => { setActiveTab('inventory'); setSearchQuery(''); }}
-                        className={`h-9 px-4 sm:px-6 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'inventory' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                        className={`flex-1 sm:flex-none h-9 px-6 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 transition-all whitespace-nowrap ${activeTab === 'inventory' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
                     >
-                        <Pill className="w-3.5 h-3.5" />
-                        {tp('tabInventory')}
+                        <Pill className="w-3.5 h-3.5 shrink-0" />
+                        <span>{tp('tabInventory')}</span>
                     </button>
                 </div>
 
@@ -1022,47 +1192,6 @@ export default function HealthPage() {
                                     />
                                 </div>
 
-                                <div className="w-px h-6 bg-[var(--color-border)] hidden md:block" />
-
-                                <button
-                                    onClick={handlePrintLogs}
-                                    className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] flex items-center justify-center transition-all animate-in fade-in"
-                                    title="Cetak Jurnal (PDF / Kertas)"
-                                >
-                                    <Printer className="w-4 h-4 text-emerald-600" />
-                                </button>
-                                <button
-                                    onClick={handleExportCSV}
-                                    className="h-9 w-9 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] flex items-center justify-center transition-all animate-in fade-in"
-                                    title="Unduh Data Excel (CSV)"
-                                >
-                                    <Download className="w-4 h-4 text-indigo-500" />
-                                </button>
-
-                                <button
-                                    onClick={() => {
-                                        setActiveLog(null)
-                                        setFormLog({
-                                            student_id: '',
-                                            date: new Date().toISOString().split('T')[0],
-                                            time: new Date().toTimeString().split(' ')[0].slice(0, 5),
-                                            complaint: '',
-                                            diagnosis: '',
-                                            treatment: '',
-                                            medicine_id: '',
-                                            medicine_qty: 1,
-                                            status: 'UKS'
-                                        })
-                                        setSelectedMeds([
-                                            { medicine_id: '', qty: 1 }
-                                        ])
-                                        setIsRecordModalOpen(true)
-                                    }}
-                                    className="h-10 px-5 rounded-xl transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest bg-[var(--color-primary)] text-white hover:scale-105 active:scale-95 justify-center shadow-lg shadow-[var(--color-primary)]/10 border border-white/10"
-                                >
-                                    <Plus className="w-3.5 h-3.5" />
-                                    <span>{tp('btnRecordAdd')}</span>
-                                </button>
                             </div>
                         </div>
 
@@ -1119,22 +1248,22 @@ export default function HealthPage() {
                                             <tr key={log.id} className="group hover:bg-[var(--color-surface-alt)]/10 transition-colors">
                                                 <td className="px-4 py-3">
                                                     <div className="flex flex-col">
-                                                        <span className="text-[12px] font-black text-[var(--color-text)]">{log.student_name}</span>
-                                                        <span className="text-[10px] text-[var(--color-text-muted)] font-bold">Kelas {log.class_name}</span>
+                                                        <span className={`text-[12px] font-black text-[var(--color-text)] ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{isPrivacyMode ? maskInfo(log.student_name, 3) : log.student_name}</span>
+                                                        <span className="text-[10px] text-[var(--color-text-muted)] font-bold">Kelas {isPrivacyMode ? maskInfo(log.class_name, 2) : log.class_name}</span>
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-3 text-[11px] text-[var(--color-text-muted)] font-bold tabular-nums">
                                                     <div>{log.date}</div>
                                                     <div className="text-[10px] opacity-75">{log.time}</div>
                                                 </td>
-                                                <td className="px-4 py-3 text-[12px] text-[var(--color-text)] font-semibold max-w-[200px] truncate" title={log.complaint}>
-                                                    {log.complaint}
+                                                <td className="px-4 py-3 text-[12px] text-[var(--color-text)] font-semibold max-w-[200px] truncate" title={!isPrivacyMode ? log.complaint : undefined}>
+                                                    <span className={isPrivacyMode ? 'blur-sm select-none' : ''}>{isPrivacyMode ? maskInfo(log.complaint, 4) : log.complaint}</span>
                                                 </td>
                                                 <td className="px-4 py-3 text-[11px] text-[var(--color-text-muted)] font-black">
-                                                    {log.diagnosis || '-'}
+                                                    <span className={isPrivacyMode ? 'blur-sm select-none' : ''}>{isPrivacyMode ? maskInfo(log.diagnosis, 4) : (log.diagnosis || '-')}</span>
                                                 </td>
-                                                <td className="px-4 py-3 text-[11px] text-[var(--color-text-muted)] max-w-[220px] truncate" title={log.treatment}>
-                                                    {log.treatment}
+                                                <td className="px-4 py-3 text-[11px] text-[var(--color-text-muted)] max-w-[220px] truncate" title={!isPrivacyMode ? log.treatment : undefined}>
+                                                    <span className={isPrivacyMode ? 'blur-sm select-none' : ''}>{isPrivacyMode ? maskInfo(log.treatment, 4) : log.treatment}</span>
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     {log.medicine_name && log.medicine_name !== '-' ? (
@@ -1247,17 +1376,17 @@ export default function HealthPage() {
                                                 <User className="w-6 h-6 text-[var(--color-text-muted)]" />
                                             </div>
                                             <div className="min-w-0 flex-1">
-                                                <h4 className="text-[14px] font-black text-[var(--color-text)] truncate">{log.student_name}</h4>
-                                                <p className="text-[11px] text-[var(--color-text-muted)] font-bold mb-3">Kelas {log.class_name}</p>
+                                                <h4 className={`text-[14px] font-black text-[var(--color-text)] truncate ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{isPrivacyMode ? maskInfo(log.student_name, 3) : log.student_name}</h4>
+                                                <p className="text-[11px] text-[var(--color-text-muted)] font-bold mb-3">Kelas {isPrivacyMode ? maskInfo(log.class_name, 2) : log.class_name}</p>
 
                                                 <div className="space-y-2 text-[12px] text-[var(--color-text)] font-medium">
                                                     <div>
                                                         <span className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider block font-bold">Keluhan</span>
-                                                        <p className="font-semibold text-rose-500 text-[12px]">{log.complaint}</p>
+                                                        <p className={`font-semibold text-rose-500 text-[12px] ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{isPrivacyMode ? maskInfo(log.complaint, 4) : log.complaint}</p>
                                                     </div>
                                                     <div>
                                                         <span className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider block font-bold">Rencana Tindakan & Obat</span>
-                                                        <p className="text-[11px] text-[var(--color-text-muted)]">{log.treatment} • <strong className="text-[var(--color-text)] font-black">{log.medicine_name}</strong></p>
+                                                        <p className={`text-[11px] text-[var(--color-text-muted)] ${isPrivacyMode ? 'blur-sm select-none' : ''}`}>{isPrivacyMode ? maskInfo(log.treatment, 4) : log.treatment} • <strong className="text-[var(--color-text)] font-black">{log.medicine_name}</strong></p>
                                                     </div>
                                                     <div className="pt-1 text-[10px] text-[var(--color-text-muted)] flex items-center gap-1.5">
                                                         <Clock className="w-3.5 h-3.5" />
@@ -1310,25 +1439,6 @@ export default function HealthPage() {
                                     </button>
                                 )}
                             </div>
-
-                            <button
-                                onClick={() => {
-                                    setActiveMed(null)
-                                    setFormMed({
-                                        name: '',
-                                        category: 'Analgesik / Antipiretik',
-                                        stock: 50,
-                                        unit: 'tablet',
-                                        min_stock: 15,
-                                        description: ''
-                                    })
-                                    setIsMedModalOpen(true)
-                                }}
-                                className="h-10 px-5 rounded-xl transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest bg-emerald-600 text-white hover:scale-105 active:scale-95 justify-center shadow-lg shadow-emerald-600/10 border border-white/10"
-                            >
-                                <Plus className="w-3.5 h-3.5" />
-                                <span>{tp('btnMedAdd')}</span>
-                            </button>
                         </div>
 
                         {/* Inventory Table */}

@@ -21,6 +21,7 @@ export default function DormsAuditModal({
             description={t('dorms.audit.description')}
             icon={ClipboardList}
             size="md"
+            mobileVariant="bottom-sheet"
             footer={
                 <div className="flex items-center justify-between gap-2 w-full">
                     <button

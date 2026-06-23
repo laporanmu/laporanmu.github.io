@@ -43,6 +43,7 @@ export default function DormsAssignModal({
             description={assignStep === 1 ? t('dorms.assign.descSelect') : t('dorms.assign.descPlotting')}
             icon={Bed}
             size="md"
+            mobileVariant="bottom-sheet"
             footer={
                 <div className="flex items-center w-full gap-3">
                     {assignStep === 1 ? (

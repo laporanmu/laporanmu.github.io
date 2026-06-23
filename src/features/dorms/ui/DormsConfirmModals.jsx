@@ -229,7 +229,10 @@ export function ConfirmDeleteInventoryModal({
     isOpen,
     onClose,
     inventoryToDelete,
-    onConfirm
+    onConfirm,
+    pendingInventoryDorm,
+    setInventoryModalDorm,
+    setPendingInventoryDorm
 }) {
     const { t } = useLanguage()
     return (
@@ -247,7 +250,13 @@ export function ConfirmDeleteInventoryModal({
                 <div className="flex items-center w-full gap-3">
                     <button
                         type="button"
-                        onClick={onClose}
+                        onClick={() => {
+                            onClose()
+                            if (pendingInventoryDorm) {
+                                setInventoryModalDorm(pendingInventoryDorm)
+                                setPendingInventoryDorm(null)
+                            }
+                        }}
                         className="h-10 px-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] text-[10px] font-black uppercase tracking-widest transition-all shrink-0"
                     >
                         {t('dorms.confirm.deleteInventory.cancel')}

@@ -1501,6 +1501,7 @@ export default function PointRulesTab({ showStats = true, initialPoin = [], init
                     title={selectedItem ? tp('rulesEditTitle') : tp('rulesAddTitle')}
                     description={selectedItem ? tp('rulesEditDesc') : tp('rulesAddDesc')}
                     size="md"
+                    mobileVariant="bottom-sheet"
                     icon={selectedItem ? Edit2 : Plus}
                     iconBg="bg-[var(--color-primary)]/10"
                     iconColor="text-[var(--color-primary)]"
@@ -1625,7 +1626,7 @@ export default function PointRulesTab({ showStats = true, initialPoin = [], init
 
             {/* Modal Bulk Delete */}
             {hasOpenedBulkDelete && (
-                <Modal isOpen={isBulkDeleteOpen} onClose={() => setIsBulkDeleteOpen(false)} title={tp('rulesBulkDeleteConfirmTitle', { count: selectedIds.length })} size="sm">
+                <Modal isOpen={isBulkDeleteOpen} onClose={() => setIsBulkDeleteOpen(false)} title={tp('rulesBulkDeleteConfirmTitle', { count: selectedIds.length })} size="sm" mobileVariant="bottom-sheet">
                     <div className="space-y-6 text-center">
                         <div className="w-20 h-20 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-red-500/20 shadow-xl"><Trash2 className="text-3xl w-10 h-10" /></div>
                         <h3 className="text-lg font-black text-[var(--color-text)] uppercase tracking-tight">{tp('rulesBulkDeleteConfirmTitle', { count: selectedIds.length })}</h3>

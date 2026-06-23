@@ -14,7 +14,10 @@
   "dorms.statUnassigned": "Belum Masuk Kamar",
   "dorms.statCleanliness": "Rata-rata Kebersihan",
   "dorms.statMusyrif": "Kontrol Musyrif",
+  "dorms.statTotalStudents": "Total Santri",
+  "dorms.statTotalRooms": "Total Kamar",
   "dorms.suffixSantri": " Santri",
+  "dorms.suffixRooms": " Kamar",
   "dorms.suffixPoin": " Poin",
   "dorms.tabPlotting": "Plotting Kamar",
   "dorms.tabPlottingShort": "Plotting",
@@ -153,6 +156,7 @@
   "dorms.bulkAssign.cancel": "Batal",
   "dorms.bulkAssign.save": "Simpan Plotting Massal",
   "dorms.bulkAssign.selectTargetRoom": "Pilih Kamar Tujuan",
+  "dorms.bulkAssign.selectedStudentsTitle": "Santri Terpilih",
 
   "dorms.confirm.evict.title": "Keluarkan dari Kamar",
   "dorms.confirm.evict.description": "Plotting kamar santri akan dikosongkan",
