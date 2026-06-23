@@ -422,5 +422,15 @@
   "behavior.cat.Prestasi": "Achievement",
   "behavior.cat.Lainnya": "Others",
   "behavior.rulesNoResults": "No Rules Found",
-  "behavior.rulesNoResultsDesc": "No point rules match your current search or filters. Try changing your keywords or reset all filters."
+  "behavior.rulesNoResultsDesc": "No point rules match your current search or filters. Try changing your keywords or reset all filters.",
+  "behavior.importTabFile": "Import from File",
+  "behavior.importTabCopy": "Copy from Another Month",
+  "behavior.copySourceTitle": "SOURCE MONTHLY DATA",
+  "behavior.copyTargetTitle": "TARGET MONTHLY DATA",
+  "behavior.copyWarning": "All behavior report data from the source month will be copied to the target month. This process will duplicate the reports with dates adjusted to the target month.",
+  "behavior.copyingText": "Copying Reports...",
+  "behavior.copyActionText": "Copy & Import Reports",
+  "behavior.toastCopyNoData": "No behavior report data found in the source month",
+  "behavior.toastCopySuccess": "Successfully copied behavior report data",
+  "behavior.toastCopyFailed": "Failed to copy behavior report data"
 }

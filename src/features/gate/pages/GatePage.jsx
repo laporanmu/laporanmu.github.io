@@ -30,6 +30,7 @@ import {
   dateTimeToISO, timeStrToISO,
   sendLogNotification, sendDailySummary,
 } from '@features/gate/hooks/useGateCore'
+import { useGateImportExport } from '@features/gate/hooks/useGateImportExport'
 import {
   buildPrintHTMLDetail, buildPrintHTMLRingkasan,
   buildCSVRingkasan, buildCSVDetail,
@@ -40,41 +41,22 @@ import {
   PAGE_T, presetTranslations, getVisitorTypes, getMeta, translatePurpose,
   PRESETS_GURU, PRESETS_KARYAWAN, PRESETS_SANTRI, PRESETS_TAMU, MONTHS_ID
 } from '@features/gate/utils/gateConstants'
-import {
-  ConfirmTimeModal, EditLogModal, ConfigModal, TimeInput, PresetPills,
-  PrintOptionsModal, BulkCheckoutModal, BulkDeleteModal
-} from '@features/gate/components/GateModals'
-import {
-  FormInternal, FormTamu, QuickGuide
-} from '@features/gate/components/GateForms'
-import LogCard from '@features/gate/components/LogCard'
 
-// ─── Utils & Webhook helpers → now in src/hooks/gate/useGateCore.jsx ─────────
-// (fmtDate, fmtTime, fmtDateTime, durasi, startOfDay, addDays,
-//  nowTimeStr, nowDateStr, dateTimeToISO, timeStrToISO,
-//  sendLogNotification, sendDailySummary) — imported above.
-function LiveClock() {
-  const { language } = useLanguage()
-  const [time, setTime] = useState(new Date())
-  useEffect(() => {
-    const t = setInterval(() => setTime(new Date()), 1000)
-    return () => clearInterval(t)
-  }, [])
-  const locales = { id: 'id-ID', en: 'en-US', ar: 'ar-EG' }
-  return (
-    <div className="flex flex-col items-end">
-      <div className="flex items-center gap-2 text-[var(--color-text)]">
-        <Clock className="w-3.5 h-3.5 text-[var(--color-primary)] animate-pulse" />
-        <span className="text-[15px] font-black tabular-nums tracking-tight">
-          {time.toLocaleTimeString(locales[language] || 'id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
-        </span>
-      </div>
-      <div className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-50 mt-0.5">
-        {fmtDate(time, language)}
-      </div>
-    </div>
-  )
-}
+import ConfirmTimeModal from '@features/gate/ui/modals/ConfirmTimeModal'
+import EditLogModal from '@features/gate/ui/modals/EditLogModal'
+import ConfigModal from '@features/gate/ui/modals/ConfigModal'
+import PrintOptionsModal from '@features/gate/ui/modals/PrintOptionsModal'
+import BulkCheckoutModal from '@features/gate/ui/modals/BulkCheckoutModal'
+import BulkDeleteModal from '@features/gate/ui/modals/BulkDeleteModal'
+
+import FormInternal from '@features/gate/ui/forms/FormInternal'
+import FormTamu from '@features/gate/ui/forms/FormTamu'
+import QuickGuide from '@features/gate/ui/QuickGuide'
+import LogCard from '@features/gate/ui/LogCard'
+import GateFilterBar from '@features/gate/ui/GateFilterBar'
+import GateTableRow from '@features/gate/ui/GateTableRow'
+import LiveClock from '@features/gate/ui/LiveClock'
+
 
 // ─── Skeletons ──────────────────────────────────────────────────────────────
 
@@ -401,73 +383,30 @@ export default function GatePage() {
     return Array.from(map.values()).sort((a, b) => b.totalMs - a.totalMs)
   }, [rekapData, filterRekap, searchRekap])
 
-  // ── Print ──────────────────────────────────────────────────────────────────
+  // ── Print & Export (handled by useGateImportExport) ────────────────────────
+  const { handleExportCSV, executePrint } = useGateImportExport({
+    language,
+    activeTab,
+    rekapMode,
+    rekapDate,
+    rekapLabel,
+    rekapView,
+    rekapRingkasan,
+    filteredRekapData,
+    todayLogs,
+    filteredLogs,
+    selectedIds,
+    TYPE_META,
+    addToast,
+    t,
+    tNum,
+    tp
+  })
 
   const handlePrint = useCallback(() => {
     setShowPrintModal(true)
   }, [])
 
-  const executePrint = useCallback((opts) => {
-    const periodLabel = rekapMode === 'harian' ? fmtDate(rekapDate, language) : rekapMode === 'bulanan' ? rekapLabel : `${tp('modeMingguan')} ${rekapLabel}`
-    const title = activeTab === 'rekap' ? `${tp('tabRekap')} ${periodLabel}` : `${tp('tabLogHariIni')} — ${fmtDate(new Date(), language)}`
-
-    let src = activeTab === 'rekap' ? filteredRekapData : todayLogs
-    if (opts.scope === 'selected' && selectedIds.length > 0) {
-      src = src.filter(log => selectedIds.includes(log.id))
-    }
-
-    if (opts.format === 'ringkasan') {
-      let ringkasanData = rekapRingkasan
-      if (opts.scope === 'selected' && selectedIds.length > 0) {
-        const map = new Map()
-        src.forEach(l => {
-          const isInternal = l.visitor_type !== 'tamu'
-          const key = l.student_id || l.teacher_id || l.visitor_name
-          if (!map.has(key)) {
-            map.set(key, { id: key, name: l.visitor_name, nip: l.visitor_nip || '-', type: l.visitor_type, count: 0, totalMs: 0, belumKembali: 0, purposes: [] })
-          }
-          const entry = map.get(key)
-          entry.count++
-          if (isInternal && l.check_out) {
-            const ms = new Date(l.check_out) - new Date(l.check_in)
-            if (ms > 0) entry.totalMs += ms
-          }
-          if (isInternal && !l.check_out) entry.belumKembali++
-          if (l.purpose && !entry.purposes.includes(l.purpose)) entry.purposes.push(l.purpose)
-        })
-        ringkasanData = Array.from(map.values()).sort((a, b) => b.totalMs - a.totalMs)
-      }
-      openPrintWindow(buildPrintHTMLRingkasan(ringkasanData, `${tp('titleSummary')} ${periodLabel}`, periodLabel, TYPE_META, language, opts))
-    } else {
-      openPrintWindow(buildPrintHTMLDetail(src, title, TYPE_META, language, opts))
-    }
-
-    logAudit({
-      action: 'PRINT', source: 'OPERATIONAL', tableName: 'gate_logs',
-      newData: { tab: activeTab, view: opts.format, count: src.length, period: periodLabel, opts }
-    })
-  }, [activeTab, rekapRingkasan, filteredRekapData, todayLogs, rekapMode, rekapDate, rekapLabel, TYPE_META, language, selectedIds])
-
-  // ── Export CSV ─────────────────────────────────────────────────────────────
-
-  const handleExportCSV = useCallback((source = 'rekap') => {
-    const periodLabel = (rekapMode === 'harian' ? fmtDate(rekapDate, language) : rekapLabel).replace(/\s/g, '_')
-    const label = source === 'rekap' ? periodLabel : fmtDate(new Date(), language).replace(/\s/g, '_')
-
-    if (source === 'rekap' && rekapView === 'ringkasan') {
-      const { csv, filename, count } = buildCSVRingkasan(rekapRingkasan, label, TYPE_META, language)
-      downloadCSV(csv, filename)
-      addToast(`${t('toastCsvSummarySuccess')} (${tNum(count)} ${t('toastPeopleCount')})`, 'success')
-      logAudit({ action: 'EXPORT', source: 'OPERATIONAL', tableName: 'gate_logs', newData: { format: 'CSV', source, view: 'ringkasan', count, period: label } })
-      return
-    }
-
-    const src = source === 'rekap' ? filteredRekapData : filteredLogs
-    const { csv, filename, count } = buildCSVDetail(src, label, TYPE_META, language)
-    downloadCSV(csv, filename)
-    addToast(`${t('toastCsvSuccess')} (${tNum(count)} ${t('toastRowCount')})`, 'success')
-    logAudit({ action: 'EXPORT', source: 'OPERATIONAL', tableName: 'gate_logs', newData: { format: 'CSV', source, view: 'rekapView', count, period: label } })
-  }, [rekapView, rekapRingkasan, filteredRekapData, filteredLogs, rekapMode, rekapDate, rekapLabel, addToast, TYPE_META, language, t])
 
 
   const TABS = [
@@ -700,149 +639,25 @@ export default function GatePage() {
         {/* ── TAB: LOG HARI INI ── */}
         {activeTab === 'log' && (
           <div className="glass rounded-[1.5rem] overflow-hidden animate-in fade-in duration-200">
-            {/* ── Toolbar: 1 baris desktop / 2 baris mobile ── */}
-            {/* === DESKTOP: 1 baris === */}
-            <div className="hidden sm:flex items-center gap-2 px-3 py-2.5 border-b border-[var(--color-border)]">
-              <div className="relative flex-1 min-w-[200px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--color-text-muted)] pointer-events-none" />
-                <input value={searchLog} onChange={e => setSearchLog(e.target.value)}
-                  placeholder={tp('placeholderSearch')}
-                  className="w-full h-8 pl-8 pr-7 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[12px] font-bold focus:outline-none focus:border-[var(--color-primary)] transition-all" />
-                {searchLog && (
-                  <button onClick={() => setSearchLog('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
-                    <X className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
-
-              <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide min-w-0 shrink-0">
-                {[{ k: 'all', l: tp('presetFilterAll') }, ...VISITOR_TYPES.map(t => ({ k: t.key, l: TYPE_META[t.key]?.label || t.label }))].map(f => (
-                  <button key={f.k} onClick={() => setFilterType(f.k)}
-                    className={`h-7 px-2.5 rounded-lg text-[9.5px] font-black transition-all whitespace-nowrap shrink-0 ${filterType === f.k
-                      ? 'bg-[var(--color-primary)] text-white'
-                      : 'border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
-                    {f.l}
-                  </button>
-                ))}
-                <div className="w-px h-4 bg-[var(--color-border)] shrink-0 mx-0.5" />
-                {[
-                  { k: 'all', l: tp('filterStatusAll'), icon: Filter },
-                  { k: 'aktif', l: tp('filterStatusActive'), icon: CircleDot },
-                  { k: 'selesai', l: tp('filterStatusCompleted'), icon: CheckCircle2 },
-                ].map(f => {
-                  const count = f.k === 'all'
-                    ? todayLogs.filter(l => filterType === 'all' ? true : l.visitor_type === filterType).length
-                    : todayLogs.filter(l => {
-                      const typeOk = filterType === 'all' || l.visitor_type === filterType
-                      const statOk = f.k === 'aktif' ? !l.check_out : !!l.check_out
-                      return typeOk && statOk
-                    }).length
-                  const activeColor = f.k === 'aktif' ? 'bg-red-500 text-white' : f.k === 'selesai' ? 'bg-emerald-500 text-white' : 'bg-[var(--color-primary)] text-white'
-                  const IconComp = f.icon
-                  return (
-                    <button key={f.k} onClick={() => setFilterStatus(f.k)}
-                      className={`h-7 px-2.5 rounded-lg text-[9.5px] font-black flex items-center gap-1 transition-all whitespace-nowrap shrink-0 ${filterStatus === f.k ? activeColor : 'border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>
-                      <IconComp className="w-3 h-3 shrink-0" />{f.l}
-                      <span className={`text-[8px] font-black px-1 py-0.5 rounded min-w-[14px] text-center ${filterStatus === f.k ? 'bg-white/25' : 'bg-[var(--color-border)]'}`}>{tNum(count)}</span>
-                    </button>
-                  )
-                })}
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <button onClick={handleCheckboxAllClick} disabled={filteredLogs.length === 0}
-                  className={`h-7 w-7 rounded-lg border flex items-center justify-center transition-all ${selectionMode ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)] bg-[var(--color-surface)] disabled:opacity-50'}`}
-                  title={selectionMode ? tp('btnCancelSelect') : tp('btnMultiSelect')}>
-                  <MultiSelectIcon className="w-3.5 h-3.5" />
-                </button>
-                <button onClick={() => handleExportCSV('log')}
-                  disabled={filteredLogs.length === 0}
-                  className="h-7 w-7 rounded-lg border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-emerald-600 hover:border-emerald-500/30 flex items-center justify-center transition-all disabled:opacity-40 disabled:pointer-events-none" title="Export CSV">
-                  <FileSpreadsheet className="w-3.5 h-3.5" />
-                </button>
-                <button onClick={handlePrint}
-                  disabled={filteredLogs.length === 0}
-                  className="h-7 w-7 rounded-lg border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-red-500 hover:border-red-500/30 flex items-center justify-center transition-all disabled:opacity-40 disabled:pointer-events-none" title="Export PDF / Cetak">
-                  <FileText className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-
-            {/* === MOBILE: 3 baris stacked === */}
-            <div className="sm:hidden border-b border-[var(--color-border)]">
-
-              {/* Baris 1: Search + Actions */}
-              <div className="flex items-center gap-2 px-3 pt-2.5 pb-2">
-                <div className="relative flex-1 min-w-0">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--color-text-muted)] pointer-events-none" />
-                  <input value={searchLog} onChange={e => setSearchLog(e.target.value)}
-                    placeholder={tp('placeholderSearch')}
-                    className="w-full h-8 pl-8 pr-7 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-bold focus:outline-none focus:border-[var(--color-primary)] transition-all" />
-                  {searchLog && (
-                    <button onClick={() => setSearchLog('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">
-                      <X className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button onClick={handleCheckboxAllClick} disabled={filteredLogs.length === 0}
-                    className={`h-8 w-8 rounded-xl border flex items-center justify-center transition-all ${selectionMode ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]' : 'border-[var(--color-border)] text-[var(--color-text-muted)] bg-[var(--color-surface)] disabled:opacity-40'}`}
-                    title={selectionMode ? tp('btnCancelSelect') : tp('btnMultiSelect')}>
-                    <MultiSelectIcon className="w-3.5 h-3.5" />
-                  </button>
-                  <button onClick={() => handleExportCSV('log')}
-                    disabled={filteredLogs.length === 0}
-                    className="h-8 w-8 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-emerald-600 flex items-center justify-center transition-all disabled:opacity-40 disabled:pointer-events-none" title="Export CSV">
-                    <FileSpreadsheet className="w-3.5 h-3.5" />
-                  </button>
-                  <button onClick={handlePrint}
-                    disabled={filteredLogs.length === 0}
-                    className="h-8 w-8 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-red-500 flex items-center justify-center transition-all disabled:opacity-40 disabled:pointer-events-none" title="Export PDF / Cetak">
-                    <FileText className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Baris 2: Type pills — grid 5 kolom, ujung rata */}
-              <div className="grid grid-cols-5 gap-1.5 px-3 pb-1.5">
-                {[{ k: 'all', l: tp('presetFilterAll') }, ...VISITOR_TYPES.map(t => ({ k: t.key, l: TYPE_META[t.key]?.label || t.label }))].map(f => (
-                  <button key={f.k} onClick={() => setFilterType(f.k)}
-                    className={`h-7 rounded-lg text-[9.5px] font-black text-center overflow-hidden transition-all ${filterType === f.k ? 'bg-[var(--color-primary)] text-white' : 'border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)]'}`}>
-                    {f.l}
-                  </button>
-                ))}
-              </div>
-
-              {/* Baris 3: Status pills — grid 3 kolom, ujung rata */}
-              <div className="grid grid-cols-3 gap-1.5 px-3 pb-2.5">
-                {[
-                  { k: 'all', label: tp('filterStatusAll') || 'Semua' },
-                  { k: 'aktif', label: tp('filterStatusActive') || 'Aktif' },
-                  { k: 'selesai', label: tp('filterStatusCompleted') || 'Selesai' },
-                ].map(f => {
-                  const count = f.k === 'all'
-                    ? todayLogs.filter(l => filterType === 'all' ? true : l.visitor_type === filterType).length
-                    : todayLogs.filter(l => {
-                      const typeOk = filterType === 'all' || l.visitor_type === filterType
-                      const statOk = f.k === 'aktif' ? !l.check_out : !!l.check_out
-                      return typeOk && statOk
-                    }).length
-                  const isActive = filterStatus === f.k
-                  const activeColor = f.k === 'aktif' ? 'bg-red-500/10 border-red-500/30 text-red-600' : f.k === 'selesai' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600' : 'bg-[var(--color-primary)]/10 border-[var(--color-primary)]/30 text-[var(--color-primary)]'
-                  const dotColor = f.k === 'aktif' ? 'bg-red-500' : f.k === 'selesai' ? 'bg-emerald-500' : 'bg-[var(--color-primary)]'
-                  return (
-                    <button key={f.k} onClick={() => setFilterStatus(f.k)}
-                      className={`flex-1 h-7 rounded-lg text-[9.5px] font-black flex items-center justify-between px-2 border transition-all ${isActive ? activeColor : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)]'}`}>
-                      <span className="truncate">{f.label}</span>
-                      <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md min-w-[18px] text-center leading-none shrink-0 ml-1 ${isActive ? '' : 'bg-[var(--color-border)]'}`}
-                        style={isActive ? { backgroundColor: 'rgba(0,0,0,0.1)' } : {}}>
-                        {tNum(count)}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-
-            </div>
+            <GateFilterBar
+              searchLog={searchLog}
+              setSearchLog={setSearchLog}
+              filterType={filterType}
+              setFilterType={setFilterType}
+              filterStatus={filterStatus}
+              setFilterStatus={setFilterStatus}
+              selectionMode={selectionMode}
+              handleCheckboxAllClick={handleCheckboxAllClick}
+              handleExportCSV={handleExportCSV}
+              handlePrint={handlePrint}
+              filteredLogs={filteredLogs}
+              todayLogs={todayLogs}
+              language={language}
+              tp={tp}
+              tNum={tNum}
+              VISITOR_TYPES={VISITOR_TYPES}
+              TYPE_META={TYPE_META}
+            />
 
             <div className="p-4">
               {loadingLogs ? (
@@ -959,92 +774,20 @@ export default function GatePage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[var(--color-border)]">
-                        {filteredLogs.map(log => {
-                          const meta = (() => {
-                            const visitorTypes = getVisitorTypes(language)
-                            return Object.fromEntries(visitorTypes.map(t => [t.key, t]))
-                          })()[log.visitor_type] || { label: log.visitor_type, bg: 'bg-slate-100', color: 'text-slate-600', icon: Users }
-                          const isActive = !log.check_out
-                          const isInternal = log.visitor_type !== 'tamu'
-                          const dur = durasi(log.check_in, log.check_out, language)
-                          const etaPassed = isActive && log.estimated_return && new Date(log.estimated_return) < new Date()
-                          const overTime = isInternal && isActive && (Date.now() - new Date(log.check_in).getTime()) > 2 * 60 * 60 * 1000
-                          const IconComp = meta.icon
-                          const isSelected = selectedIds.includes(log.id)
-                          let rowBg = ''
-                          if (isSelected) rowBg = 'bg-[var(--color-primary)]/5'
-                          else if (etaPassed) rowBg = 'bg-red-500/5'
-                          else if (overTime) rowBg = 'bg-amber-500/5'
-                          return (
-                            <tr key={log.id} className={`group transition-colors hover:bg-[var(--color-surface-alt)]/60 ${rowBg}`}>
-                              {selectionMode && (
-                                <td className="px-3 py-1.5">
-                                  <input type="checkbox" checked={isSelected}
-                                    onChange={() => toggleSelect(log.id)}
-                                    className="w-4 h-4 rounded border-2 border-[var(--color-border)] text-[var(--color-primary)] cursor-pointer" />
-                                </td>
-                              )}
-                              <td className="px-4 py-1.5">
-                                <div className="flex items-center gap-2">
-                                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${meta.bg}`}>
-                                    <IconComp className={`w-3 h-3 ${meta.color}`} />
-                                  </div>
-                                  <div className={dir === 'rtl' ? 'text-right' : ''}>
-                                    <p className="text-[12px] font-black text-[var(--color-text)] leading-tight">{log.visitor_name}</p>
-                                    <span className={`text-[8.5px] font-bold px-1 rounded ${meta.bg} ${meta.color} leading-none inline-block mt-0.5`}>{meta.label}</span>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-4 py-1.5">
-                                <p className="text-[11px] font-semibold text-[var(--color-text-muted)] leading-tight">{translatePurpose(log.purpose, language)}</p>
-                                {log.destination && <p className="text-[9px] text-[var(--color-text-muted)] opacity-60 leading-none mt-0.5">→ {log.destination}</p>}
-                              </td>
-                              <td className="px-4 py-1.5">
-                                <p className="text-[11px] font-black text-[var(--color-text)] leading-none">{fmtTime(log.check_in, language)}</p>
-                                {log.estimated_return && isActive && (
-                                  <p className={`text-[9px] font-bold mt-0.5 leading-none ${etaPassed ? 'text-red-600' : 'text-[var(--color-text-muted)] opacity-70'}`}>
-                                    ETA {fmtTime(log.estimated_return, language)}
-                                  </p>
-                                )}
-                              </td>
-                              <td className="px-4 py-1.5">
-                                {dur
-                                  ? <span className="text-[9px] font-black text-[var(--color-text-muted)] bg-[var(--color-surface-alt)] px-1.5 py-0.5 rounded leading-none">{dur}</span>
-                                  : <span className="text-[10px] text-[var(--color-text-muted)] opacity-40">—</span>}
-                              </td>
-                              <td className="px-4 py-1.5 text-start">
-                                <div className="flex items-center justify-start gap-1.5">
-                                  {isActive ? (
-                                    <span className="text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 leading-none">
-                                      {language === 'en' ? 'ACTIVE' : language === 'ar' ? 'نشط' : 'AKTIF'}
-                                    </span>
-                                  ) : (
-                                    <span className="text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider bg-slate-100 text-slate-500 border border-slate-200 leading-none">
-                                      {language === 'en' ? 'DONE' : language === 'ar' ? 'مكتمل' : 'SELESAI'}
-                                    </span>
-                                  )}
-                                  {etaPassed && <span className="text-[8px] font-black px-1 py-0.5 rounded bg-red-600 text-white leading-none">{language === 'en' ? 'PAST DUE' : language === 'ar' ? 'متأخر' : 'LEWAT ETA'}</span>}
-                                  {overTime && !etaPassed && <span className="text-[8px] font-black px-1 py-0.5 rounded bg-amber-500/15 text-amber-600 leading-none">{language === 'en' ? 'OVER TIME' : language === 'ar' ? 'تجاوز' : 'LAMA'}</span>}
-                                </div>
-                              </td>
-                              <td className="px-4 py-1.5 text-center">
-                                <div className="inline-flex items-center justify-center gap-1">
-                                  <button onClick={() => setEditLog(log)}
-                                    className="h-6 w-6 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]/30 flex items-center justify-center transition-all">
-                                    <Edit2 className="w-2.5 h-2.5" />
-                                  </button>
-                                  {isActive && (
-                                    <button onClick={() => isInternal ? handleReturn(log) : handleCheckout(log)}
-                                      className={`h-6 w-6 rounded-lg flex items-center justify-center transition-all active:scale-95 ${isInternal ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-red-500 text-white hover:bg-red-600'}`}
-                                      title={isInternal ? (language === 'en' ? 'Return' : 'Kembali') : (language === 'en' ? 'Exit' : 'Keluar')}>
-                                      {isInternal ? <LogIn className="w-2.5 h-2.5" /> : <LogOut className="w-2.5 h-2.5" />}
-                                    </button>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          )
-                        })}
+                        {filteredLogs.map(log => (
+                          <GateTableRow
+                            key={log.id}
+                            log={log}
+                            isSelected={selectedIds.includes(log.id)}
+                            selectionMode={selectionMode}
+                            toggleSelect={toggleSelect}
+                            setEditLog={setEditLog}
+                            handleReturn={handleReturn}
+                            handleCheckout={handleCheckout}
+                            language={language}
+                            dir={dir}
+                          />
+                        ))}
                       </tbody>
                     </table>
                   </div>

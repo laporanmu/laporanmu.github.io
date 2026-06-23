@@ -1,7 +1,7 @@
 import React from 'react'
 import { Eye, Edit2, Trash2 } from 'lucide-react'
 import { useLanguage } from '@context/Language'
-import { getAvatarColorByName } from './avatarUtils'
+import { getAvatarColorByName } from '../utils/avatarUtils'
 
 export default function BehaviorTableRow({
     r,

@@ -9,12 +9,12 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@context/Auth'
 import { useFlag } from '@context/FeatureFlags'
-const LazyPointRulesTab = React.lazy(() => import('./PointRulesTab'))
+const LazyPointRulesTab = React.lazy(() => import('../ui/PointRulesTab'))
 
-const LazyBehaviorExportModal = React.lazy(() => import('./BehaviorExportModal'))
-const LazyBehaviorImportModal = React.lazy(() => import('./BehaviorImportModal'))
-const LazyBehaviorFormModal = React.lazy(() => import('./BehaviorFormModal'))
-const LazyBehaviorDetailModal = React.lazy(() => import('./BehaviorDetailModal'))
+const LazyBehaviorExportModal = React.lazy(() => import('../ui/modals/BehaviorExportModal'))
+const LazyBehaviorImportModal = React.lazy(() => import('../ui/modals/BehaviorImportModal'))
+const LazyBehaviorFormModal = React.lazy(() => import('../ui/modals/BehaviorFormModal'))
+const LazyBehaviorDetailModal = React.lazy(() => import('../ui/modals/BehaviorDetailModal'))
 import DashboardLayout from '@core/layouts/DashboardLayout'
 import StatsCarousel from '@shared/components/StatsCarousel'
 import Breadcrumb from '@shared/components/Breadcrumb'
@@ -22,15 +22,15 @@ import PageHeader from '@shared/components/PageHeader'
 import { StatCard, EmptyState } from '@shared/components/DataDisplay'
 import Modal from '@shared/components/Modal'
 import ConfirmDialog from '@shared/components/ConfirmDialog'
-import BehaviorFilterBar from './BehaviorFilterBar'
-import TimelineCard from './TimelineCard'
-import BehaviorTableRow from './BehaviorTableRow'
+import BehaviorFilterBar from '../ui/BehaviorFilterBar'
+import TimelineCard from '../ui/TimelineCard'
+import BehaviorTableRow from '../ui/BehaviorTableRow'
 import RichSelect from '@shared/components/RichSelect'
 import { TableSkeleton } from '@shared/components/Skeleton'
 import { useLanguage } from '@context/Language'
 import Pagination from '@shared/components/Pagination'
 import BulkActionsBar from '@shared/components/BulkActionsBar'
-import { useBehaviorCore } from './useBehaviorCore'
+import { useBehaviorCore } from '../hooks/useBehaviorCore'
 
 function getPortalContainer(id) {
     let el = document.getElementById(id);
@@ -157,7 +157,9 @@ export default function BehaviorPage() {
         handleExportPDF,
         buildImportPreview,
         handleImportCellEdit,
-        handleRemoveImportRow
+        handleRemoveImportRow,
+        copyingData,
+        copyDataFromMonth
     } = useBehaviorCore()
 
     const { profile } = useAuth()
@@ -294,6 +296,8 @@ export default function BehaviorPage() {
                             setImportEditCell={setImportEditCell}
                             handleRemoveImportRow={handleRemoveImportRow}
                             handleBulkFix={handleBulkFix}
+                            copyingData={copyingData}
+                            copyDataFromMonth={copyDataFromMonth}
                         />
                     )}
                     <input

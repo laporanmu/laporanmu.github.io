@@ -11,7 +11,7 @@ import Modal from '@shared/components/Modal'
 import ConfirmDialog from '@shared/components/ConfirmDialog'
 import RichSelect from '@shared/components/RichSelect'
 import Pagination from '@shared/components/Pagination'
-const LazyRulesExportModal = React.lazy(() => import('./RulesExportModal'))
+const LazyRulesExportModal = React.lazy(() => import('./modals/RulesExportModal'))
 import { StatCard, EmptyState } from '@shared/components/DataDisplay'
 import { useToast } from '@context/Toast'
 import { useAuth } from '@context/Auth'
@@ -1324,7 +1324,7 @@ export default function PointRulesTab({ showStats = true, initialPoin = [], init
                                                             right: menuPos.right,
                                                             transform: menuPos.showUp ? 'translateY(-100%)' : undefined
                                                         }}>
-                                                        <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">{tp('manageColumns')}</p>
+                                                         <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text-muted)] px-3 py-2">{tp('manageColumns')}</p>
                                                         {[{ key: 'description', label: tp('rulesColDescription') }, { key: 'type', label: tp('rulesColTypePreset') }, { key: 'category', label: tp('rulesColCategory') }, { key: 'points', label: tp('rulesColWeightPreset') }].map(({ key, label }) => (
                                                             <button key={key} onClick={() => setVisibleCols(p => ({ ...p, [key]: !p[key] }))} className="w-full flex items-center justify-between px-3 py-2 rounded-xl hover:bg-[var(--color-surface-alt)] transition-all group text-left">
                                                                 <span className="text-[10px] font-bold text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors">{label}</span>

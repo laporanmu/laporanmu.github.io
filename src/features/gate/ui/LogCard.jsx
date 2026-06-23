@@ -114,7 +114,7 @@ const LogCard = memo(function LogCard({ log, onReturn, onCheckout, onEdit, isSel
             className={`h-8 px-3 rounded-lg text-[10px] font-black flex items-center gap-1.5 transition-colors active:scale-95 ${isInternal
               ? 'bg-emerald-500 text-white hover:bg-emerald-600'
               : 'bg-red-500 text-white hover:bg-red-600'}`}>
-            {isInternal ? <LogIn className="w-3 h-3" /> : <LogOut className="w-3 h-3" />}
+            {isInternal ? <LogIn className="w-3.5 h-3.5" /> : <LogOut className="w-3.5 h-3.5" />}
             <span className="hidden sm:inline">{btnLabel}</span>
           </button>
         )}

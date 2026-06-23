@@ -45,7 +45,7 @@ const PublicVerifyPage = lazyRetry(() => import('@features/public/pages/PublicVe
 const DashboardPage = lazyRetry(() => import('@features/dashboard/pages/DashboardPage.jsx'))
 const TaskCenterPage = lazyRetry(() => import('@features/dashboard/pages/TaskCenterPage.jsx'))
 const RaportPage = lazyRetry(() => import('@features/raport/pages/RaportPage.jsx'))
-const BehaviorPage = lazyRetry(() => import('@features/behavior/BehaviorPage.jsx'))
+const BehaviorPage = lazyRetry(() => import('@features/behavior/pages/BehaviorPage.jsx'))
 const DormsPage = lazyRetry(() => import('@features/dorms/pages/DormsPage.jsx'))
 const HealthPage = lazyRetry(() => import('@features/health/pages/HealthPage.jsx'))
 const CounselingPage = lazyRetry(() => import('@features/counseling/pages/CounselingPage.jsx'))

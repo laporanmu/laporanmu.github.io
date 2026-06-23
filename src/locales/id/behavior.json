@@ -422,5 +422,15 @@
   "behavior.cat.Prestasi": "Prestasi",
   "behavior.cat.Lainnya": "Lainnya",
   "behavior.rulesNoResults": "Aturan Tidak Ditemukan",
-  "behavior.rulesNoResultsDesc": "Tidak ada konfigurasi poin yang cocok dengan pencarian atau filter aktif. Coba ubah kata kunci atau reset filter."
+  "behavior.rulesNoResultsDesc": "Tidak ada konfigurasi poin yang cocok dengan pencarian atau filter aktif. Coba ubah kata kunci atau reset filter.",
+  "behavior.importTabFile": "Import dari File",
+  "behavior.importTabCopy": "Salin Bulan Lain",
+  "behavior.copySourceTitle": "SUMBER DATA BULANAN",
+  "behavior.copyTargetTitle": "TUJUAN DATA BULANAN",
+  "behavior.copyWarning": "Seluruh data laporan perilaku dari bulan sumber akan disalin ke bulan tujuan. Proses ini akan menduplikasi laporan dengan tanggal yang disesuaikan ke bulan tujuan.",
+  "behavior.copyingText": "Menyalin Laporan...",
+  "behavior.copyActionText": "Salin & Impor Laporan",
+  "behavior.toastCopyNoData": "Tidak ada data laporan perilaku pada bulan sumber",
+  "behavior.toastCopySuccess": "Berhasil menyalin data laporan perilaku",
+  "behavior.toastCopyFailed": "Gagal menyalin data laporan perilaku"
 }

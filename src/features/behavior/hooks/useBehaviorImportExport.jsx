@@ -555,7 +555,7 @@ export function useBehaviorImportExport({
                 setImportProgress({ done: Math.min(i + CHUNK, importReadyRows.length), total: importReadyRows.length })
             }
 
-            addToast(t('behavior.toastImportSuccess').replace('{count}', tNum(importReadyRows.length)), 'success')
+            addToast(t('behavior.toastImportTextSuccess') || t('behavior.toastImportSuccess').replace('{count}', tNum(importReadyRows.length)), 'success')
             await logAudit({
                 action: 'INSERT',
                 source: 'OPERATIONAL',
@@ -581,6 +581,96 @@ export function useBehaviorImportExport({
         }
     }
 
+    const [copyingData, setCopyingData] = useState(false)
+
+    const copyDataFromMonth = async (sourceMonth, sourceYear, targetMonth, targetYear) => {
+        setCopyingData(true)
+        try {
+            const startDate = new Date(sourceYear, sourceMonth - 1, 1)
+            const endDate = new Date(sourceYear, sourceMonth, 0, 23, 59, 59, 999)
+
+            const { data, error } = await supabase
+                .from('reports')
+                .select('*')
+                .gte('reported_at', startDate.toISOString())
+                .lte('reported_at', endDate.toISOString())
+
+            if (error) throw error
+
+            if (!data || data.length === 0) {
+                addToast(
+                    t('behavior.toastCopyNoData') || 
+                    `Tidak ada data laporan perilaku pada bulan ${sourceMonth}/${sourceYear}`, 
+                    'warning'
+                )
+                return false
+            }
+
+            const newReports = data.map(r => {
+                const sourceDate = new Date(r.reported_at)
+                const day = sourceDate.getDate()
+                const lastDayOfTarget = new Date(targetYear, targetMonth, 0).getDate()
+                const newDay = Math.min(day, lastDayOfTarget)
+                
+                const targetDate = new Date(
+                    targetYear,
+                    targetMonth - 1,
+                    newDay,
+                    sourceDate.getHours(),
+                    sourceDate.getMinutes(),
+                    sourceDate.getSeconds(),
+                    sourceDate.getMilliseconds()
+                )
+
+                return {
+                    student_id: r.student_id,
+                    violation_type_id: r.violation_type_id,
+                    points: r.points,
+                    notes: r.notes,
+                    reported_at: targetDate.toISOString(),
+                    teacher_name: profile?.name || r.teacher_name || 'Sistem'
+                }
+            })
+
+            const CHUNK = 50
+            for (let i = 0; i < newReports.length; i += CHUNK) {
+                const chunk = newReports.slice(i, i + CHUNK)
+                const { error: insertError } = await supabase
+                    .from('reports')
+                    .insert(chunk)
+                if (insertError) throw insertError
+            }
+
+            addToast(
+                t('behavior.toastCopySuccess') || 
+                `Berhasil menyalin ${newReports.length} data laporan perilaku`, 
+                'success'
+            )
+
+            await logAudit({
+                action: 'INSERT',
+                source: 'OPERATIONAL',
+                tableName: 'reports',
+                newData: {
+                    bulk_copy: true,
+                    count: newReports.length,
+                    source: `${sourceMonth}/${sourceYear}`,
+                    target: `${targetMonth}/${targetYear}`
+                }
+            })
+
+            await fetchReports()
+            fetchStats()
+            return true
+        } catch (e) {
+            console.error(e)
+            addToast(t('behavior.toastCopyFailed') || 'Gagal menyalin data laporan perilaku', 'error')
+            return false
+        } finally {
+            setCopyingData(false)
+        }
+    }
+
     return {
         isImportModalOpen, setIsImportModalOpen,
         isExportModalOpen, setIsExportModalOpen,
@@ -603,6 +693,8 @@ export function useBehaviorImportExport({
         hasImportBlockingErrors,
         SYSTEM_COLS,
         ALL_EXPORT_COLUMNS,
+        copyingData,
+        copyDataFromMonth,
 
         processImportFile,
         handleImportClick,

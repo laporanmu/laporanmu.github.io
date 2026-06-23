@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect, useMemo } from 'react'
 
 import {
     ArrowLeft, School, Loader2, Save, Printer, Search, Zap, Sparkles, AlertTriangle,
@@ -135,9 +135,158 @@ const MobileSkeleton = () => (
         </div>
     </div>
 )
+const CopyMonthlyDataModalBody = ({
+    students,
+    scores,
+    extras,
+    currentMonth,
+    currentYear,
+    onSourceChange
+}) => {
+    const defaultMonth = currentMonth === 1 ? 12 : currentMonth - 1
+    const defaultYear = currentMonth === 1 ? currentYear - 1 : currentYear
+
+    const [sourceMonth, setSourceMonth] = useState(defaultMonth)
+    const [sourceYear, setSourceYear] = useState(defaultYear)
+    const [loading, setLoading] = useState(false)
+    const [prevCount, setPrevCount] = useState(0)
+
+    const years = useMemo(() => {
+        const current = new Date().getFullYear()
+        return Array.from({ length: 5 }, (_, i) => current - 3 + i)
+    }, [])
+
+    useEffect(() => {
+        let active = true
+        const checkData = async () => {
+            setLoading(true)
+            try {
+                const ids = students.map(s => s.id)
+                const { data } = await supabase
+                    .from('student_monthly_reports')
+                    .select('student_id,nilai_akhlak,nilai_ibadah,nilai_kebersihan,nilai_quran,nilai_bahasa')
+                    .in('student_id', ids)
+                    .eq('month', sourceMonth)
+                    .eq('year', sourceYear)
+
+                if (!active) return
+
+                const hasPrevScores = (studentId) => {
+                    const r = data?.find(x => x.student_id === studentId)
+                    if (!r) return false
+                    return Object.values(r).some(v => v !== null && v !== undefined && v !== '')
+                }
+
+                const count = students.filter(s => hasPrevScores(s.id)).length
+                setPrevCount(count)
+            } catch (e) {
+                console.error(e)
+                if (active) setPrevCount(0)
+            } finally {
+                if (active) setLoading(false)
+            }
+        }
+        checkData()
+        onSourceChange(sourceMonth, sourceYear)
+        return () => { active = false }
+    }, [sourceMonth, sourceYear, students, onSourceChange])
+
+    const overwrittenStudents = useMemo(() => {
+        const hasCurrentScores = (studentId) => {
+            const sc = scores[studentId]
+            const ex = extras[studentId]
+            const hasSc = sc && Object.values(sc).some(v => v !== null && v !== undefined && v !== '')
+            const hasEx = ex && Object.values(ex).some(v => v !== null && v !== undefined && v !== '')
+            return !!(hasSc || hasEx)
+        }
+        return students.filter(s => hasCurrentScores(s.id))
+    }, [students, scores, extras])
+
+    const currentOverwriteCount = overwrittenStudents.length
+
+    return (
+        <div className="space-y-4">
+            <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
+                Pilih bulan dan tahun sumber data nilai yang ingin Anda salin ke bulan aktif saat ini.
+            </p>
+
+            <div className="grid grid-cols-2 gap-3 p-3.5 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-sm">
+                <div className="space-y-1.5">
+                    <label className="text-[9px] font-black uppercase text-[var(--color-text-muted)] tracking-wider">Bulan Sumber</label>
+                    <select
+                        value={sourceMonth}
+                        onChange={e => setSourceMonth(Number(e.target.value))}
+                        className="w-full h-9 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-black text-[var(--color-text)] outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 transition-all cursor-pointer"
+                    >
+                        {BULAN.map(b => (
+                            <option key={b.id} value={b.id}>{b.id_str} ({b.ar})</option>
+                        ))}
+                    </select>
+                </div>
+                <div className="space-y-1.5">
+                    <label className="text-[9px] font-black uppercase text-[var(--color-text-muted)] tracking-wider">Tahun Sumber</label>
+                    <select
+                        value={sourceYear}
+                        onChange={e => setSourceYear(Number(e.target.value))}
+                        className="w-full h-9 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-black text-[var(--color-text)] outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 transition-all cursor-pointer"
+                    >
+                        {years.map(y => (
+                            <option key={y} value={y}>{y}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            {loading ? (
+                <div className="p-3.5 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 text-[10px] text-[var(--color-text-muted)] font-black flex items-center justify-center gap-2 animate-pulse">
+                    <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
+                    <span>Memeriksa data nilai sumber...</span>
+                </div>
+            ) : (
+                <>
+                    <div className="p-3.5 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 text-[10px] text-[var(--color-text-muted)] font-black flex items-center justify-between">
+                        <span>Data bulan terpilih ditemukan untuk:</span>
+                        <span className="bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-lg font-black text-[11px]">
+                            {prevCount} dari {students.length} santri
+                        </span>
+                    </div>
+                    {prevCount === 0 && (
+                        <div className="p-3.5 rounded-2xl bg-rose-500/5 border border-rose-500/10 text-[10px] text-rose-700 font-bold flex items-start gap-2">
+                            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                            <span>
+                                <span className="font-black text-rose-800 block mb-0.5">Peringatan Kosong</span>
+                                Tidak ditemukan data nilai pada periode terpilih. Melanjutkan akan menyalin nilai kosong.
+                            </span>
+                        </div>
+                    )}
+                </>
+            )}
+
+            {currentOverwriteCount > 0 && (
+                <div className="p-3.5 rounded-2xl bg-amber-500/5 border border-amber-500/10 text-[10px] text-amber-700 font-bold space-y-2">
+                    <div className="flex items-start gap-2">
+                        <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                        <span>
+                            <span className="font-black text-amber-800 block mb-0.5">Peringatan Tertimpa</span>
+                            Ada <span className="font-black">{currentOverwriteCount} santri</span> yang nilainya sudah terisi di bulan ini dan akan <span className="font-black text-amber-800 uppercase tracking-wider">tertimpa</span> data salinan:
+                        </span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1 max-h-24 overflow-y-auto p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/15">
+                        {overwrittenStudents.map(s => (
+                            <span key={s.id} className="px-1.5 py-0.5 rounded bg-white text-amber-800 text-[9px] font-black border border-amber-500/10">
+                                {s.name}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}
 
 export default function RaportInputTable({
     // Context States
+
     globalSaveIndicator,
     criteria,
     maxScore,
@@ -225,6 +374,43 @@ export default function RaportInputTable({
     const getGrade = (val) => getGradePredicate(val, reportType, classLevel)
 
     const [isBulkModalOpen, setIsBulkModalOpen] = useState(false)
+    const copySourceRef = useRef({
+        month: selectedMonth === 1 ? 12 : selectedMonth - 1,
+        year: selectedMonth === 1 ? selectedYear - 1 : selectedYear
+    })
+
+    const handleCopyDataModal = () => {
+        const defaultMonth = selectedMonth === 1 ? 12 : selectedMonth - 1
+        const defaultYear = selectedMonth === 1 ? selectedYear - 1 : selectedYear
+        copySourceRef.current = { month: defaultMonth, year: defaultYear }
+
+        setConfirmModal({
+            title: 'Salin Data Nilai?',
+            description: 'Salin nilai dari bulan/tahun pilihan Anda',
+            body: (
+                <CopyMonthlyDataModalBody
+                    students={students}
+                    scores={scores}
+                    extras={extras}
+                    currentMonth={selectedMonth}
+                    currentYear={selectedYear}
+                    onSourceChange={(m, y) => {
+                        copySourceRef.current = { month: m, year: y }
+                    }}
+                />
+            ),
+            icon: Zap,
+            iconBg: 'bg-amber-500/10',
+            iconColor: 'text-amber-600',
+            variant: 'amber',
+            confirmLabel: 'Ya, Salin Data',
+            confirmIcon: Zap,
+            onConfirm: () => {
+                setConfirmModal(null)
+                copyFromLastMonth(copySourceRef.current.month, copySourceRef.current.year)
+            }
+        })
+    }
 
     const classStats = React.useMemo(() => {
         const activeCriteria = criteria || []
@@ -427,70 +613,10 @@ export default function RaportInputTable({
                     </button>
 
                     <button
-                        onClick={() => {
-                            const hasCurrentScores = (studentId) => {
-                                const sc = scores[studentId];
-                                const ex = extras[studentId];
-                                const hasSc = sc && Object.values(sc).some(v => v !== null && v !== undefined && v !== '');
-                                const hasEx = ex && Object.values(ex).some(v => v !== null && v !== undefined && v !== '');
-                                return !!(hasSc || hasEx);
-                            };
-
-                            const hasPrevScores = (studentId) => {
-                                const s = prevMonthScores?.[studentId];
-                                if (!s) return false;
-                                return Object.values(s).some(v => v !== null && v !== undefined && v !== '');
-                            };
-
-                            const prevCount = students.filter(s => hasPrevScores(s.id)).length;
-                            const overwrittenStudents = students.filter(s => hasCurrentScores(s.id));
-                            const currentOverwriteCount = overwrittenStudents.length;
-
-                            setConfirmModal({
-                                title: 'Salin Data Bulan Lalu?',
-                                description: 'Data nilai bulan lalu akan disalin',
-                                body: (
-                                    <div className="space-y-3">
-                                        <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
-                                            Nilai akademik, hafalan, fisik, dan catatan santri akan disalin dari bulan sebelumnya.
-                                        </p>
-                                        <div className="p-3 rounded-xl bg-slate-500/5 border border-[var(--color-border)]/50 text-[10px] text-[var(--color-text-muted)] font-bold">
-                                            Ditemukan data bulan lalu untuk <span className="font-black text-[var(--color-text)]">{prevCount}</span> dari <span className="font-black text-[var(--color-text)]">{students.length}</span> santri di kelas ini.
-                                        </div>
-                                        {prevCount === 0 && (
-                                            <div className="p-3 rounded-xl bg-red-500/5 border border-red-500/20 text-[10px] text-red-700 font-bold">
-                                                <span className="font-black text-red-800">Peringatan:</span> Tidak ditemukan data nilai bulan lalu untuk santri di kelas ini.
-                                            </div>
-                                        )}
-                                        {currentOverwriteCount > 0 && (
-                                            <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 text-[10px] text-amber-700 font-bold">
-                                                <span className="font-black text-amber-800">Perhatian:</span> Ada <span className="font-black">{currentOverwriteCount} santri</span> yang nilainya sudah terisi di bulan ini dan akan <span className="font-black text-amber-800 uppercase tracking-wider">tertimpa</span>:
-                                                <div className="mt-2 flex flex-wrap gap-1">
-                                                    {overwrittenStudents.map(s => (
-                                                        <span key={s.id} className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-800 text-[9px] font-black border border-amber-500/15">
-                                                            {s.name}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                ),
-                                icon: Zap,
-                                iconBg: 'bg-amber-500/10',
-                                iconColor: 'text-amber-600',
-                                variant: 'amber',
-                                confirmLabel: 'Ya, Salin Data',
-                                confirmIcon: Zap,
-                                onConfirm: () => {
-                                    setConfirmModal(null)
-                                    copyFromLastMonth()
-                                }
-                            })
-                        }}
+                        onClick={handleCopyDataModal}
                         disabled={copyingLastMonth || !canEdit}
                         className="h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 flex items-center justify-center transition-all hover:bg-amber-500/20 disabled:opacity-50"
-                        title="Salin Bulan Lalu"
+                        title="Salin Data Nilai"
                     >
                         {copyingLastMonth ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
                     </button>
@@ -754,69 +880,9 @@ export default function RaportInputTable({
                                 <WhatsAppIcon className="w-3 h-3" /> <span className="hidden lg:inline">Blast WA</span>
                             </button>
 
-                            <button onClick={() => {
-                                const hasCurrentScores = (studentId) => {
-                                    const sc = scores[studentId];
-                                    const ex = extras[studentId];
-                                    const hasSc = sc && Object.values(sc).some(v => v !== null && v !== undefined && v !== '');
-                                    const hasEx = ex && Object.values(ex).some(v => v !== null && v !== undefined && v !== '');
-                                    return !!(hasSc || hasEx);
-                                };
-
-                                const hasPrevScores = (studentId) => {
-                                    const s = prevMonthScores?.[studentId];
-                                    if (!s) return false;
-                                    return Object.values(s).some(v => v !== null && v !== undefined && v !== '');
-                                };
-
-                                const prevCount = students.filter(s => hasPrevScores(s.id)).length;
-                                const overwrittenStudents = students.filter(s => hasCurrentScores(s.id));
-                                const currentOverwriteCount = overwrittenStudents.length;
-
-                                setConfirmModal({
-                                    title: 'Salin Data Bulan Lalu?',
-                                    description: 'Data nilai bulan lalu akan disalin',
-                                    body: (
-                                        <div className="space-y-3">
-                                            <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
-                                                Nilai akademik, hafalan, fisik, dan catatan santri akan disalin dari bulan sebelumnya.
-                                            </p>
-                                            <div className="p-3 rounded-xl bg-slate-500/5 border border-[var(--color-border)]/50 text-[10px] text-[var(--color-text-muted)] font-bold">
-                                                Ditemukan data bulan lalu untuk <span className="font-black text-[var(--color-text)]">{prevCount}</span> dari <span className="font-black text-[var(--color-text)]">{students.length}</span> santri di kelas ini.
-                                            </div>
-                                            {prevCount === 0 && (
-                                                <div className="p-3 rounded-xl bg-red-500/5 border border-red-500/20 text-[10px] text-red-700 font-bold">
-                                                    <span className="font-black text-red-800">Peringatan:</span> Tidak ditemukan data nilai bulan lalu untuk santri di kelas ini.
-                                                </div>
-                                            )}
-                                            {currentOverwriteCount > 0 && (
-                                                <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 text-[10px] text-amber-700 font-bold">
-                                                    <span className="font-black text-amber-800">Perhatian:</span> Ada <span className="font-black">{currentOverwriteCount} santri</span> yang nilainya sudah terisi di bulan ini dan akan <span className="font-black text-amber-800 uppercase tracking-wider">tertimpa</span>:
-                                                    <div className="mt-2 flex flex-wrap gap-1">
-                                                        {overwrittenStudents.map(s => (
-                                                            <span key={s.id} className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-800 text-[9px] font-black border border-amber-500/15">
-                                                                {s.name}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ),
-                                    icon: Zap,
-                                    iconBg: 'bg-amber-500/10',
-                                    iconColor: 'text-amber-600',
-                                    variant: 'amber',
-                                    confirmLabel: 'Ya, Salin Data',
-                                    confirmIcon: Zap,
-                                    onConfirm: () => {
-                                        setConfirmModal(null)
-                                        copyFromLastMonth()
-                                    }
-                                })
-                            }} disabled={copyingLastMonth || !canEdit} className="h-9 px-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 text-[9px] font-black flex items-center justify-center gap-1.5 transition-all hover:bg-amber-500/20 disabled:opacity-50 flex-grow min-w-[36px] shrink-0" title="Salin Data Bulan Lalu">
+                            <button onClick={handleCopyDataModal} disabled={copyingLastMonth || !canEdit} className="h-9 px-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 text-[9px] font-black flex items-center justify-center gap-1.5 transition-all hover:bg-amber-500/20 disabled:opacity-50 flex-grow min-w-[36px] shrink-0" title="Salin Data Periode">
                                 {copyingLastMonth ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
-                                <span className="hidden lg:inline">Salin Bulan Lalu</span>
+                                <span className="hidden lg:inline">Salin Data</span>
                             </button>
 
                             <button onClick={handleResetClass} disabled={!canEdit} className="h-9 px-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 text-[9px] font-black flex items-center justify-center gap-1 transition-all hover:bg-red-500/20 disabled:opacity-50 flex-grow min-w-[36px] shrink-0" title="Reset Kelas">

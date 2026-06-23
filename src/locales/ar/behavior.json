@@ -418,6 +418,16 @@
   "behavior.cat.Sikap": "السلوك",
   "behavior.cat.Prestasi": "الإنجاز",
   "behavior.cat.Lainnya": "أخرى",
-  "behavior.rulesNoResults": "لم يتم العثور على قواعد",
-  "behavior.rulesNoResultsDesc": "لا توجد قواعد نقاط تطابق البحث أو الفلاتر الحالية. جرب تغيير الكلمات المفتاحية أو إعادة تعيين الفلاتر."
+  "behavior.rulesNoResults": "لم يتم العور على قواعد",
+  "behavior.rulesNoResultsDesc": "لا توجد قواعد نقاط تطابق البحث أو الفلاتر الحالية. جرب تغيير الكلمات المفتاحية أو إعادة تعيين الفلاتر.",
+  "behavior.importTabFile": "استيراد من ملف",
+  "behavior.importTabCopy": "نسخ من شهر آخر",
+  "behavior.copySourceTitle": "بيانات الشهر المصدر",
+  "behavior.copyTargetTitle": "بيانات الشهر الهدف",
+  "behavior.copyWarning": "سيتم نسخ جميع بيانات تقرير السلوك من الشهر المصدر إلى الشهر الهدف. ستقوم هذه العملية بتكرار التقارير مع تعديل التواريخ إلى الشهر الهدف.",
+  "behavior.copyingText": "جاري نسخ التقارير...",
+  "behavior.copyActionText": "نسخ واستيراد التقارير",
+  "behavior.toastCopyNoData": "لا توجد بيانات تقرير سلوك في الشهر المصدر",
+  "behavior.toastCopySuccess": "تم نسخ بيانات تقرير السلوك بنجاح",
+  "behavior.toastCopyFailed": "فشل نسخ بيانات تقرير السلوك"
 }

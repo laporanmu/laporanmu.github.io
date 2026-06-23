@@ -72,8 +72,38 @@ export default function BehaviorImportModal(props) {
         importEditCell,
         setImportEditCell,
         handleRemoveImportRow,
-        handleBulkFix
+        handleBulkFix,
+        copyingData,
+        copyDataFromMonth
     } = props
+
+    const currentDate = new Date()
+    const currentMonth = currentDate.getMonth() + 1
+    const currentYear = currentDate.getFullYear()
+    const defaultSourceMonth = currentMonth === 1 ? 12 : currentMonth - 1
+    const defaultSourceYear = currentMonth === 1 ? currentYear - 1 : currentYear
+
+    const [importTab, setImportTab] = useState('file') // 'file' | 'copy'
+    const [copySourceMonth, setCopySourceMonth] = useState(defaultSourceMonth)
+    const [copySourceYear, setCopySourceYear] = useState(defaultSourceYear)
+    const [copyTargetMonth, setCopyTargetMonth] = useState(currentMonth)
+    const [copyTargetYear, setCopyTargetYear] = useState(currentYear)
+
+    const BULAN = [
+        { id: 1, name: language === 'ar' ? 'يناير' : language === 'en' ? 'January' : 'Januari' },
+        { id: 2, name: language === 'ar' ? 'فبراير' : language === 'en' ? 'February' : 'Februari' },
+        { id: 3, name: language === 'ar' ? 'مارس' : language === 'en' ? 'March' : 'Maret' },
+        { id: 4, name: language === 'ar' ? 'أبريل' : language === 'en' ? 'April' : 'April' },
+        { id: 5, name: language === 'ar' ? 'مايو' : language === 'en' ? 'May' : 'Mei' },
+        { id: 6, name: language === 'ar' ? 'يونيو' : language === 'en' ? 'June' : 'Juni' },
+        { id: 7, name: language === 'ar' ? 'يوليو' : language === 'en' ? 'July' : 'Juli' },
+        { id: 8, name: language === 'ar' ? 'أغسطس' : language === 'en' ? 'August' : 'Agustus' },
+        { id: 9, name: language === 'ar' ? 'سبتمبر' : language === 'en' ? 'September' : 'September' },
+        { id: 10, name: language === 'ar' ? 'أكتوبر' : language === 'en' ? 'October' : 'Oktober' },
+        { id: 11, name: language === 'ar' ? 'نوفمبر' : language === 'en' ? 'November' : 'November' },
+        { id: 12, name: language === 'ar' ? 'ديسمبر' : language === 'en' ? 'December' : 'Desember' },
+    ]
+    const years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i)
 
     const [filterIssuesOnly, setFilterIssuesOnly] = useState(false)
 
@@ -321,16 +351,18 @@ export default function BehaviorImportModal(props) {
                         )}
 
                         {importStep === 1 ? (
-                            <button
-                                onClick={() => (importRawData.length > 0 && importFileName) ? setImportStep(2) : importFileInputRef.current?.click()}
-                                className="h-10 px-6 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2"
-                            >
-                                {(importRawData.length > 0 && importFileName) ? (
-                                    <>{tp('continue')} <FontAwesomeIcon icon={faArrowRight} /></>
-                                ) : (
-                                    <>{tp('importStepUploadDesc')} <FontAwesomeIcon icon={faUpload} /></>
-                                )}
-                            </button>
+                            importTab === 'file' && (
+                                <button
+                                    onClick={() => (importRawData.length > 0 && importFileName) ? setImportStep(2) : importFileInputRef.current?.click()}
+                                    className="h-10 px-6 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center gap-2"
+                                >
+                                    {(importRawData.length > 0 && importFileName) ? (
+                                        <>{tp('continue')} <FontAwesomeIcon icon={faArrowRight} /></>
+                                    ) : (
+                                        <>{tp('importStepUploadDesc')} <FontAwesomeIcon icon={faUpload} /></>
+                                    )}
+                                </button>
+                            )
                         ) : importStep === 2 ? (
                             <button
                                 onClick={async () => {
@@ -409,123 +441,240 @@ export default function BehaviorImportModal(props) {
 
             {importStep === 1 && (
                 <div className="space-y-2.5">
-                    <div
-                        onDragOver={e => { e.preventDefault(); setImportDragOver(true) }}
-                        onDragLeave={() => setImportDragOver(false)}
-                        onDrop={async e => {
-                            e.preventDefault()
-                            setImportDragOver(false)
-                            const file = e.dataTransfer.files?.[0]
-                            if (file) await processImportFile(file)
-                        }}
-                        onClick={() => importFileInputRef.current?.click()}
-                        className={`w-full h-14 rounded-xl border-2 border-dashed cursor-pointer flex items-center justify-center gap-3 transition-all
-                        ${importDragOver
-                                ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 scale-[1.01]'
-                                : 'border-[var(--color-primary)]/30 bg-[var(--color-primary)]/4 hover:border-[var(--color-primary)]/60 hover:bg-[var(--color-primary)]/8'}`}
-                    >
-                        <FontAwesomeIcon icon={faUpload} className={`text-sm transition-all ${importDragOver ? 'text-[var(--color-primary)] scale-110' : 'text-[var(--color-primary)]/60'}`} />
-                        <div className="text-left">
-                            <p className="text-[11px] font-black text-[var(--color-primary)] uppercase tracking-wider leading-none">
-                                {importDragOver ? tp('importDropActive') : tp('importDropInactive')}
-                            </p>
-                            <p className="text-[10px] text-[var(--color-text-muted)] font-bold mt-1 opacity-60">{tp('importDropSupported')}</p>
-                        </div>
+                    {/* Tab Selection */}
+                    <div className="flex gap-1.5 p-1 rounded-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] mb-4">
+                        <button
+                            type="button"
+                            onClick={() => setImportTab('file')}
+                            className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${importTab === 'file' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm border border-[var(--color-border)]/50' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                        >
+                            <FontAwesomeIcon icon={faUpload} className="text-[9px]" />
+                            {tp('importTabFile') || 'Import dari File'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setImportTab('copy')}
+                            className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${importTab === 'copy' ? 'bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm border border-[var(--color-border)]/50' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+                        >
+                            <FontAwesomeIcon icon={faCopy} className="text-[9px]" />
+                            {tp('importTabCopy') || 'Salin Bulan Lain'}
+                        </button>
                     </div>
 
-                    <div className="space-y-4">
-                        {/* Top Header: Actions & Classes Reference */}
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3 bg-[var(--color-surface-alt)]/50 rounded-2xl border border-[var(--color-border)] shadow-sm">
-                            <div className="flex items-center gap-6">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600">
-                                        <FontAwesomeIcon icon={faSchool} className="text-xs" />
+                    {importTab === 'file' ? (
+                        <div className="space-y-2.5">
+                            <div
+                                onDragOver={e => { e.preventDefault(); setImportDragOver(true) }}
+                                onDragLeave={() => setImportDragOver(false)}
+                                onDrop={async e => {
+                                    e.preventDefault()
+                                    setImportDragOver(false)
+                                    const file = e.dataTransfer.files?.[0]
+                                    if (file) await processImportFile(file)
+                                }}
+                                onClick={() => importFileInputRef.current?.click()}
+                                className={`w-full h-14 rounded-xl border-2 border-dashed cursor-pointer flex items-center justify-center gap-3 transition-all
+                                ${importDragOver
+                                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 scale-[1.01]'
+                                        : 'border-[var(--color-primary)]/30 bg-[var(--color-primary)]/4 hover:border-[var(--color-primary)]/60 hover:bg-[var(--color-primary)]/8'}`}
+                            >
+                                <FontAwesomeIcon icon={faUpload} className={`text-sm transition-all ${importDragOver ? 'text-[var(--color-primary)] scale-110' : 'text-[var(--color-primary)]/60'}`} />
+                                <div className="text-left">
+                                    <p className="text-[11px] font-black text-[var(--color-primary)] uppercase tracking-wider leading-none">
+                                        {importDragOver ? tp('importDropActive') : tp('importDropInactive')}
+                                    </p>
+                                    <p className="text-[10px] text-[var(--color-text-muted)] font-bold mt-1 opacity-60">{tp('importDropSupported')}</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                {/* Top Header: Actions & Classes Reference */}
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3 bg-[var(--color-surface-alt)]/50 rounded-2xl border border-[var(--color-border)] shadow-sm">
+                                    <div className="flex items-center gap-6">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+                                                <FontAwesomeIcon icon={faSchool} className="text-xs" />
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text)]">{tp('importRefData')}</span>
+                                                <span className="text-[8px] font-bold text-emerald-600">{tp('importRefDesc')}</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text)]">{tp('importRefData')}</span>
-                                        <span className="text-[8px] font-bold text-emerald-600">{tp('importRefDesc')}</span>
+
+                                    <button
+                                        onClick={handleDownloadTemplate}
+                                        className="shrink-0 h-9 px-4 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-emerald-600 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-emerald-500/20"
+                                    >
+                                        <FontAwesomeIcon icon={faDownload} /> {tp('importDownloadTemplate')}
+                                    </button>
+                                </div>
+
+                                {/* Visual Column Mapping Structure */}
+                                <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] overflow-hidden shadow-sm flex flex-col">
+                                    <div className="px-4 py-2 bg-[var(--color-surface-alt)] border-b border-[var(--color-border)] flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <FontAwesomeIcon icon={faTableList} className="text-[var(--color-primary)] text-xs" />
+                                            <span className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-muted)]">{tp('importVisTitle')}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="relative flex h-1.5 w-1.5">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                                            </span>
+                                            <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">{tp('importVisAutoMatch')}</span>
+                                        </div>
                                     </div>
+
+                                    <div className="overflow-hidden bg-[var(--color-surface-alt)]/10">
+                                        <table className="w-full border-collapse table-fixed">
+                                            <thead>
+                                                <tr className="bg-[var(--color-surface)]">
+                                                    <th className="w-8 border-r border-b border-[var(--color-border)]"></th>
+                                                    {[
+                                                        { l: 'A', k: 'NAME', n: tp('colStudent'), w: 'w-[30%]' },
+                                                        { l: 'B', k: 'BEHAVIOR', n: tp('colRule'), w: 'w-[30%]' },
+                                                        { l: 'C', k: 'POINTS', n: tp('colPoints'), w: 'w-[12%]' },
+                                                        { l: 'D', k: 'NOTES', n: tp('colNotes'), w: 'w-[28%]' }
+                                                    ].map((col, i) => (
+                                                        <th key={i} className={`px-2 py-1.5 border-r border-b border-[var(--color-border)] text-left ${col.w} min-w-0 overflow-hidden`}>
+                                                            <div className="flex flex-col min-w-0">
+                                                                <div className="flex items-center justify-between gap-1 min-w-0">
+                                                                    <span className="text-[9px] font-black text-[var(--color-text)] shrink-0">{col.l}</span>
+                                                                    <span className="text-[7.5px] font-bold text-emerald-600 opacity-80 truncate" title={col.k}>({col.k})</span>
+                                                                </div>
+                                                                <div className="h-0.5 w-full bg-emerald-500/20 rounded-full mt-1"></div>
+                                                            </div>
+                                                        </th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {[
+                                                    [tp('tplStudent1'), tp('tplRule1'), '-5', tp('tplNotes1')],
+                                                    [tp('tplStudent2'), tp('tplRule2'), '10', tp('tplNotes2_short')]
+                                                ].map((row, rIdx) => (
+                                                    <tr key={rIdx}>
+                                                        <td className="bg-[var(--color-surface-alt)] border-r border-b border-[var(--color-border)] text-[8px] font-bold text-[var(--color-text-muted)] text-center py-1">
+                                                            {rIdx + 1}
+                                                        </td>
+                                                        {row.map((cell, cIdx) => (
+                                                            <td key={cIdx} className="px-2 py-1 border-r border-b border-[var(--color-border)] bg-[var(--color-surface)]/40 overflow-hidden">
+                                                                <span className="text-[9px] font-medium text-[var(--color-text)] opacity-70 truncate block" title={cell}>{cell}</span>
+                                                            </td>
+                                                        ))}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div className="px-4 py-1.5 bg-[var(--color-surface)] border-t border-[var(--color-border)] flex items-center justify-between">
+                                        <p className="text-[8px] text-[var(--color-text-muted)] font-medium italic opacity-60">
+                                            {tp('importVisNote')}
+                                        </p>
+                                        <div className="flex gap-1.5">
+                                            {['.xlsx', '.csv'].map(ext => (
+                                                <span key={ext} className="text-[7px] font-black text-[var(--color-primary)] px-1 py-0.5 bg-[var(--color-primary)]/5 rounded border border-[var(--color-primary)]/10">{ext}</span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-4 py-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <div className="p-4 rounded-2xl bg-[var(--color-surface-alt)]/50 border border-[var(--color-border)] shadow-sm space-y-4">
+                                <div>
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2">
+                                        {tp('copySourceTitle') || 'SUMBER DATA BULANAN'}
+                                    </h4>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
+                                                {tp('month') || 'Bulan'}
+                                            </label>
+                                            <RichSelect
+                                                small
+                                                value={copySourceMonth}
+                                                onChange={setCopySourceMonth}
+                                                options={BULAN.map(b => ({ id: b.id, name: b.name }))}
+                                                placeholder="Pilih Bulan"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
+                                                {tp('year') || 'Tahun'}
+                                            </label>
+                                            <RichSelect
+                                                small
+                                                value={copySourceYear}
+                                                onChange={setCopySourceYear}
+                                                options={years.map(y => ({ id: y, name: String(y) }))}
+                                                placeholder="Pilih Tahun"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="h-px bg-[var(--color-border)]/65" />
+
+                                <div>
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-2">
+                                        {tp('copyTargetTitle') || 'TUJUAN DATA BULANAN'}
+                                    </h4>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
+                                                {tp('month') || 'Bulan'}
+                                            </label>
+                                            <RichSelect
+                                                small
+                                                value={copyTargetMonth}
+                                                onChange={setCopyTargetMonth}
+                                                options={BULAN.map(b => ({ id: b.id, name: b.name }))}
+                                                placeholder="Pilih Bulan"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[8px] font-black text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
+                                                {tp('year') || 'Tahun'}
+                                            </label>
+                                            <RichSelect
+                                                small
+                                                value={copyTargetYear}
+                                                onChange={setCopyTargetYear}
+                                                options={years.map(y => ({ id: y, name: String(y) }))}
+                                                placeholder="Pilih Tahun"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/15 flex items-start gap-2.5 text-[10px] text-amber-600 font-bold leading-normal">
+                                <FontAwesomeIcon icon={faCircleExclamation} className="text-amber-500 mt-0.5 shrink-0" />
+                                <div>
+                                    {tp('copyWarning') || 'Seluruh data laporan perilaku dari bulan sumber akan disalin ke bulan tujuan. Proses ini akan menduplikasi laporan dengan tanggal yang disesuaikan ke bulan tujuan.'}
                                 </div>
                             </div>
 
                             <button
-                                onClick={handleDownloadTemplate}
-                                className="shrink-0 h-9 px-4 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-emerald-600 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-emerald-500/20"
+                                type="button"
+                                onClick={async () => {
+                                    const success = await copyDataFromMonth(copySourceMonth, copySourceYear, copyTargetMonth, copyTargetYear);
+                                    if (success) onClose();
+                                }}
+                                disabled={copyingData}
+                                className="w-full h-10 rounded-xl bg-[var(--color-primary)] hover:brightness-110 text-white text-[11px] font-black uppercase tracking-widest disabled:opacity-40 shadow-lg shadow-[var(--color-primary)]/20 transition-all flex items-center justify-center gap-2"
                             >
-                                <FontAwesomeIcon icon={faDownload} /> {tp('importDownloadTemplate')}
+                                {copyingData ? (
+                                    <><FontAwesomeIcon icon={faSpinner} className="fa-spin" /> {tp('copyingText') || 'Menyalin Laporan...'}</>
+                                ) : (
+                                    <><FontAwesomeIcon icon={faCopy} /> {tp('copyActionText') || 'Salin & Impor Laporan'}</>
+                                )}
                             </button>
                         </div>
-
-                        {/* Visual Column Mapping Structure */}
-                        <div className="bg-[var(--color-surface)] rounded-2xl border border-[var(--color-border)] overflow-hidden shadow-sm flex flex-col">
-                            <div className="px-4 py-2 bg-[var(--color-surface-alt)] border-b border-[var(--color-border)] flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <FontAwesomeIcon icon={faTableList} className="text-[var(--color-primary)] text-xs" />
-                                    <span className="text-[10px] font-black uppercase tracking-wider text-[var(--color-text-muted)]">{tp('importVisTitle')}</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                    <span className="relative flex h-1.5 w-1.5">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-                                    </span>
-                                    <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">{tp('importVisAutoMatch')}</span>
-                                </div>
-                            </div>
-
-                            <div className="overflow-hidden bg-[var(--color-surface-alt)]/10">
-                                <table className="w-full border-collapse table-fixed">
-                                    <thead>
-                                        <tr className="bg-[var(--color-surface)]">
-                                            <th className="w-8 border-r border-b border-[var(--color-border)]"></th>
-                                            {[
-                                                { l: 'A', k: 'NAME', n: tp('colStudent'), w: 'w-[30%]' },
-                                                { l: 'B', k: 'BEHAVIOR', n: tp('colRule'), w: 'w-[30%]' },
-                                                { l: 'C', k: 'POINTS', n: tp('colPoints'), w: 'w-[12%]' },
-                                                { l: 'D', k: 'NOTES', n: tp('colNotes'), w: 'w-[28%]' }
-                                            ].map((col, i) => (
-                                                <th key={i} className={`px-2 py-1.5 border-r border-b border-[var(--color-border)] text-left ${col.w} min-w-0 overflow-hidden`}>
-                                                    <div className="flex flex-col min-w-0">
-                                                        <div className="flex items-center justify-between gap-1 min-w-0">
-                                                            <span className="text-[9px] font-black text-[var(--color-text)] shrink-0">{col.l}</span>
-                                                            <span className="text-[7.5px] font-bold text-emerald-600 opacity-80 truncate" title={col.k}>({col.k})</span>
-                                                        </div>
-                                                        <div className="h-0.5 w-full bg-emerald-500/20 rounded-full mt-1"></div>
-                                                    </div>
-                                                </th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {[
-                                            [tp('tplStudent1'), tp('tplRule1'), '-5', tp('tplNotes1')],
-                                            [tp('tplStudent2'), tp('tplRule2'), '10', tp('tplNotes2_short')]
-                                        ].map((row, rIdx) => (
-                                            <tr key={rIdx}>
-                                                <td className="bg-[var(--color-surface-alt)] border-r border-b border-[var(--color-border)] text-[8px] font-bold text-[var(--color-text-muted)] text-center py-1">
-                                                    {rIdx + 1}
-                                                </td>
-                                                {row.map((cell, cIdx) => (
-                                                    <td key={cIdx} className="px-2 py-1 border-r border-b border-[var(--color-border)] bg-[var(--color-surface)]/40 overflow-hidden">
-                                                        <span className="text-[9px] font-medium text-[var(--color-text)] opacity-70 truncate block" title={cell}>{cell}</span>
-                                                    </td>
-                                                ))}
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div className="px-4 py-1.5 bg-[var(--color-surface)] border-t border-[var(--color-border)] flex items-center justify-between">
-                                <p className="text-[8px] text-[var(--color-text-muted)] font-medium italic opacity-60">
-                                    {tp('importVisNote')}
-                                </p>
-                                <div className="flex gap-1.5">
-                                    {['.xlsx', '.csv'].map(ext => (
-                                        <span key={ext} className="text-[7px] font-black text-[var(--color-primary)] px-1 py-0.5 bg-[var(--color-primary)]/5 rounded border border-[var(--color-primary)]/10">{ext}</span>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    )}
                 </div>
             )}
 

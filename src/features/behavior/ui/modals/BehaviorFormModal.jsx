@@ -405,7 +405,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                                 </>
                             ) : (
                                 <>
-                                    {selectedItem ? <Edit2 className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                                    {selectedItem ? <Edit2 className="w-3.5 h-3.5 animate-in fade-in" /> : <Plus className="w-3.5 h-3.5 animate-in fade-in" />}
                                     <span>{selectedItem ? tp('saveChanges') : tp('saveReport')}</span>
                                 </>
                             )}
@@ -578,14 +578,14 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                             const s = students.find(st => st.id === formData.student_id)
                             return (
                                 <div className="p-1.5 bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-2xl flex items-center gap-2">
-                                    <div className="w-6.5 h-6.5 rounded-lg bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center font-black text-xs flex-shrink-0">
+                                    <div className="w-6.5 h-6.5 rounded-lg bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center font-black text-xs flex-shrink-0 animate-in fade-in">
                                         {(s?.name || '?')[0].toUpperCase()}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-[9px] font-black uppercase text-[var(--color-text-muted)] tracking-widest leading-none">
                                             {tp('recipient')}
                                         </p>
-                                        <p className="text-sm font-bold text-[var(--color-text)] truncate leading-tight mt-1">
+                                        <p className="text-sm font-bold text-[var(--color-text)] truncate leading-tight mt-1 animate-in fade-in">
                                             {s?.name}
                                             {s?.class_name && (
                                                 <span className="text-[10px] font-bold text-[var(--color-text-muted)] ml-1.5 opacity-80">
@@ -598,7 +598,7 @@ const BehaviorFormModal = memo(function BehaviorFormModal({
                                         <button
                                             type="button"
                                             onClick={() => setCurrentStep(1)}
-                                            className="w-6 h-6 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[var(--color-primary)]/30 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] flex items-center justify-center transition-all flex-shrink-0 animate-in fade-in"
+                                            className="w-6 h-6 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[var(--color-primary)]/30 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] flex items-center justify-center transition-all flex-shrink-0"
                                             aria-label="Change student"
                                         >
                                             <BackIcon className="w-2.5 h-2.5" />
