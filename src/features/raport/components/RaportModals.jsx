@@ -134,7 +134,7 @@ export const WaBlastConfirmContent = memo(({ queue, onConfirm, onCancel }) => {
     )
 })
 
-export const WaBlastProgressContent = memo(({ progress, total, done, failed, activeName, active, onCancel }) => {
+export const WaBlastProgressContent = memo(({ progress, total, done, failed, activeName, active, onCancel, status }) => {
     const pct = total > 0 ? Math.round((progress / total) * 100) : 0
     const isFinished = pct === 100 || !active
 
@@ -201,7 +201,12 @@ export const WaBlastProgressContent = memo(({ progress, total, done, failed, act
             {!isFinished && activeName && (
                 <div className="p-4 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] flex items-center justify-between gap-3 animate-in fade-in zoom-in-95 duration-200">
                     <div className="min-w-0 flex-1">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">Sekarang Mengirim Ke:</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">
+                            {status === 'generating' && 'Men-generate PDF raport...'}
+                            {status === 'uploading' && 'Mengunggah PDF ke Supabase...'}
+                            {status === 'sending' && 'Mengirim pesan WhatsApp...'}
+                            {!status && 'Sekarang Mengirim Ke:'}
+                        </p>
                         <p className="text-sm font-black text-[var(--color-text)] truncate">{activeName}</p>
                     </div>
                     <div className="w-6 h-6 rounded-full border-2 border-green-500/20 border-t-green-500 animate-spin shrink-0" />
@@ -225,7 +230,7 @@ export const WaBlastProgressContent = memo(({ progress, total, done, failed, act
 
 // ─── ZIP Blast Progress Content ──────────────────────────────────────────────
 
-export const ZipBlastProgressContent = memo(({ progress, total, done, failed, activeName, active, onCancel }) => {
+export const ZipBlastProgressContent = memo(({ progress, total, done, failed, activeName, active, onCancel, status }) => {
     const pct = total > 0 ? Math.round((progress / total) * 100) : 0
     const isFinished = pct === 100 || !active
 
@@ -306,7 +311,10 @@ export const ZipBlastProgressContent = memo(({ progress, total, done, failed, ac
             {!isFinished && activeName && (
                 <div className="p-4 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] flex items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
                     <div className="min-w-0 flex-1">
-                        <p className="text-[9px] font-black uppercase tracking-wider text-[var(--color-text-muted)]">Sedang Memproses:</p>
+                        <p className="text-[9px] font-black uppercase tracking-wider text-[var(--color-text-muted)]">
+                            {status === 'generating' && 'Men-generate PDF raport...'}
+                            {!status && 'Sedang Memproses:'}
+                        </p>
                         <p className="text-xs font-black text-[var(--color-text)] mt-0.5 truncate">{activeName}</p>
                     </div>
                     <div className="w-5 h-5 rounded-full border-2 border-teal-500/35 border-t-teal-500 animate-spin shrink-0" />

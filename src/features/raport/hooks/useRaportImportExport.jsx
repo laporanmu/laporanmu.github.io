@@ -1,9 +1,19 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { supabase } from '@lib/supabase'
 import { logAudit } from '@utils/auditLogger'
 import { BULAN, STORAGE_BUCKET } from '@utils/reports/raportConstants'
 import { buildWaLines, escapeCsvCell, calcAvg } from '@utils/reports/raportHelpers'
 import { RAPORT_TYPES, getClassLevel, getGradePredicate } from '@utils/reports/raportTypeRegistry'
+
+// Helper for persistent caching keys
+const getCacheKey = (studentId, rType, month, year, semester, acadYear) => {
+    if (rType === 'bulanan') {
+        return `raport_link_${studentId}_bulanan_${month}_${year}`
+    } else {
+        const safeAcadYear = String(acadYear || '').replace(/\//g, '_')
+        return `raport_link_${studentId}_${rType}_${semester}_${safeAcadYear}`
+    }
+}
 
 // Helper withTimeout agar html2canvas tidak hang selamanya
 const withTimeout = (promise, ms, label = 'Operasi') =>
@@ -12,7 +22,19 @@ const withTimeout = (promise, ms, label = 'Operasi') =>
         new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timeout setelah ${ms / 1000}s`)), ms)),
     ])
 
-export function useRaportImportExport(core, { printContainerRef, silentPrintRef }) {
+// Helper to check if a public URL exists (e.g. not deleted from Supabase)
+const checkUrlExists = async (url) => {
+    if (!url) return false
+    try {
+        const response = await fetch(url, { method: 'HEAD' })
+        return response.ok
+    } catch (e) {
+        console.warn('[Storage Cache] HEAD check failed (network/CORS), assuming exists:', e)
+        return true
+    }
+}
+
+export function useRaportImportExport(core, { printContainerRef, silentPrintRef, pageSize }) {
     const {
         addToast,
         selectedClass,
@@ -38,11 +60,52 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
     const [raportLinks, setRaportLinks] = useState({}) // cache PDF links to avoid double uploading
     const [sendingWA, setSendingWA] = useState({}) // studentId -> 'generating' | 'uploading' | 'done' | null
     const [waBlastConfirm, setWaBlastConfirm] = useState(null)
-    const [waBlast, setWaBlast] = useState(null) // { queue, idx, done, failed, active }
-    const [zipBlast, setZipBlast] = useState(null) // { queue, idx, done, failed, total, active }
+    const [waBlast, setWaBlast] = useState(null) // { queue, idx, done, failed, active, status }
+    const [zipBlast, setZipBlast] = useState(null) // { queue, idx, done, failed, total, active, status }
     const [exporting, setExporting] = useState(false)
     const [isImportModalOpen, setIsImportModalOpen] = useState(false)
     const [isExportModalOpen, setIsExportOpen] = useState(false)
+
+    // Helper to get cached link
+    const getCachedRaportLink = useCallback((studentId) => {
+        const key = getCacheKey(studentId, reportType, selectedMonth, selectedYear, selectedSemester, academicYear)
+        try {
+            return localStorage.getItem(key) || null
+        } catch (e) {
+            console.error('Error reading localStorage cache:', e)
+            return null
+        }
+    }, [reportType, selectedMonth, selectedYear, selectedSemester, academicYear])
+
+    // Helper to set cached link
+    const cacheRaportLink = useCallback((studentId, url) => {
+        const key = getCacheKey(studentId, reportType, selectedMonth, selectedYear, selectedSemester, academicYear)
+        try {
+            localStorage.setItem(key, url)
+            setRaportLinks(prev => ({ ...prev, [studentId]: url }))
+        } catch (e) {
+            console.error('Error writing localStorage cache:', e)
+        }
+    }, [reportType, selectedMonth, selectedYear, selectedSemester, academicYear])
+
+    // Synchronize in-memory cache state when student list or period changes
+    useEffect(() => {
+        if (!students || !students.length) {
+            setRaportLinks({})
+            return
+        }
+        const loaded = {}
+        students.forEach(s => {
+            const key = getCacheKey(s.id, reportType, selectedMonth, selectedYear, selectedSemester, academicYear)
+            try {
+                const val = localStorage.getItem(key)
+                if (val) loaded[s.id] = val
+            } catch (e) {
+                console.error(e)
+            }
+        })
+        setRaportLinks(loaded)
+    }, [students, reportType, selectedMonth, selectedYear, selectedSemester, academicYear])
 
     // Abort controllers
     const waBlastAbortRef = useRef(false)
@@ -142,44 +205,138 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
         const safeName = student.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '')
         const filename = `${safeName}_${bulanStr}_${activeYear}.pdf`
 
-        let cardEl = document.querySelector(`.raport-card[data-student-id="${student.id}"]`)
+        // Pastikan card sudah di-render di printContainerRef (area tersembunyi yg sudah ada font + gambar)
+        let cardEl = printContainerRef.current?.querySelector(`.raport-card[data-student-id="${student.id}"]`)
         if (!cardEl) {
-            if (silentPrintRef) silentPrintRef.current = true // jangan buka tab print
+            if (silentPrintRef) silentPrintRef.current = true
             setPrintRenderedCount(0); setPrintQueue([student.id])
             await new Promise(resolve => {
                 let t = 0
                 const timer = setInterval(() => {
                     const card = printContainerRef.current?.querySelector(`.raport-card[data-student-id="${student.id}"]`)
                     if (card) { cardEl = card; clearInterval(timer); resolve() }
-                    if (++t > 50) { clearInterval(timer); resolve() }
+                    if (++t > 80) { clearInterval(timer); resolve() }
                 }, 100)
             })
-            setPrintQueue([]); setPrintRenderedCount(0)
-            if (silentPrintRef) silentPrintRef.current = false // reset flag
+            if (silentPrintRef) silentPrintRef.current = false
         }
         if (!cardEl) throw new Error('Gagal render raport card')
-        const rootStyles = getComputedStyle(document.documentElement)
-        const cssVars = ['--color-border', '--color-surface', '--color-surface-alt', '--color-text', '--color-text-muted'].map(v => `${v}: ${rootStyles.getPropertyValue(v).trim() || '#ccc'};`).join(' ')
-        const A4W = 794, A4H = 1123, wrapper = document.createElement('div')
-        wrapper.style.cssText = `position:fixed;left:-9999px;top:0;width:${A4W}px;height:${A4H}px;background:white;overflow:hidden;display:flex;align-items:flex-start;justify-content:center;font-family:'Times New Roman',serif;`
-        wrapper.innerHTML = `<style>:root{${cssVars}}*{box-sizing:border-box;-webkit-print-color-adjust:exact!important}img{mix-blend-mode:multiply}.raport-card{width:${A4W}px!important;min-width:${A4W}px!important;height:${A4H}px!important;overflow:hidden!important;background:white!important;margin:0!important}</style>${cardEl.outerHTML}`
+
+        // Buat wrapper sementara yang menyalin semua stylesheet dari dokumen aktif
+        // (agar font Arab, Segoe, dll tetap terbaca oleh html2canvas)
+        const W = pageSize === 'f4' ? 812.6 : 793.7
+        const H = pageSize === 'f4' ? 1247.2 : 1122.5
+        const wrapper = document.createElement('div')
+        wrapper.style.cssText = `position:fixed;left:-9999px;top:0;width:${W}px;height:${H}px;background:white;overflow:hidden;`
+
+        // Clone semua <style> dan <link rel=stylesheet> dari dokumen aktif ke wrapper
+        const styleClones = []
+        document.querySelectorAll('style, link[rel="stylesheet"]').forEach(el => {
+            styleClones.push(el.cloneNode(true))
+        })
+        // Override khusus raport card agar pas kertas yang dipilih
+        const overrideStyle = document.createElement('style')
+        overrideStyle.textContent = `
+            .raport-card {
+                width: ${W}px !important; min-width: ${W}px !important;
+                height: ${H}px !important; overflow: hidden !important;
+                background: white !important; margin: 0 !important; position: relative !important;
+            }
+            [style*="Traditional Arabic"], [dir="rtl"], .font-arabic, h1[style*="Amiri"], h2[style*="Amiri"], .school-name-ar, .school-subtitle-ar, [style*="rtl"] {
+                font-family: 'Amiri', serif !important;
+                letter-spacing: normal !important;
+            }
+            td[style*="Traditional Arabic"], th[style*="Traditional Arabic"], 
+            td[dir="rtl"], th[dir="rtl"], 
+            td.font-arabic, th.font-arabic, 
+            td[style*="rtl"], th[style*="rtl"] {
+                line-height: 1.45 !important;
+            }
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                box-sizing: border-box !important;
+            }
+            img {
+                mix-blend-mode: multiply !important;
+                max-width: 100% !important;
+                height: auto !important;
+            }
+        `
+        styleClones.forEach(s => wrapper.appendChild(s))
+        wrapper.appendChild(overrideStyle)
+        // Leverage existing DOM node directly to capture QR code canvas and loaded state correctly
+        wrapper.appendChild(cardEl)
         document.body.appendChild(wrapper)
-        await new Promise(r => setTimeout(r, 700))
+
+        // Tunggu: font load + gambar QR load
+        if (document.fonts) {
+            try {
+                await Promise.all([
+                    document.fonts.load('400 16px Amiri'),
+                    document.fonts.load('700 16px Amiri'),
+                    document.fonts.load('400 16px Cairo'),
+                    document.fonts.load('700 16px Cairo')
+                ])
+            } catch (e) {
+                console.warn('Failed to load fonts explicitly:', e)
+            }
+        }
+        await document.fonts.ready
+        await new Promise(r => setTimeout(r, 800))
+
+        // Preload semua gambar di dalam wrapper agar html2canvas tidak skip
+        const imgs = wrapper.querySelectorAll('img')
+        await Promise.allSettled(Array.from(imgs).map(img => new Promise(res => {
+            if (img.complete && img.naturalWidth > 0) return res()
+            img.onload = res; img.onerror = res
+            // Force reload dengan crossOrigin jika gambar belum ter-load
+            if (!img.complete) { const s = img.src; img.src = ''; img.crossOrigin = 'anonymous'; img.src = s }
+        })))
+        await new Promise(r => setTimeout(r, 300))
+
         try {
             const canvas = await withTimeout(
-                html2canvas(wrapper, { scale: 3, useCORS: true, allowTaint: true, backgroundColor: '#ffffff', width: A4W, height: A4H, scrollX: 0, scrollY: 0, logging: false }),
-                15000,
+                html2canvas(wrapper, {
+                    scale: 2.5,
+                    useCORS: true,
+                    allowTaint: false,
+                    backgroundColor: '#ffffff',
+                    width: W,
+                    height: H,
+                    scrollX: 0, scrollY: 0,
+                    logging: false,
+                    imageTimeout: 10000,
+                    onclone: (doc) => {
+                        // Pastikan raport-card di clone doc juga punya ukuran yang benar
+                        const clonedCard = doc.querySelector('.raport-card')
+                        if (clonedCard) {
+                            clonedCard.style.width = `${W}px`
+                            clonedCard.style.height = `${H}px`
+                            clonedCard.style.overflow = 'hidden'
+                        }
+                    }
+                }),
+                20000,
                 'Render PDF'
             )
-            const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true })
-            pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 210, 297)
+            const pdf = new jsPDF({
+                unit: 'mm',
+                format: pageSize === 'f4' ? [215, 330] : 'a4',
+                orientation: 'portrait',
+                compress: true
+            })
+            const pdfW = pageSize === 'f4' ? 215 : 210
+            const pdfH = pageSize === 'f4' ? 330 : 297
+            pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, pdfW, pdfH)
             const blob = pdf.output('blob')
             if (!blob || blob.size < 5000) throw new Error('PDF terlalu kecil')
             return { blob, filename }
         } finally {
             if (document.body.contains(wrapper)) document.body.removeChild(wrapper)
+            setPrintQueue([]); setPrintRenderedCount(0)
         }
-    }, [bulanObj, selectedMonth, selectedYear, printContainerRef, setPrintQueue, setPrintRenderedCount])
+    }, [bulanObj, selectedMonth, selectedYear, printContainerRef, setPrintQueue, setPrintRenderedCount, pageSize])
 
     // ── Upload to Supabase ──
     const uploadToSupabase = useCallback(async (blob, filename) => {
@@ -199,11 +356,34 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
         if (!student.phone) { addToast('Nomor WA wali tidak tersedia', 'warning'); return }
         const phone = student.phone.replace(/\D/g, '').replace(/^0/, '62')
 
-        // Jika cache sudah ada
-        if (raportLinks[student.id]) {
+        // Cek persistent cache raportLinks terlebih dahulu
+        let cachedUrl = getCachedRaportLink(student.id)
+        if (cachedUrl) {
+            const exists = await checkUrlExists(cachedUrl)
+            if (!exists) {
+                const key = getCacheKey(student.id, reportType, selectedMonth, selectedYear, selectedSemester, academicYear)
+                localStorage.removeItem(key)
+                setRaportLinks(prev => {
+                    const next = { ...prev }
+                    delete next[student.id]
+                    return next
+                })
+                cachedUrl = null
+            }
+        }
+
+        if (cachedUrl) {
             setSendingWA(prev => ({ ...prev, [student.id]: 'done' }))
-            await sendFonnteFile(phone, raportLinks[student.id], `Raport_${student.name.replace(/\s+/g, '_')}.pdf`)
-            addToast(`✅ PDF Raport terkirim ke wali ${student.name.split(' ')[0]}`, 'success')
+            const message = buildWaMessage(student, cachedUrl)
+            const sent = await sendFonnteMessage(phone, message)
+            if (sent) {
+                addToast(`✅ PDF Raport terkirim ke wali ${student.name.split(' ')[0]}`, 'success')
+            } else {
+                // Fallback to wa.me
+                const tab = window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank')
+                if (!tab) addToast('Popup diblokir.', 'warning')
+                else addToast(`📲 WA dibuka untuk ${student.name.split(' ')[0]}`, 'info')
+            }
             return
         }
 
@@ -214,15 +394,15 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
 
             setSendingWA(prev => ({ ...prev, [student.id]: 'uploading' }))
             const publicUrl = await uploadToSupabase(blob, filename)
-            setRaportLinks(prev => ({ ...prev, [student.id]: publicUrl }))
+            cacheRaportLink(student.id, publicUrl)
 
             setSendingWA(prev => ({ ...prev, [student.id]: 'done' }))
-            const sent = await sendFonnteFile(phone, publicUrl, filename)
+            const message = buildWaMessage(student, publicUrl)
+            const sent = await sendFonnteMessage(phone, message)
             if (sent) {
                 addToast(`✅ PDF Raport terkirim ke wali ${student.name.split(' ')[0]}`, 'success')
             } else {
                 // Fallback to wa.me
-                const message = buildWaMessage(student, publicUrl)
                 const tab = window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank')
                 if (!tab) addToast('Popup diblokir.', 'warning')
                 else addToast(`📲 WA dibuka untuk ${student.name.split(' ')[0]}`, 'info')
@@ -232,12 +412,12 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
             addToast(`Gagal kirim WA ke ${student.name.split(' ')[0]}: ${e.message}`, 'error')
             setSendingWA(prev => ({ ...prev, [student.id]: null }))
         }
-    }, [raportLinks, generatePDFBlob, uploadToSupabase, sendFonnteFile, buildWaMessage, addToast])
+    }, [getCachedRaportLink, cacheRaportLink, generatePDFBlob, uploadToSupabase, sendFonnteMessage, buildWaMessage, addToast, reportType, selectedMonth, selectedYear, selectedSemester, academicYear])
 
     // ── Blast WA ──
     const runWaBlast = useCallback(async (queue, abortRef) => {
         let done = 0, failed = 0
-        setWaBlast({ queue, idx: 0, done: 0, failed: 0, active: true })
+        setWaBlast({ queue, idx: 0, done: 0, failed: 0, active: true, status: 'generating' })
         for (let i = 0; i < queue.length; i++) {
             if (abortRef.current) break
             setWaBlast(prev => prev ? { ...prev, idx: i } : null)
@@ -246,15 +426,33 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
                 const phone = student.phone?.replace(/\D/g, '').replace(/^0/, '62')
                 if (!phone) { failed++; continue }
 
-                let url = raportLinks[student.id]
+                let url = getCachedRaportLink(student.id)
+                if (url) {
+                    const exists = await checkUrlExists(url)
+                    if (!exists) {
+                        const key = getCacheKey(student.id, reportType, selectedMonth, selectedYear, selectedSemester, academicYear)
+                        localStorage.removeItem(key)
+                        setRaportLinks(prev => {
+                            const next = { ...prev }
+                            delete next[student.id]
+                            return next
+                        })
+                        url = null
+                    }
+                }
+
                 if (!url) {
+                    setWaBlast(prev => prev ? { ...prev, idx: i, status: 'generating' } : null)
                     const { blob, filename } = await generatePDFBlob(student)
                     if (abortRef.current) break
+
+                    setWaBlast(prev => prev ? { ...prev, idx: i, status: 'uploading' } : null)
                     url = await uploadToSupabase(blob, filename)
-                    setRaportLinks(prev => ({ ...prev, [student.id]: url }))
+                    cacheRaportLink(student.id, url)
                 }
 
                 if (abortRef.current) break
+                setWaBlast(prev => prev ? { ...prev, idx: i, status: 'sending' } : null)
                 
                 // Gunakan sendFonnteMessage (teks) dengan menyisipkan URL PDF karena Fonnte Free tidak support file
                 const message = buildWaMessage(student, url)
@@ -270,7 +468,7 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
         }
         setWaBlast(prev => prev ? { ...prev, active: false } : null)
         addToast(`WA Blast selesai: ${done} terkirim, ${failed} gagal`, 'info')
-    }, [raportLinks, generatePDFBlob, uploadToSupabase, sendFonnteMessage, buildWaMessage, addToast])
+    }, [getCachedRaportLink, cacheRaportLink, generatePDFBlob, uploadToSupabase, sendFonnteMessage, buildWaMessage, addToast, reportType, selectedMonth, selectedYear, selectedSemester, academicYear])
 
     // ── Blast ZIP ──
     const runZipBlast = useCallback(async (stuList, archEntry = null) => {
@@ -279,7 +477,7 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
         let done = 0, failed = 0
         const total = stuList.length
         zipAbortRef.current = false
-        setZipBlast({ queue: stuList, idx: 0, done: 0, failed: 0, total, active: true })
+        setZipBlast({ queue: stuList, idx: 0, done: 0, failed: 0, total, active: true, status: 'generating' })
 
         const rtObj = RAPORT_TYPES[reportType] || RAPORT_TYPES.bulanan
         const bulanStr = archEntry ? BULAN.find(b => b.id === archEntry.month)?.id_str : (bulanObj?.id_str || String(selectedMonth))
@@ -289,7 +487,7 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
                 break
             }
             const student = stuList[i]
-            setZipBlast(prev => prev ? { ...prev, idx: i } : null)
+            setZipBlast(prev => prev ? { ...prev, idx: i, status: 'generating' } : null)
             try {
                 setPreviewStudentId(student.id)
                 await new Promise(r => setTimeout(r, 350))

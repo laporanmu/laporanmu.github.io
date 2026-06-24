@@ -385,7 +385,7 @@ const RaportPrintCard = memo(({
                         )}
                         <div className="school-name-ar" style={{
                             fontSize: isLisan ? '26pt' : '30pt', fontWeight: 900, color: settings.report_color_primary || '#1a5c35',
-                            direction: 'rtl', fontFamily: "'Traditional Arabic', serif", letterSpacing: 0.5,
+                            direction: 'rtl', fontFamily: "'Traditional Arabic', serif", letterSpacing: 'normal',
                             lineHeight: 1.05, marginBottom: 4,
                             textShadow: '0.4px 0 0 currentColor, -0.4px 0 0 currentColor'
                         }}>{settings.school_name_ar || ''}</div>
@@ -564,7 +564,7 @@ const RaportPrintCard = memo(({
                                     {k.ar ? (
                                         <>
                                             <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 10px`, textAlign: 'left', color: '#444', width: `${lc.subjectIdWidth}%` }}>{k.id}</td>
-                                            <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 10px`, textAlign: 'right', fontFamily: "'Traditional Arabic', serif", fontSize: isLisan ? '16pt' : `${lc.arMainFontSize}pt`, width: `${lc.subjectArWidth}%`, lineHeight: 1.1 }}>{k.ar}</td>
+                                            <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 10px`, textAlign: 'right', direction: 'rtl', fontFamily: "'Traditional Arabic', serif", fontSize: isLisan ? '16pt' : `${lc.arMainFontSize}pt`, width: `${lc.subjectArWidth}%`, lineHeight: 1.1 }}>{k.ar}</td>
                                         </>
                                     ) : (
                                         <td colSpan={2} style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 10px`, textAlign: 'left', color: '#444', fontSize: '11pt' }}>{k.id}</td>

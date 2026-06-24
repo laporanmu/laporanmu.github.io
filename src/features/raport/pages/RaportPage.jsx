@@ -89,6 +89,7 @@ export default function RaportPage() {
     const printContainerRef = useRef(null)
     const silentPrintRef = useRef(false) // skip executePrint saat generate PDF untuk WA
     const [layoutConfig, setLayoutConfig] = useState(() => loadLayoutConfig())
+    const [pageSize, setPageSize] = useState('f4') // 'a4' | 'f4'
 
     // ── Hooks integration ──
     const core = useRaportCore()
@@ -141,7 +142,7 @@ export default function RaportPage() {
     })), [years])
 
 
-    const importExport = useRaportImportExport(core, { printContainerRef, silentPrintRef })
+    const importExport = useRaportImportExport(core, { printContainerRef, silentPrintRef, pageSize })
     const {
         raportLinks, setRaportLinks, sendingWA, setSendingWA,
         waBlastConfirm, setWaBlastConfirm, waBlast, setWaBlast,
@@ -232,7 +233,6 @@ export default function RaportPage() {
     useEffect(() => { if (isImportModalOpen) setHasOpenedImport(true) }, [isImportModalOpen])
     useEffect(() => { if (isExportModalOpen) setHasOpenedExport(true) }, [isExportModalOpen])
     useEffect(() => { if (showTutorialModal) setHasOpenedTutorial(true) }, [showTutorialModal])
-    const [pageSize, setPageSize] = useState('f4') // 'a4' | 'f4'
     const [previewZoom, setPreviewZoom] = useState(1) // 0.8 = 80% zoom out
     const [isFullScreenPreview, setIsFullScreenPreview] = useState(false)
     const [fullScreenZoom, setFullScreenZoom] = useState(1) // zoom khusus fullscreen
@@ -1444,8 +1444,15 @@ export default function RaportPage() {
         * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         
         /* Font Arab eksplisit */
-        [dir="rtl"], .font-arabic, h1[style*="Amiri"], h2[style*="Amiri"] {
+        [style*="Traditional Arabic"], [dir="rtl"], .font-arabic, h1[style*="Amiri"], h2[style*="Amiri"], .school-name-ar, .school-subtitle-ar, [style*="rtl"] {
             font-family: 'Amiri', serif !important;
+            letter-spacing: normal !important;
+        }
+        td[style*="Traditional Arabic"], th[style*="Traditional Arabic"], 
+        td[dir="rtl"], th[dir="rtl"], 
+        td.font-arabic, th.font-arabic, 
+        td[style*="rtl"], th[style*="rtl"] {
+            line-height: 1.45 !important;
         }
         
         .raport-card { 
@@ -1533,7 +1540,7 @@ export default function RaportPage() {
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
                 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Outfit:wght@700;900&family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
                 <style>
-                    @page{size:${pageSize === 'f4' ? '215mm 330mm' : 'A4'};margin:${pageSize === 'f4' ? '8mm 10mm 8mm 20mm' : '4mm 10mm 4mm 20mm'}}body{margin:0;padding:0;font-family:'Inter',sans-serif;background:white}.raport-card{page-break-after:always;box-sizing:border-box;width:100%!important;min-width:100%!important;height:100%!important;min-height:100%!important;padding:0!important;margin:0!important}.raport-print-metadata{left:0!important;right:0!important;bottom:0!important}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+                    @page{size:${pageSize === 'f4' ? '215mm 330mm' : 'A4'};margin:${pageSize === 'f4' ? '8mm 10mm 8mm 20mm' : '4mm 10mm 4mm 20mm'}}body{margin:0;padding:0;font-family:'Inter',sans-serif;background:white}.raport-card{page-break-after:always;box-sizing:border-box;width:100%!important;min-width:100%!important;height:100%!important;min-height:100%!important;padding:0!important;margin:0!important}.raport-print-metadata{left:0!important;right:0!important;bottom:0!important}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}[style*="Traditional Arabic"],[dir="rtl"],.font-arabic,h1[style*="Amiri"],h2[style*="Amiri"],.school-name-ar,.school-subtitle-ar,[style*="rtl"]{font-family:'Amiri',serif!important;letter-spacing:normal!important}td[style*="Traditional Arabic"],th[style*="Traditional Arabic"],td[dir="rtl"],th[dir="rtl"],td.font-arabic,th.font-arabic,td[style*="rtl"],th[style*="rtl"]{line-height:1.45!important}
                 </style></head><body>${html}</body></html>`)
             win.document.close();
             win.focus();
@@ -3270,6 +3277,7 @@ export default function RaportPage() {
                             failed={waBlast.failed}
                             activeName={waBlast.active && waBlast.queue[waBlast.idx]?.name}
                             active={waBlast.active}
+                            status={waBlast.status}
                             onCancel={() => {
                                 waBlastAbortRef.current = true
                                 setWaBlast(prev => prev ? { ...prev, active: false } : null)
@@ -3295,6 +3303,7 @@ export default function RaportPage() {
                             failed={zipBlast.failed}
                             activeName={zipBlast.active && zipBlast.queue[zipBlast.idx]?.name}
                             active={zipBlast.active}
+                            status={zipBlast.status}
                             onCancel={() => {
                                 zipAbortRef.current = true
                                 setZipBlast(prev => prev ? { ...prev, active: false } : null)
