@@ -4,6 +4,8 @@ import {
     Search, Info, Lightbulb, Save,
     Table, Check, Archive, Paintbrush, FileText, ClipboardList
 } from 'lucide-react'
+import Modal from '@shared/components/Modal'
+import RichSelect from '@shared/components/RichSelect'
 
 // Simple SVG replacement for WhatsApp icon
 const WhatsAppIcon = (props) => (
@@ -53,11 +55,13 @@ export const ShortcutModalContent = memo(() => {
 
 // ─── WA Blast Confirm Content ────────────────────────────────────────────────
 
-export const WaBlastConfirmContent = memo(({ queue, onConfirm, onCancel }) => {
+export const WaBlastConfirmContent = memo(({ isOpen, onClose, queue, onConfirm, onCancel, currentLang = 'id', currentPageSize = 'f4' }) => {
     const [selectedIds, setSelectedIds] = useState(new Set(queue.map(s => s.id)))
+    const [selectedLang, setSelectedLang] = useState(currentLang)
+    const [selectedPageSize, setSelectedPageSize] = useState(currentPageSize)
     
     const handleConfirm = () => {
-        onConfirm(queue.filter(s => selectedIds.has(s.id)))
+        onConfirm(queue.filter(s => selectedIds.has(s.id)), selectedLang, selectedPageSize)
     }
 
     const toggleAll = () => {
@@ -72,65 +76,114 @@ export const WaBlastConfirmContent = memo(({ queue, onConfirm, onCancel }) => {
         setSelectedIds(newSet)
     }
 
+    const langOptions = [
+        { id: 'id', name: 'Bahasa Indonesia' },
+        { id: 'ar', name: 'Bahasa Arab (العربية)' }
+    ]
+
+    const pageSizeOptions = [
+        { id: 'a4', name: 'A4 (210 × 297 mm)' },
+        { id: 'f4', name: 'F4 / Folio (215 × 330 mm)' }
+    ]
+
     return (
-        <div className="space-y-4">
-            {/* Header info */}
-            <div className="p-4 rounded-3xl bg-amber-500/5 border border-amber-500/15 text-[12px] text-amber-700 dark:text-amber-400 font-bold leading-relaxed">
-                Sistem akan mengirim pesan secara otomatis di latar belakang (Background API). Pastikan token API (Fonnte) Anda valid dan kuota mencukupi agar proses berjalan lancar.
-            </div>
-
-            {/* List */}
-            <div className="border border-[var(--color-border)] rounded-2xl bg-[var(--color-surface)] overflow-hidden shadow-sm">
-                {/* Select All header */}
-                <div className="flex items-center justify-between px-4 py-3 bg-[var(--color-surface-alt)] border-b border-[var(--color-border)]">
-                    <button onClick={toggleAll} className="flex items-center gap-2 text-[10px] font-black text-[var(--color-text)] hover:text-green-600 transition-colors">
-                        <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${selectedIds.size === queue.length ? 'bg-green-500 border-green-500' : 'border-[var(--color-border)] bg-white'}`}>
-                            {selectedIds.size === queue.length && <Check className="w-2.5 h-2.5 text-white" />}
-                        </div>
-                        Pilih Semua ({queue.length})
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Konfirmasi WA Blast"
+            description="Preview dan pilih wali santri target penerima raport"
+            icon={WhatsAppIcon}
+            variant="green"
+            size="md"
+            footer={
+                <div className="flex items-center w-full gap-3">
+                    <button onClick={onCancel} className="h-10 px-5 rounded-xl border border-[var(--color-border)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] transition-all">
+                        Batal
                     </button>
-                    <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">Target Pengiriman</span>
+                    <div className="flex-1" />
+                    <button onClick={handleConfirm} disabled={selectedIds.size === 0} className="h-10 px-6 rounded-xl bg-green-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-green-500/20 hover:bg-green-600 transition-all flex items-center gap-2 disabled:opacity-50">
+                        <WhatsAppIcon className="w-4 h-4" />
+                        Kirim ke {selectedIds.size} Santri
+                    </button>
                 </div>
-                {/* Scrollable list */}
-                <div className="p-3 space-y-1.5 max-h-[220px] overflow-y-auto custom-scrollbar bg-[var(--color-surface)]">
-                    {queue.map((s, idx) => {
-                        const isSelected = selectedIds.has(s.id)
-                        return (
-                            <button key={s.id} type="button"
-                                onClick={() => toggleOne(s.id)}
-                                className={`w-full flex items-center gap-3 p-2.5 rounded-xl border text-left transition-all ${isSelected ? 'bg-green-500/5 border-green-500/20' : 'border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]'}`}>
-                                {/* Checkbox */}
-                                <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${isSelected ? 'bg-green-500 border-green-500' : 'border-[var(--color-border)] bg-white'}`}>
-                                    {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
-                                </div>
-                                {/* Index + Name */}
-                                <div className="flex items-center gap-2 flex-1 min-w-0">
-                                    <span className="text-[9px] font-black text-[var(--color-text-muted)] w-5 shrink-0">{idx + 1}</span>
-                                    <div className="min-w-0">
-                                        <div className="text-[11px] font-black text-[var(--color-text)] truncate">{s.name}</div>
-                                    </div>
-                                </div>
-                                {/* Phone Number */}
-                                <div className="text-[10px] font-black text-[var(--color-text-muted)] px-2">
-                                    {s.phone ? (s.phone.length > 8 ? s.phone.substring(0, 4) + '****' + s.phone.slice(-4) : s.phone) : '—'}
-                                </div>
-                            </button>
-                        )
-                    })}
+            }
+        >
+            <div className="space-y-4">
+                {/* Header info */}
+                <div className="p-4 rounded-3xl bg-amber-500/5 border border-amber-500/15 text-[12px] text-amber-700 dark:text-amber-400 font-bold leading-relaxed">
+                    Sistem akan mengirim pesan secara otomatis di latar belakang (Background API). Pastikan token API (Fonnte) Anda valid dan kuota mencukupi agar proses berjalan lancar.
                 </div>
-            </div>
 
-            <div className="flex items-center w-full gap-3 pt-2">
-                <button onClick={onCancel} className="h-11 px-5 rounded-xl border border-[var(--color-border)] text-sm font-black text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] transition-all">
-                    Batal
-                </button>
-                <div className="flex-1" />
-                <button onClick={handleConfirm} disabled={selectedIds.size === 0} className="h-11 px-6 rounded-xl bg-green-500 text-white text-sm font-black shadow-lg shadow-green-500/20 hover:bg-green-600 transition-all flex items-center gap-2 disabled:opacity-50">
-                    <WhatsAppIcon className="w-4 h-4" />
-                    Kirim ke {selectedIds.size} Santri
-                </button>
+                {/* Document Settings */}
+                <div className="p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] space-y-3">
+                    <div className="flex items-center gap-2">
+                        <ClipboardList className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Pengaturan Dokumen Raport</p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1 text-left">
+                            <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">Bahasa Raport</label>
+                            <RichSelect
+                                value={selectedLang}
+                                onChange={setSelectedLang}
+                                options={langOptions}
+                                small
+                            />
+                        </div>
+                        <div className="space-y-1 text-left">
+                            <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">Ukuran Kertas</label>
+                            <RichSelect
+                                value={selectedPageSize}
+                                onChange={setSelectedPageSize}
+                                options={pageSizeOptions}
+                                small
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* List */}
+                <div className="border border-[var(--color-border)] rounded-2xl bg-[var(--color-surface)] overflow-hidden shadow-sm">
+                    {/* Select All header */}
+                    <div className="flex items-center justify-between px-4 py-3 bg-[var(--color-surface-alt)] border-b border-[var(--color-border)]">
+                        <button onClick={toggleAll} className="flex items-center gap-2 text-[10px] font-black text-[var(--color-text)] hover:text-green-600 transition-colors">
+                            <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${selectedIds.size === queue.length ? 'bg-green-500 border-green-500' : 'border-[var(--color-border)] bg-white'}`}>
+                                {selectedIds.size === queue.length && <Check className="w-2.5 h-2.5 text-white" />}
+                            </div>
+                            Pilih Semua ({queue.length})
+                        </button>
+                        <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">Target Pengiriman</span>
+                    </div>
+                    {/* Scrollable list */}
+                    <div className="p-3 space-y-1.5 max-h-[220px] overflow-y-auto custom-scrollbar bg-[var(--color-surface)]">
+                        {queue.map((s, idx) => {
+                            const isSelected = selectedIds.has(s.id)
+                            return (
+                                <button key={s.id} type="button"
+                                    onClick={() => toggleOne(s.id)}
+                                    className={`w-full flex items-center gap-3 p-2.5 rounded-xl border text-left transition-all ${isSelected ? 'bg-green-500/5 border-green-500/20' : 'border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]'}`}>
+                                    {/* Checkbox */}
+                                    <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${isSelected ? 'bg-green-500 border-green-500' : 'border-[var(--color-border)] bg-white'}`}>
+                                        {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
+                                    </div>
+                                    {/* Index + Name */}
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                        <span className="text-[9px] font-black text-[var(--color-text-muted)] w-5 shrink-0">{idx + 1}</span>
+                                        <div className="min-w-0">
+                                            <div className="text-[11px] font-black text-[var(--color-text)] truncate">{s.name}</div>
+                                        </div>
+                                    </div>
+                                    {/* Phone Number */}
+                                    <div className="text-[10px] font-black text-[var(--color-text-muted)] px-2">
+                                        {s.phone ? (s.phone.length > 8 ? s.phone.substring(0, 4) + '****' + s.phone.slice(-4) : s.phone) : '—'}
+                                    </div>
+                                </button>
+                            )
+                        })}
+                    </div>
+                </div>
             </div>
-        </div>
+        </Modal>
     )
 })
 

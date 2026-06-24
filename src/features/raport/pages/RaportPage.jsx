@@ -3239,26 +3239,25 @@ export default function RaportPage() {
                 </Suspense>
 
                 {/* WA Blast Confirm Modal */}
-                <Modal
-                    isOpen={!!waBlastConfirm}
-                    onClose={() => setWaBlastConfirm(null)}
-                    title="Konfirmasi WA Blast"
-                    description="Preview dan pilih wali santri target penerima raport"
-                    icon={WhatsAppIcon}
-                    variant="green"
-                    size="md"
-                >
-                    {waBlastConfirm && (
-                        <WaBlastConfirmContent
-                            queue={waBlastConfirm.queue}
-                            onConfirm={(selectedQueue) => {
-                                setWaBlastConfirm(null)
+                {waBlastConfirm && (
+                    <WaBlastConfirmContent
+                        isOpen={!!waBlastConfirm}
+                        onClose={() => setWaBlastConfirm(null)}
+                        queue={waBlastConfirm.queue}
+                        currentLang={lang}
+                        currentPageSize={pageSize}
+                        onConfirm={(selectedQueue, newLang, newPageSize) => {
+                            setLang(newLang)
+                            setPageSize(newPageSize)
+                            setWaBlastConfirm(null)
+                            // Tunggu satu frame agar React selesai me-render printContainerRef dengan opsi baru
+                            setTimeout(() => {
                                 runWaBlast(selectedQueue, waBlastAbortRef)
-                            }}
-                            onCancel={() => setWaBlastConfirm(null)}
-                        />
-                    )}
-                </Modal>
+                            }, 150)
+                        }}
+                        onCancel={() => setWaBlastConfirm(null)}
+                    />
+                )}
 
                 {/* WA Blast Progress Modal */}
                 <Modal
