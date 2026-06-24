@@ -39,6 +39,7 @@ import {
 import { translitToAr, translitClassToAr, loadTranslitData } from '@utils/reports/translitData'
 import { RadarChart, SparklineTrend } from '@features/raport/components/RaportCharts'
 import RaportPrintCard from '@features/raport/components/RaportPrintCard'
+import RaportLayoutSettings, { loadLayoutConfig } from '@features/raport/components/RaportLayoutSettings'
 import StudentRow, { ExtraInput, ExtraTextarea } from '@features/raport/components/RaportRecordRow'
 import BulkActionBar from '@features/raport/components/BulkActionBar'
 import { ShortcutModalContent, WaBlastConfirmContent, WaBlastProgressContent, ZipBlastProgressContent } from '@features/raport/components/RaportModals'
@@ -87,6 +88,7 @@ function getPortalContainer(id) {
 export default function RaportPage() {
     const printContainerRef = useRef(null)
     const silentPrintRef = useRef(false) // skip executePrint saat generate PDF untuk WA
+    const [layoutConfig, setLayoutConfig] = useState(() => loadLayoutConfig())
 
     // ── Hooks integration ──
     const core = useRaportCore()
@@ -1423,7 +1425,7 @@ export default function RaportPage() {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Outfit:wght@700;900&family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;900&display=block" rel="stylesheet">
     <style>
-        @page { size: A4; margin: 0; }
+        @page { size: ${pageSize === 'f4' ? '215mm 330mm' : 'A4'}; margin: 0; }
         
         /* CSS variables biar konsisten */
         :root {
@@ -1489,7 +1491,7 @@ export default function RaportPage() {
                 setPrintRenderedCount(0);
             }, 800);
         }
-    }, [selectedClass, bulanObj, selectedYear, addToast, profile, selectedMonth])
+    }, [selectedClass, bulanObj, selectedYear, addToast, profile, selectedMonth, pageSize])
 
     useEffect(() => {
         if (!printQueue.length || printRenderedCount < printQueue.length) return
@@ -1515,7 +1517,7 @@ export default function RaportPage() {
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
                 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Outfit:wght@700;900&family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
                 <style>
-                    @page{size:A4;margin:0}body{margin:0;padding:0;font-family:'Inter',sans-serif;background:white}.raport-card{page-break-after:always;box-sizing:border-box}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+                    @page{size:${pageSize === 'f4' ? '215mm 330mm' : 'A4'};margin:0}body{margin:0;padding:0;font-family:'Inter',sans-serif;background:white}.raport-card{page-break-after:always;box-sizing:border-box}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
                 </style></head><body>${html}</body></html>`)
             win.document.close();
             win.focus();
@@ -1549,7 +1551,7 @@ export default function RaportPage() {
             }
         }
         setTimeout(() => tryExport(), 300)
-    }, [pendingExport, archivePreview, addToast])
+    }, [pendingExport, archivePreview, addToast, pageSize])
 
     // ─── Render helpers ───────────────────────────────────────────────────────
 
@@ -2211,6 +2213,11 @@ export default function RaportPage() {
                                 <ArrowLeft className="w-3.5 h-3.5 mr-1.5" /> Kembali ke Input
                             </button>
                         </div>
+
+                        <RaportLayoutSettings
+                            config={layoutConfig}
+                            onChange={setLayoutConfig}
+                        />
                     </div>
 
                     {/* Right: Preview Area - Unified in one card */}
@@ -2366,6 +2373,7 @@ export default function RaportPage() {
                                                     selectedSemester={selectedSemester}
                                                     academicYear={academicYear}
                                                     selectedClass={selectedClass}
+                                                    layoutConfig={layoutConfig}
                                                 />
                                             )}
                                         </div>
@@ -2756,6 +2764,7 @@ export default function RaportPage() {
                                                         selectedSemester={entry.semester || 1}
                                                         academicYear={entry.academic_year || ''}
                                                         selectedClass={pClass}
+                                                        layoutConfig={layoutConfig}
                                                     />
                                                 </div>
                                             </div>
@@ -3168,7 +3177,7 @@ export default function RaportPage() {
                 {printQueue.length > 0 && (
                     <div ref={printContainerRef} style={{ position: 'fixed', left: '-9999px', top: 0, visibility: 'hidden', pointerEvents: 'none' }}>
                         {printStudents.filter(s => printQueue.includes(s.id)).map(s => (
-                            <RaportPrintCard key={s.id} student={s} scores={printScores[s.id]} extra={printExtras[s.id]} bulanObj={printBulan} tahun={printYear} musyrif={printMusyrif} className={printClass} lang={printLang} settings={settings} pageSize={pageSize} catatanArab={catatanArabMap[s.id]} studentIndex={printStudents.findIndex(x => x.id === s.id) + 1} onRendered={() => setPrintRenderedCount(c => c + 1)} reportType={printReportType} selectedSemester={printSemester} academicYear={printAcademicYear} selectedClass={printSelectedClassResolved} />
+                            <RaportPrintCard key={s.id} student={s} scores={printScores[s.id]} extra={printExtras[s.id]} bulanObj={printBulan} tahun={printYear} musyrif={printMusyrif} className={printClass} lang={printLang} settings={settings} pageSize={pageSize} catatanArab={catatanArabMap[s.id]} studentIndex={printStudents.findIndex(x => x.id === s.id) + 1} onRendered={() => setPrintRenderedCount(c => c + 1)} reportType={printReportType} selectedSemester={printSemester} academicYear={printAcademicYear} selectedClass={printSelectedClassResolved} layoutConfig={layoutConfig} />
                         ))}
                     </div>
                 )}
@@ -3698,10 +3707,11 @@ export default function RaportPage() {
                                                         pageSize={pageSize}
                                                         catatanArab={fsCatatanArab}
                                                         studentIndex={fsStudentsList.findIndex(s => s.id === fsStudent?.id) + 1}
-                                                         reportType={fsReportType}
-                                                         selectedSemester={fsSemester}
-                                                         academicYear={fsAcademicYear}
-                                                         selectedClass={fsSelectedClass}
+                                                        reportType={fsReportType}
+                                                        selectedSemester={fsSemester}
+                                                        academicYear={fsAcademicYear}
+                                                        selectedClass={fsSelectedClass}
+                                                        layoutConfig={layoutConfig}
                                                     />
                                                 )}
                                             </div>

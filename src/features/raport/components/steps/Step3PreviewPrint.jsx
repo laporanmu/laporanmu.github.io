@@ -7,6 +7,7 @@ import StatsCarousel from '@shared/components/StatsCarousel'
 import { StatCard } from '@shared/components/DataDisplay'
 import Modal from '@shared/components/Modal'
 import RaportPrintCard from '@features/raport/components/RaportPrintCard'
+import RaportLayoutSettings from '@features/raport/components/RaportLayoutSettings'
 import { BULAN } from '@utils/reports/raportConstants'
 import { isComplete } from '@utils/reports/raportHelpers'
 
@@ -47,6 +48,8 @@ export default function Step3PreviewPrint({
     reportType = 'bulanan',
     selectedSemester = 1,
     academicYear = '',
+    layoutConfig,
+    setLayoutConfig,
 }) {
     const previewStudent = previewStudentId ? students.find(s => s.id === previewStudentId) : students[0]
     const rtObj = RAPORT_TYPES[reportType] || RAPORT_TYPES.bulanan
@@ -224,6 +227,14 @@ export default function Step3PreviewPrint({
                             <ArrowLeft className="w-3.5 h-3.5 mr-1.5" /> Kembali ke Input
                         </button>
                     </div>
+
+                    {/* Layout Customization Panel */}
+                    {layoutConfig && setLayoutConfig && (
+                        <RaportLayoutSettings
+                            config={layoutConfig}
+                            onChange={setLayoutConfig}
+                        />
+                    )}
                 </div>
 
                 {/* Right: Preview Area */}
@@ -449,6 +460,7 @@ export default function Step3PreviewPrint({
                                                 selectedSemester={selectedSemester}
                                                 academicYear={academicYear}
                                                 selectedClass={selectedClass}
+                                                layoutConfig={layoutConfig}
                                             />
                                         )}
                                     </div>
