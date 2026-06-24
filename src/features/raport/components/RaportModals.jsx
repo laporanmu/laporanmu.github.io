@@ -10,7 +10,7 @@ import RichSelect from '@shared/components/RichSelect'
 // Simple SVG replacement for WhatsApp icon
 const WhatsAppIcon = (props) => (
     <svg viewBox="0 0 24 24" fill="currentColor" className={props.className} style={props.style} width={props.width || "1em"} height={props.height || "1em"}>
-        <path d="M12.012 1c-6.067 0-11 4.934-11 11a10.957 10.957 0 001.605 5.679L1 23l5.52-1.748A10.949 10.949 0 0012.012 23c6.067 0 11-4.933 11-11s-4.933-11-11-11zm5.12 15.65c-.218.614-1.077 1.15-1.636 1.218-.557.068-1.229.098-3.003-.618-2.28-.92-3.738-3.23-3.852-3.38-.114-.15-.92-1.227-.92-2.355 0-1.127.59-1.682.802-1.912.213-.23.46-.287.613-.287.154 0 .307.003.44.01.14.007.327-.052.51.393.187.456.64 1.56.697 1.674.057.115.095.249.019.402-.077.153-.153.249-.306.42-.154.173-.326.288-.135.614.19.326.85 1.397 1.82 2.261.97.864 1.787 1.132 2.094 1.266.307.135.48.115.652-.076.173-.192.748-.864.947-1.161.2-.298.4-.249.671-.15.27.097 1.722.812 2.018.96.297.147.494.22.567.346.073.125.073.722-.145 1.336z"/>
+        <path d="M12.012 1c-6.067 0-11 4.934-11 11a10.957 10.957 0 001.605 5.679L1 23l5.52-1.748A10.949 10.949 0 0012.012 23c6.067 0 11-4.933 11-11s-4.933-11-11-11zm5.12 15.65c-.218.614-1.077 1.15-1.636 1.218-.557.068-1.229.098-3.003-.618-2.28-.92-3.738-3.23-3.852-3.38-.114-.15-.92-1.227-.92-2.355 0-1.127.59-1.682.802-1.912.213-.23.46-.287.613-.287.154 0 .307.003.44.01.14.007.327-.052.51.393.187.456.64 1.56.697 1.674.057.115.095.249.019.402-.077.153-.153.249-.306.42-.154.173-.326.288-.135.614.19.326.85 1.397 1.82 2.261.97.864 1.787 1.132 2.094 1.266.307.135.48.115.652-.076.173-.192.748-.864.947-1.161.2-.298.4-.249.671-.15.27.097 1.722.812 2.018.96.297.147.494.22.567.346.073.125.073.722-.145 1.336z" />
     </svg>
 )
 
@@ -59,7 +59,7 @@ export const WaBlastConfirmContent = memo(({ isOpen, onClose, queue, onConfirm, 
     const [selectedIds, setSelectedIds] = useState(new Set(queue.map(s => s.id)))
     const [selectedLang, setSelectedLang] = useState(currentLang)
     const [selectedPageSize, setSelectedPageSize] = useState(currentPageSize)
-    
+
     const handleConfirm = () => {
         onConfirm(queue.filter(s => selectedIds.has(s.id)), selectedLang, selectedPageSize)
     }
@@ -108,21 +108,24 @@ export const WaBlastConfirmContent = memo(({ isOpen, onClose, queue, onConfirm, 
                 </div>
             }
         >
-            <div className="space-y-4">
+            <div className="space-y-3">
                 {/* Header info */}
-                <div className="p-4 rounded-3xl bg-amber-500/5 border border-amber-500/15 text-[12px] text-amber-700 dark:text-amber-400 font-bold leading-relaxed">
-                    Sistem akan mengirim pesan secara otomatis di latar belakang (Background API). Pastikan token API (Fonnte) Anda valid dan kuota mencukupi agar proses berjalan lancar.
+                <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/5 border border-amber-500/10 text-[11px] text-amber-800 dark:text-amber-300 font-semibold leading-relaxed">
+                    <Info className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                    <p className="flex-1">
+                        Sistem mengirim pesan otomatis di latar belakang (Background API). Pastikan token API (Fonnte) valid dan kuota mencukupi agar proses lancar.
+                    </p>
                 </div>
 
                 {/* Document Settings */}
-                <div className="p-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] space-y-3">
-                    <div className="flex items-center gap-2">
+                <div className="p-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-alt)] space-y-2">
+                    <div className="flex items-center gap-1.5">
                         <ClipboardList className="w-3.5 h-3.5 text-[var(--color-primary)]" />
-                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text)]">Pengaturan Dokumen Raport</p>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text)]">Pengaturan Dokumen Raport</p>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="space-y-1 text-left">
-                            <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">Bahasa Raport</label>
+                        <div className="space-y-0.5 text-left">
+                            <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">Bahasa Raport</label>
                             <RichSelect
                                 value={selectedLang}
                                 onChange={setSelectedLang}
@@ -130,8 +133,8 @@ export const WaBlastConfirmContent = memo(({ isOpen, onClose, queue, onConfirm, 
                                 small
                             />
                         </div>
-                        <div className="space-y-1 text-left">
-                            <label className="text-[10px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">Ukuran Kertas</label>
+                        <div className="space-y-0.5 text-left">
+                            <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">Ukuran Kertas</label>
                             <RichSelect
                                 value={selectedPageSize}
                                 onChange={setSelectedPageSize}
@@ -155,16 +158,16 @@ export const WaBlastConfirmContent = memo(({ isOpen, onClose, queue, onConfirm, 
                         <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">Target Pengiriman</span>
                     </div>
                     {/* Scrollable list */}
-                    <div className="p-3 space-y-1.5 max-h-[220px] overflow-y-auto custom-scrollbar bg-[var(--color-surface)]">
+                    <div className="p-2 space-y-1 max-h-[210px] overflow-y-auto custom-scrollbar bg-[var(--color-surface)]">
                         {queue.map((s, idx) => {
                             const isSelected = selectedIds.has(s.id)
                             return (
                                 <button key={s.id} type="button"
                                     onClick={() => toggleOne(s.id)}
-                                    className={`w-full flex items-center gap-3 p-2.5 rounded-xl border text-left transition-all ${isSelected ? 'bg-green-500/5 border-green-500/20' : 'border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]'}`}>
+                                    className={`w-full flex items-center gap-3 py-1.5 px-2.5 rounded-lg border text-left transition-all ${isSelected ? 'bg-green-500/5 border-green-500/20' : 'border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]'}`}>
                                     {/* Checkbox */}
-                                    <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${isSelected ? 'bg-green-500 border-green-500' : 'border-[var(--color-border)] bg-white'}`}>
-                                        {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
+                                    <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition-all ${isSelected ? 'bg-green-500 border-green-500' : 'border-[var(--color-border)] bg-white'}`}>
+                                        {isSelected && <Check className="w-2 h-2 text-white" />}
                                     </div>
                                     {/* Index + Name */}
                                     <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -196,11 +199,10 @@ export const WaBlastProgressContent = memo(({ progress, total, done, failed, act
             {/* Header: Icon & Title */}
             <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
-                        isFinished 
-                            ? 'bg-emerald-500/10 text-emerald-500' 
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${isFinished
+                            ? 'bg-emerald-500/10 text-emerald-500'
                             : 'bg-green-500/10 text-green-500'
-                    }`}>
+                        }`}>
                         {isFinished ? (
                             <Check className="w-6 h-6" />
                         ) : (
@@ -226,10 +228,9 @@ export const WaBlastProgressContent = memo(({ progress, total, done, failed, act
 
             {/* Progress Bar Container */}
             <div className="h-4 w-full rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] p-1">
-                <div 
-                    className={`h-full rounded-full transition-all duration-500 ${
-                        isFinished ? 'bg-emerald-500' : 'bg-green-500'
-                    }`} 
+                <div
+                    className={`h-full rounded-full transition-all duration-500 ${isFinished ? 'bg-emerald-500' : 'bg-green-500'
+                        }`}
                     style={{ width: `${pct}%` }}
                 />
             </div>
@@ -269,7 +270,7 @@ export const WaBlastProgressContent = memo(({ progress, total, done, failed, act
             {/* Actions */}
             {active && onCancel && (
                 <div className="flex justify-end pt-2">
-                    <button 
+                    <button
                         onClick={onCancel}
                         className="h-10 px-5 rounded-xl border border-red-500/20 text-red-500 text-[11px] font-black uppercase tracking-widest hover:bg-red-500/10 transition-all"
                     >
@@ -301,11 +302,10 @@ export const ZipBlastProgressContent = memo(({ progress, total, done, failed, ac
 
             <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${
-                        isFinished 
-                            ? 'bg-emerald-500/10 text-emerald-500 shadow-lg shadow-emerald-500/5' 
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${isFinished
+                            ? 'bg-emerald-500/10 text-emerald-500 shadow-lg shadow-emerald-500/5'
                             : 'bg-teal-500/10 text-teal-500 animate-pulse'
-                    }`}>
+                        }`}>
                         {isFinished ? (
                             <Check className="w-5 h-5" />
                         ) : (
@@ -331,10 +331,9 @@ export const ZipBlastProgressContent = memo(({ progress, total, done, failed, ac
 
             {/* Progress track */}
             <div className="relative h-4 w-full rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] p-1 overflow-hidden">
-                <div 
-                    className={`h-full rounded-full transition-all duration-500 relative overflow-hidden ${
-                        isFinished ? 'bg-emerald-500' : 'bg-gradient-to-r from-teal-400 to-emerald-500'
-                    }`} 
+                <div
+                    className={`h-full rounded-full transition-all duration-500 relative overflow-hidden ${isFinished ? 'bg-emerald-500' : 'bg-gradient-to-r from-teal-400 to-emerald-500'
+                        }`}
                     style={{ width: `${pct}%` }}
                 >
                     {/* Pulsing highlight effect */}
@@ -377,7 +376,7 @@ export const ZipBlastProgressContent = memo(({ progress, total, done, failed, ac
             {/* Actions */}
             {active && (
                 <div className="flex justify-end pt-1">
-                    <button 
+                    <button
                         onClick={onCancel}
                         className="h-10 px-5 rounded-xl border border-red-500/20 bg-red-500/8 hover:bg-red-500/15 text-red-500 text-[10px] font-black uppercase tracking-widest transition-all"
                     >
