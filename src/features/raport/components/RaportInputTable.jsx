@@ -641,7 +641,11 @@ export default function RaportInputTable({
                     <button
                         onClick={() => {
                             const withPhone = students.filter(s => s.phone && isComplete(scores[s.id] || {}, criteria))
-                            if (withPhone.length) setWaBlastConfirm({ queue: withPhone })
+                            if (withPhone.length) {
+                                setWaBlastConfirm({ queue: withPhone })
+                            } else {
+                                addToast('Belum ada santri dengan nomor WA & nilai lengkap', 'warning')
+                            }
                         }}
                         className="h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 flex items-center justify-center transition-all hover:bg-emerald-500/20"
                         title="Blast WA"
@@ -912,7 +916,11 @@ export default function RaportInputTable({
 
                             <button onClick={() => {
                                 const withPhone = students.filter(s => s.phone && isComplete(scores[s.id] || {}, criteria))
-                                if (withPhone.length) setWaBlastConfirm({ queue: withPhone })
+                                if (withPhone.length) {
+                                    setWaBlastConfirm({ queue: withPhone })
+                                } else {
+                                    addToast('Belum ada santri dengan nomor WA & nilai lengkap', 'warning')
+                                }
                             }} className="h-9 px-2.5 rounded-xl bg-green-500/10 border border-green-500/20 text-green-600 text-[9px] font-black flex items-center justify-center gap-1 transition-all hover:bg-green-500/20 flex-grow min-w-[36px] shrink-0" title="Blast WhatsApp Nilai">
                                 <WhatsAppIcon className="w-3 h-3" /> <span className="hidden lg:inline">Blast WA</span>
                             </button>
@@ -1336,16 +1344,17 @@ export default function RaportInputTable({
                                         </th>
                                         <th className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] sticky left-0 z-10" style={{ background: 'var(--color-surface-alt)', padding: '10px 0', textAlign: 'center', verticalAlign: 'middle', borderRight: '1px solid var(--color-border)', boxShadow: 'inset 0 -1px 0 var(--color-border)' }}>Santri</th>
                                         {criteria.map(k => (
-                                            <th key={k.key} style={{ padding: '8px 2px', textAlign: 'center', verticalAlign: 'middle', background: 'var(--color-surface-alt)', boxShadow: 'inset 0 -1px 0 var(--color-border)' }}>
-                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 0 }}>
+                                            <th key={k.key} title={k.id} style={{ padding: '8px 2px', textAlign: 'center', verticalAlign: 'middle', background: 'var(--color-surface-alt)', boxShadow: 'inset 0 -1px 0 var(--color-border)' }}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 0, overflow: 'hidden' }}>
                                                     <span style={{
                                                         fontSize: 9.5,
                                                         fontWeight: 900,
                                                         color: 'var(--color-text-muted)',
                                                         lineHeight: 1.2,
-                                                        whiteSpace: 'normal',
+                                                        whiteSpace: 'nowrap',
                                                         textAlign: 'center',
-                                                        wordBreak: 'break-word',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
                                                         width: '100%',
                                                         textTransform: 'uppercase',
                                                         letterSpacing: '0.5px'
@@ -1357,14 +1366,9 @@ export default function RaportInputTable({
                                         ))}
                                         {(rtObj.hasFisik || rtObj.hasAttendance) && (
                                             <th style={{ padding: '10px 8px', textAlign: 'center', verticalAlign: 'middle', background: 'var(--color-surface-alt)', boxShadow: 'inset 0 -1px 0 var(--color-border)' }}>
-                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                                                    <span style={{ fontSize: 10, fontWeight: 900, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>
-                                                        {rtObj.hasFisik && rtObj.hasAttendance ? 'Fisik & Kehadiran' : rtObj.hasFisik ? 'Fisik' : 'Kehadiran'}
-                                                    </span>
-                                                    <span style={{ fontSize: 8, color: 'var(--color-text-muted)', opacity: 0.55, fontWeight: 600 }}>
-                                                        {rtObj.hasFisik && rtObj.hasAttendance ? 'BB · TB · Skt · Izin · Alpa · Plg' : rtObj.hasFisik ? 'BB · TB' : 'Skt · Izin · Alpa · Plg'}
-                                                    </span>
-                                                </div>
+                                                <span style={{ fontSize: 10, fontWeight: 900, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>
+                                                    {rtObj.hasFisik && rtObj.hasAttendance ? 'Fisik & Kehadiran' : rtObj.hasFisik ? 'Fisik' : 'Kehadiran'}
+                                                </span>
                                             </th>
                                         )}
                                         {(rtObj.hasHafalan || rtObj.hasCatatan) && (

@@ -3236,13 +3236,18 @@ export default function RaportPage() {
                     isOpen={!!waBlastConfirm}
                     onClose={() => setWaBlastConfirm(null)}
                     title="Konfirmasi WA Blast"
+                    description="Preview dan pilih wali santri target penerima raport"
                     icon={WhatsAppIcon}
                     variant="green"
+                    size="md"
                 >
                     {waBlastConfirm && (
                         <WaBlastConfirmContent
-                            count={waBlastConfirm.queue.length}
-                            onConfirm={() => runWaBlast(waBlastConfirm.queue)}
+                            queue={waBlastConfirm.queue}
+                            onConfirm={(selectedQueue) => {
+                                setWaBlastConfirm(null)
+                                runWaBlast(selectedQueue, waBlastAbortRef)
+                            }}
                             onCancel={() => setWaBlastConfirm(null)}
                         />
                     )}
@@ -3253,6 +3258,7 @@ export default function RaportPage() {
                     isOpen={!!waBlast}
                     onClose={() => !waBlast?.active && setWaBlast(null)}
                     title="WA Blast Progress"
+                    description="Pantau proses pengiriman pesan WhatsApp ke wali santri"
                     icon={WhatsAppIcon}
                     showClose={!waBlast?.active}
                 >
@@ -3260,8 +3266,15 @@ export default function RaportPage() {
                         <WaBlastProgressContent
                             progress={waBlast.done + waBlast.failed}
                             total={waBlast.queue.length}
+                            done={waBlast.done}
+                            failed={waBlast.failed}
                             activeName={waBlast.active && waBlast.queue[waBlast.idx]?.name}
-                            isFailed={waBlast.failed > 0}
+                            active={waBlast.active}
+                            onCancel={() => {
+                                waBlastAbortRef.current = true
+                                setWaBlast(prev => prev ? { ...prev, active: false } : null)
+                                addToast('Membatalkan WA Blast...', 'info')
+                            }}
                         />
                     )}
                 </Modal>

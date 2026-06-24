@@ -73,12 +73,12 @@ export const KRITERIA = [
 ]
 
 export const FISIK_FIELDS = [
-    { key: 'berat_badan', label: 'BB', icon: Scale, color: '#6366f1', unit: 'kg' },
-    { key: 'tinggi_badan', label: 'TB', icon: Ruler, color: '#06b6d4', unit: 'cm' },
-    { key: 'hari_sakit', label: 'Skt', icon: HeartPulse, color: '#ef4444', unit: 'hr' },
-    { key: 'hari_izin', label: 'Izin', icon: AlertCircle, color: '#f59e0b', unit: 'hr' },
-    { key: 'hari_alpa', label: 'Alpa', icon: AlertTriangle, color: '#ef4444', unit: 'hr' },
-    { key: 'hari_pulang', label: 'Plg', icon: DoorOpen, color: '#8b5cf6', unit: 'x' },
+    { key: 'berat_badan', label: 'BB', fullLabel: 'Berat Badan', icon: Scale, color: '#6366f1', unit: 'kg' },
+    { key: 'tinggi_badan', label: 'TB', fullLabel: 'Tinggi Badan', icon: Ruler, color: '#06b6d4', unit: 'cm' },
+    { key: 'hari_sakit', label: 'Skt', fullLabel: 'Hari Sakit', icon: HeartPulse, color: '#ef4444', unit: 'hr' },
+    { key: 'hari_izin', label: 'Izin', fullLabel: 'Hari Izin', icon: AlertCircle, color: '#f59e0b', unit: 'hr' },
+    { key: 'hari_alpa', label: 'Alpa', fullLabel: 'Hari Alpa', icon: AlertTriangle, color: '#ef4444', unit: 'hr' },
+    { key: 'hari_pulang', label: 'Plg', fullLabel: 'Hari Pulang', icon: DoorOpen, color: '#8b5cf6', unit: 'x' },
 ]
 
 export const HAFALAN_FIELDS = [

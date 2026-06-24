@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useState } from 'react'
 import {
     Keyboard, X, ChevronLeft, ChevronRight,
     Search, Info, Lightbulb, Save,
@@ -53,64 +53,170 @@ export const ShortcutModalContent = memo(() => {
 
 // ─── WA Blast Confirm Content ────────────────────────────────────────────────
 
-export const WaBlastConfirmContent = memo(({ count, onConfirm, onCancel }) => (
-    <div className="space-y-6 text-center">
-        <div className="p-1 inline-block">
-             <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center">
-                <WhatsAppIcon className="w-10 h-10 text-green-500" />
+export const WaBlastConfirmContent = memo(({ queue, onConfirm, onCancel }) => {
+    const [selectedIds, setSelectedIds] = useState(new Set(queue.map(s => s.id)))
+    
+    const handleConfirm = () => {
+        onConfirm(queue.filter(s => selectedIds.has(s.id)))
+    }
+
+    const toggleAll = () => {
+        if (selectedIds.size === queue.length) setSelectedIds(new Set())
+        else setSelectedIds(new Set(queue.map(s => s.id)))
+    }
+
+    const toggleOne = (id) => {
+        const newSet = new Set(selectedIds)
+        if (newSet.has(id)) newSet.delete(id)
+        else newSet.add(id)
+        setSelectedIds(newSet)
+    }
+
+    return (
+        <div className="space-y-4">
+            {/* Header info */}
+            <div className="p-4 rounded-3xl bg-amber-500/5 border border-amber-500/15 text-[12px] text-amber-700 dark:text-amber-400 font-bold leading-relaxed">
+                Sistem akan mengirim pesan secara otomatis di latar belakang (Background API). Pastikan token API (Fonnte) Anda valid dan kuota mencukupi agar proses berjalan lancar.
+            </div>
+
+            {/* List */}
+            <div className="border border-[var(--color-border)] rounded-2xl bg-[var(--color-surface)] overflow-hidden shadow-sm">
+                {/* Select All header */}
+                <div className="flex items-center justify-between px-4 py-3 bg-[var(--color-surface-alt)] border-b border-[var(--color-border)]">
+                    <button onClick={toggleAll} className="flex items-center gap-2 text-[10px] font-black text-[var(--color-text)] hover:text-green-600 transition-colors">
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${selectedIds.size === queue.length ? 'bg-green-500 border-green-500' : 'border-[var(--color-border)] bg-white'}`}>
+                            {selectedIds.size === queue.length && <Check className="w-2.5 h-2.5 text-white" />}
+                        </div>
+                        Pilih Semua ({queue.length})
+                    </button>
+                    <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">Target Pengiriman</span>
+                </div>
+                {/* Scrollable list */}
+                <div className="p-3 space-y-1.5 max-h-[220px] overflow-y-auto custom-scrollbar bg-[var(--color-surface)]">
+                    {queue.map((s, idx) => {
+                        const isSelected = selectedIds.has(s.id)
+                        return (
+                            <button key={s.id} type="button"
+                                onClick={() => toggleOne(s.id)}
+                                className={`w-full flex items-center gap-3 p-2.5 rounded-xl border text-left transition-all ${isSelected ? 'bg-green-500/5 border-green-500/20' : 'border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]'}`}>
+                                {/* Checkbox */}
+                                <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${isSelected ? 'bg-green-500 border-green-500' : 'border-[var(--color-border)] bg-white'}`}>
+                                    {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
+                                </div>
+                                {/* Index + Name */}
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    <span className="text-[9px] font-black text-[var(--color-text-muted)] w-5 shrink-0">{idx + 1}</span>
+                                    <div className="min-w-0">
+                                        <div className="text-[11px] font-black text-[var(--color-text)] truncate">{s.name}</div>
+                                    </div>
+                                </div>
+                                {/* Phone Number */}
+                                <div className="text-[10px] font-black text-[var(--color-text-muted)] px-2">
+                                    {s.phone ? (s.phone.length > 8 ? s.phone.substring(0, 4) + '****' + s.phone.slice(-4) : s.phone) : '—'}
+                                </div>
+                            </button>
+                        )
+                    })}
+                </div>
+            </div>
+
+            <div className="flex items-center w-full gap-3 pt-2">
+                <button onClick={onCancel} className="h-11 px-5 rounded-xl border border-[var(--color-border)] text-sm font-black text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] transition-all">
+                    Batal
+                </button>
+                <div className="flex-1" />
+                <button onClick={handleConfirm} disabled={selectedIds.size === 0} className="h-11 px-6 rounded-xl bg-green-500 text-white text-sm font-black shadow-lg shadow-green-500/20 hover:bg-green-600 transition-all flex items-center gap-2 disabled:opacity-50">
+                    <WhatsAppIcon className="w-4 h-4" />
+                    Kirim ke {selectedIds.size} Santri
+                </button>
             </div>
         </div>
-        <div className="space-y-1">
-            <h3 className="text-xl font-black text-[var(--color-text)] tracking-tight">WhatsApp Blast</h3>
-            <p className="text-sm text-[var(--color-text-muted)] font-medium">Kirim raport ke {count} santri sekaligus</p>
-        </div>
+    )
+})
 
-        <div className="p-5 rounded-3xl bg-amber-500/5 border border-amber-500/15 text-[13px] text-amber-700 dark:text-amber-400 font-bold leading-relaxed">
-            Pastikan browser mengizinkan Popup agar proses bisa berjalan lancar. Setiap pesan akan membuka tab WhatsApp baru secara otomatis.
-        </div>
-
-        <div className="flex gap-3 pt-2">
-            <button onClick={onCancel} className="flex-1 h-12 rounded-2xl border border-[var(--color-border)] text-sm font-black text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] transition-all">
-                Batal
-            </button>
-            <button onClick={onConfirm} className="flex-1 h-12 rounded-2xl bg-green-500 text-white text-sm font-black shadow-lg shadow-green-500/20 hover:bg-green-600 transition-all">
-                Mulai Kirim
-            </button>
-        </div>
-    </div>
-))
-
-// ─── WA Blast Progress Content ───────────────────────────────────────────────
-
-export const WaBlastProgressContent = memo(({ progress, total, activeName, isFailed }) => {
+export const WaBlastProgressContent = memo(({ progress, total, done, failed, activeName, active, onCancel }) => {
     const pct = total > 0 ? Math.round((progress / total) * 100) : 0
+    const isFinished = pct === 100 || !active
+
     return (
         <div className="space-y-6 py-4">
+            {/* Header: Icon & Title */}
             <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${pct === 100 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-indigo-500/10 text-indigo-500'}`}>
-                        {pct === 100 ? (
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+                        isFinished 
+                            ? 'bg-emerald-500/10 text-emerald-500' 
+                            : 'bg-green-500/10 text-green-500'
+                    }`}>
+                        {isFinished ? (
                             <Check className="w-6 h-6" />
                         ) : (
-                            <WhatsAppIcon className="w-6 h-6" />
+                            <div className="relative flex items-center justify-center">
+                                <WhatsAppIcon className="w-6 h-6" />
+                                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full animate-ping" />
+                            </div>
                         )}
                     </div>
                     <div>
-                        <p className="text-base font-black text-[var(--color-text)] tracking-tight">{pct === 100 ? 'Proses Selesai!' : 'Sedang Mengirim...'}</p>
-                        <p className="text-xs text-[var(--color-text-muted)] font-bold">{progress} dari {total} santri terproses</p>
+                        <p className="text-base font-black text-[var(--color-text)] tracking-tight">
+                            {isFinished ? 'Blast Selesai!' : 'Sedang Mengirim...'}
+                        </p>
+                        <p className="text-xs text-[var(--color-text-muted)] font-bold">
+                            {progress} dari {total} santri terproses
+                        </p>
                     </div>
                 </div>
-                <span className="text-2xl font-black text-[var(--color-text)]">{pct}%</span>
+                <span className={`text-3xl font-black tabular-nums tracking-tighter ${isFinished ? 'text-emerald-500' : 'text-[var(--color-text)]'}`}>
+                    {pct}<span className="text-lg opacity-50">%</span>
+                </span>
             </div>
 
-            <div className="h-4 w-full rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] overflow-hidden p-1">
-                <div className={`h-full rounded-full transition-all duration-700 shadow-sm ${pct === 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`} style={{ width: `${pct}%` }} />
+            {/* Progress Bar Container */}
+            <div className="h-4 w-full rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] p-1">
+                <div 
+                    className={`h-full rounded-full transition-all duration-500 ${
+                        isFinished ? 'bg-emerald-500' : 'bg-green-500'
+                    }`} 
+                    style={{ width: `${pct}%` }}
+                />
             </div>
 
-            {pct < 100 && activeName && (
-                <div className="p-5 rounded-3xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] animate-pulse">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">Sekarang:</p>
-                    <p className="text-base font-black text-[var(--color-text)]">{activeName}</p>
+            {/* Stats Breakdown */}
+            <div className="grid grid-cols-3 gap-3">
+                <div className="p-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/15 flex flex-col items-center">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-0.5">Terkirim</span>
+                    <span className="text-xl font-black text-emerald-600 tabular-nums">{done || 0}</span>
+                </div>
+                <div className="p-3 rounded-2xl bg-rose-500/5 border border-rose-500/15 flex flex-col items-center">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-rose-600 mb-0.5">Gagal</span>
+                    <span className="text-xl font-black text-rose-600 tabular-nums">{failed || 0}</span>
+                </div>
+                <div className="p-3 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] flex flex-col items-center">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-0.5">Tersisa</span>
+                    <span className="text-xl font-black text-[var(--color-text-muted)] tabular-nums">{Math.max(0, total - progress)}</span>
+                </div>
+            </div>
+
+            {/* Active processing element */}
+            {!isFinished && activeName && (
+                <div className="p-4 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] flex items-center justify-between gap-3 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] mb-1">Sekarang Mengirim Ke:</p>
+                        <p className="text-sm font-black text-[var(--color-text)] truncate">{activeName}</p>
+                    </div>
+                    <div className="w-6 h-6 rounded-full border-2 border-green-500/20 border-t-green-500 animate-spin shrink-0" />
+                </div>
+            )}
+
+            {/* Actions */}
+            {active && onCancel && (
+                <div className="flex justify-end pt-2">
+                    <button 
+                        onClick={onCancel}
+                        className="h-10 px-5 rounded-xl border border-red-500/20 text-red-500 text-[11px] font-black uppercase tracking-widest hover:bg-red-500/10 transition-all"
+                    >
+                        Batalkan Antrean
+                    </button>
                 </div>
             )}
         </div>

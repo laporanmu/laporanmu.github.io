@@ -247,16 +247,21 @@ const StudentRow = memo(({
             })}
             {(rtObj.hasFisik || rtObj.hasAttendance) && (
                 <td className="px-2 py-3" style={{ verticalAlign: 'middle' }}>
-                    <div className="grid grid-cols-2 gap-1.5">
+                    <div className="grid grid-cols-2 gap-x-1.5 gap-y-2">
                         {activeFisikFields.map(f => {
                             const IconComp = f.icon
                             return (
-                                <div key={f.key} className="flex items-center gap-1 rounded-md border border-[var(--color-border)] overflow-hidden" style={{ background: 'var(--color-surface)', height: 32 }}>
-                                    <div className="w-6 h-full flex items-center justify-center shrink-0" style={{ background: f.color + '18' }}>
-                                        <IconComp className="w-2.5 h-2.5" style={{ color: f.color }} />
+                                <div key={f.key} className="flex flex-col gap-0.5">
+                                    <span style={{ fontSize: 7.5, fontWeight: 900, color: f.color, letterSpacing: '0.4px', textTransform: 'uppercase', lineHeight: 1, paddingLeft: 2 }}>
+                                        {f.label}
+                                    </span>
+                                    <div title={`${f.fullLabel} (${f.unit})`} className="flex items-center gap-0 rounded-md border border-[var(--color-border)] overflow-hidden" style={{ background: 'var(--color-surface)', height: 28 }}>
+                                        <div className="w-6 h-full flex items-center justify-center shrink-0" style={{ background: f.color + '18' }}>
+                                            <IconComp className="w-2.5 h-2.5" style={{ color: f.color }} />
+                                        </div>
+                                        <ExtraInput type="number" inputMode="decimal" placeholder="—" value={ex[f.key] ?? ''} studentId={student.id} fieldKey={f.key} onCommit={onExtraChange} aria-label={f.fullLabel} className="flex-1 w-0 h-full text-[11px] font-bold text-center px-0.5 bg-transparent text-[var(--color-text)] outline-none appearance-none" />
+                                        <span className="text-[8px] text-[var(--color-text-muted)] font-bold pr-1 shrink-0">{f.unit}</span>
                                     </div>
-                                    <ExtraInput type="number" inputMode="decimal" placeholder="—" value={ex[f.key] ?? ''} studentId={student.id} fieldKey={f.key} onCommit={onExtraChange} aria-label={f.label} className="flex-1 w-0 h-full text-[11px] font-bold text-left px-1.5 bg-transparent text-[var(--color-text)] outline-none appearance-none" />
-                                    <span className="text-[9px] text-[var(--color-text-muted)] font-bold pr-1 shrink-0">{f.unit}</span>
                                 </div>
                             )
                         })}

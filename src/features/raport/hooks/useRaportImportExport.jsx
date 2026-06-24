@@ -255,7 +255,11 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
                 }
 
                 if (abortRef.current) break
-                const sent = await sendFonnteFile(phone, url, `Raport_${student.name.replace(/\s+/g, '_')}.pdf`)
+                
+                // Gunakan sendFonnteMessage (teks) dengan menyisipkan URL PDF karena Fonnte Free tidak support file
+                const message = buildWaMessage(student, url)
+                const sent = await sendFonnteMessage(phone, message)
+                
                 if (sent) done++
                 else failed++
 
@@ -266,7 +270,7 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef 
         }
         setWaBlast(prev => prev ? { ...prev, active: false } : null)
         addToast(`WA Blast selesai: ${done} terkirim, ${failed} gagal`, 'info')
-    }, [raportLinks, generatePDFBlob, uploadToSupabase, sendFonnteFile, addToast])
+    }, [raportLinks, generatePDFBlob, uploadToSupabase, sendFonnteMessage, buildWaMessage, addToast])
 
     // ── Blast ZIP ──
     const runZipBlast = useCallback(async (stuList, archEntry = null) => {
