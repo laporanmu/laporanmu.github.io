@@ -243,14 +243,7 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef,
                 background: white !important; margin: 0 !important; position: relative !important;
             }
             [style*="Traditional Arabic"], [dir="rtl"], .font-arabic, h1[style*="Amiri"], h2[style*="Amiri"], .school-name-ar, .school-subtitle-ar, [style*="rtl"] {
-                font-family: 'Amiri', serif !important;
                 letter-spacing: normal !important;
-            }
-            td[style*="Traditional Arabic"], th[style*="Traditional Arabic"], 
-            td[dir="rtl"], th[dir="rtl"], 
-            td.font-arabic, th.font-arabic, 
-            td[style*="rtl"], th[style*="rtl"] {
-                line-height: 1.45 !important;
             }
             * {
                 -webkit-print-color-adjust: exact !important;
@@ -259,8 +252,6 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef,
             }
             img {
                 mix-blend-mode: multiply !important;
-                max-width: 100% !important;
-                height: auto !important;
             }
         `
         styleClones.forEach(s => wrapper.appendChild(s))
@@ -333,6 +324,9 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef,
             if (!blob || blob.size < 5000) throw new Error('PDF terlalu kecil')
             return { blob, filename }
         } finally {
+            if (cardEl && printContainerRef.current && !printContainerRef.current.contains(cardEl)) {
+                printContainerRef.current.appendChild(cardEl)
+            }
             if (document.body.contains(wrapper)) document.body.removeChild(wrapper)
             setPrintQueue([]); setPrintRenderedCount(0)
         }
