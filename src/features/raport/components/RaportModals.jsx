@@ -158,7 +158,7 @@ export const WaBlastConfirmContent = memo(({ isOpen, onClose, queue, onConfirm, 
                         <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">Target Pengiriman</span>
                     </div>
                     {/* Scrollable list */}
-                    <div className="p-2 space-y-1 max-h-[210px] overflow-y-auto custom-scrollbar bg-[var(--color-surface)]">
+                    <div className="p-2 space-y-1 max-h-[160px] overflow-y-auto custom-scrollbar bg-[var(--color-surface)]">
                         {queue.map((s, idx) => {
                             const isSelected = selectedIds.has(s.id)
                             return (
@@ -200,8 +200,8 @@ export const WaBlastProgressContent = memo(({ progress, total, done, failed, act
             <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3">
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${isFinished
-                            ? 'bg-emerald-500/10 text-emerald-500'
-                            : 'bg-green-500/10 text-green-500'
+                        ? 'bg-emerald-500/10 text-emerald-500'
+                        : 'bg-green-500/10 text-green-500'
                         }`}>
                         {isFinished ? (
                             <Check className="w-6 h-6" />
@@ -303,8 +303,8 @@ export const ZipBlastProgressContent = memo(({ progress, total, done, failed, ac
             <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3">
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${isFinished
-                            ? 'bg-emerald-500/10 text-emerald-500 shadow-lg shadow-emerald-500/5'
-                            : 'bg-teal-500/10 text-teal-500 animate-pulse'
+                        ? 'bg-emerald-500/10 text-emerald-500 shadow-lg shadow-emerald-500/5'
+                        : 'bg-teal-500/10 text-teal-500 animate-pulse'
                         }`}>
                         {isFinished ? (
                             <Check className="w-5 h-5" />
