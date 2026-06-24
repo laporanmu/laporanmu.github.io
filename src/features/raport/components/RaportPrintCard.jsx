@@ -302,18 +302,24 @@ const RaportPrintCard = memo(({
                 @media print {
                     @page {
                         size: ${pageSize === 'f4' ? '215mm 330mm' : 'A4'};
-                        margin: 0;
+                        margin: ${pageSize === 'f4' ? '8mm 10mm 8mm 20mm' : '4mm 10mm 4mm 20mm'};
                     }
                     body { margin: 0 !important; padding: 0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                     .raport-card {
                         box-shadow: none !important;
                         margin: 0 !important;
-                        padding: ${isA4 ? '4mm 10mm 4mm 20mm' : '8mm 10mm 8mm 20mm'} !important;
-                        width: ${pageW} !important;
-                        min-width: ${pageW} !important;
-                        height: ${pageH} !important;
-                        min-height: ${pageH} !important;
+                        padding: 0 !important;
+                        width: 100% !important;
+                        min-width: 100% !important;
+                        height: 100% !important;
+                        min-height: 100% !important;
                         max-width: none !important;
+                        box-sizing: border-box !important;
+                    }
+                    .raport-print-metadata {
+                        left: 0 !important;
+                        right: 0 !important;
+                        bottom: 0 !important;
                     }
                     .raport-header-flex {
                         display: flex !important;
