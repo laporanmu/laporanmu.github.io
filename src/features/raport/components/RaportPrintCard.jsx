@@ -30,19 +30,19 @@ const printCardAreEqual = (prev, next) => {
     return true
 }
 
-const RaportPrintCard = memo(({ 
-    student, 
-    scores, 
-    extra, 
-    bulanObj, 
-    tahun, 
-    musyrif, 
-    className, 
-    lang = 'ar', 
-    settings = {}, 
-    catatanArab, 
-    onRendered, 
-    pageSize = 'a4', 
+const RaportPrintCard = memo(({
+    student,
+    scores,
+    extra,
+    bulanObj,
+    tahun,
+    musyrif,
+    className,
+    lang = 'ar',
+    settings = {},
+    catatanArab,
+    onRendered,
+    pageSize = 'a4',
     studentIndex,
     reportType = 'bulanan',
     selectedSemester = 1,
@@ -105,13 +105,13 @@ const RaportPrintCard = memo(({
     }
     const unitLogo = getUnitLogo()
     const isTanggul = String(settings.school_name_id || '').toLowerCase().includes('tanggul') ||
-                      String(settings.school_address || '').toLowerCase().includes('tanggul')
+        String(settings.school_address || '').toLowerCase().includes('tanggul')
 
     useEffect(() => { onRendered?.() }, [onRendered])
 
     const classLevel = selectedClass ? getClassLevel(selectedClass) : getClassLevel(className)
     const getGradeObj = (v) => getGradePredicate(v, reportType, classLevel)
-    
+
     const gradeLabel = (v) => {
         const g = getGradeObj(v)
         return isAr ? g.label : g.id
@@ -123,7 +123,7 @@ const RaportPrintCard = memo(({
 
     const tableDir = isAr ? 'rtl' : 'ltr'
     const displayName = isAr ? (student?.metadata?.nama_arab || student?.name || '—') : (student?.name || '—')
-    
+
     const displayVal = (v, zeroAsDash = false) => {
         if (v === '' || v === null || v === undefined || (v === 0 && zeroAsDash) || (v === '0' && zeroAsDash)) return '—';
         if (isAr) {
@@ -170,12 +170,12 @@ const RaportPrintCard = memo(({
         const host = window.location.hostname;
         const reportNo = getReportNumber();
         const sId = student?.id || '';
-        
+
         // Cek jika diakses lewat IP lokal agar HP satu Wi-Fi bisa langsung scan & akses local dev server
-        const isLocalIp = host.startsWith('192.168.') || 
-                          host.startsWith('10.') || 
-                          host.startsWith('172.') ||
-                          host.includes('.local');
+        const isLocalIp = host.startsWith('192.168.') ||
+            host.startsWith('10.') ||
+            host.startsWith('172.') ||
+            host.includes('.local');
 
         if (isLocalIp) {
             return `${origin}/verify?no=${reportNo}&s=${sId}`;
@@ -185,7 +185,7 @@ const RaportPrintCard = memo(({
         if (host === 'localhost' || host === '127.0.0.1') {
             return `https://laporanmu.my.id/verify?no=${reportNo}&s=${sId}`;
         }
-        
+
         // Di production, otomatis pakai domain aktif (dinamis)
         return `${origin}/verify?no=${reportNo}&s=${sId}`;
     }
@@ -302,24 +302,23 @@ const RaportPrintCard = memo(({
                 @media print {
                     @page {
                         size: ${pageSize === 'f4' ? '215mm 330mm' : 'A4'};
-                        margin: ${pageSize === 'f4' ? '8mm 10mm 8mm 20mm' : '4mm 10mm 4mm 20mm'};
+                        margin: 0;
                     }
                     body { margin: 0 !important; padding: 0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                     .raport-card {
                         box-shadow: none !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        width: 100% !important;
-                        min-width: 100% !important;
-                        height: 100% !important;
-                        min-height: 100% !important;
+                        margin: 0 auto !important;
+                        width: ${pageSize === 'f4' ? '215mm' : '210mm'} !important;
+                        min-width: ${pageSize === 'f4' ? '215mm' : '210mm'} !important;
+                        min-height: ${pageSize === 'f4' ? '330mm' : '297mm'} !important;
+                        height: auto !important;
                         max-width: none !important;
                         box-sizing: border-box !important;
                     }
                     .raport-print-metadata {
-                        left: 0 !important;
-                        right: 0 !important;
-                        bottom: 0 !important;
+                        left: 20mm !important;
+                        right: 10mm !important;
+                        bottom: 6mm !important;
                     }
                     .raport-header-flex {
                         display: flex !important;
@@ -389,19 +388,19 @@ const RaportPrintCard = memo(({
                             lineHeight: 1.05, marginBottom: 4,
                             textShadow: '0.4px 0 0 currentColor, -0.4px 0 0 currentColor'
                         }}>{settings.school_name_ar || ''}</div>
-                        <div className="school-name-id" style={{ 
-                            fontSize: isLisan ? '13pt' : '15pt', 
-                            fontWeight: 800, 
-                            letterSpacing: 0.8, 
-                            color: '#111', 
-                            marginTop: 2 
+                        <div className="school-name-id" style={{
+                            fontSize: isLisan ? '13pt' : '15pt',
+                            fontWeight: 800,
+                            letterSpacing: 0.8,
+                            color: '#111',
+                            marginTop: 2
                         }}>{settings.school_name_id || ''}</div>
                         {isTanggul ? (
-                            <div className="school-address" style={{ 
-                                fontSize: '8.1pt', 
-                                color: '#333', 
-                                marginTop: 3, 
-                                lineHeight: 1.35, 
+                            <div className="school-address" style={{
+                                fontSize: '8.1pt',
+                                color: '#333',
+                                marginTop: 3,
+                                lineHeight: 1.35,
                                 fontWeight: 600,
                                 fontFamily: "'Segoe Print', 'Segoe Script', 'Monotype Corsiva', cursive, sans-serif"
                             }}>
@@ -422,12 +421,12 @@ const RaportPrintCard = memo(({
             </div>
 
             {/* Judul Laporan */}
-            <div style={{ 
-                textAlign: 'center', 
-                margin: isLisan 
-                    ? (isA4 ? '2px 0 4px' : '2px 0 6px') 
-                    : (isA4 ? (isAr ? '4px 0 6px' : '12px 0 18px') : (isAr ? '6px 0 10px' : '18px 0 26px')), 
-                fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit' 
+            <div style={{
+                textAlign: 'center',
+                margin: isLisan
+                    ? (isA4 ? '2px 0 4px' : '2px 0 6px')
+                    : (isA4 ? (isAr ? '4px 0 6px' : '12px 0 18px') : (isAr ? '6px 0 10px' : '18px 0 26px')),
+                fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit'
             }}>
                 <div style={{ fontSize: isAr ? '28pt' : (isLisan ? '14pt' : '18pt'), fontWeight: 900, direction: isAr ? 'rtl' : 'ltr', lineHeight: isAr ? 1.15 : 1.3 }}>{getReportTitle()}</div>
                 <div style={{ fontSize: isAr ? '22pt' : (isLisan ? '12pt' : '14pt'), fontWeight: 700, direction: isAr ? 'rtl' : 'ltr', marginTop: isAr ? 4 : 10, lineHeight: isAr ? 1.15 : 1.3 }}>{getPeriodTitle()}</div>

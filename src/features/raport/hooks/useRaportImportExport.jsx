@@ -26,10 +26,13 @@ const withTimeout = (promise, ms, label = 'Operasi') =>
 const checkUrlExists = async (url) => {
     if (!url) return false
     try {
-        const response = await fetch(url, { method: 'HEAD' })
-        return response.ok
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: { 'Range': 'bytes=0-0' }
+        })
+        return response.ok || response.status === 206
     } catch (e) {
-        console.warn('[Storage Cache] HEAD check failed (network/CORS), assuming exists:', e)
+        console.warn('[Storage Cache] Check failed (network/CORS), assuming exists:', e)
         return true
     }
 }
@@ -218,9 +221,12 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef,
                     if (++t > 80) { clearInterval(timer); resolve() }
                 }, 100)
             })
-            if (silentPrintRef) silentPrintRef.current = false
         }
         if (!cardEl) throw new Error('Gagal render raport card')
+
+        const isLisan = reportType === 'pondok_lisan'
+        const isTanggul = String(settings.school_name_id || '').toLowerCase().includes('tanggul') ||
+            String(settings.school_address || '').toLowerCase().includes('tanggul')
 
         // Buat wrapper sementara yang menyalin semua stylesheet dari dokumen aktif
         // (agar font Arab, Segoe, dll tetap terbaca oleh html2canvas)
@@ -241,7 +247,53 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef,
                 width: ${W}px !important; min-width: ${W}px !important;
                 height: ${H}px !important; overflow: hidden !important;
                 background: white !important; margin: 0 !important; position: relative !important;
+                padding: ${pageSize === 'f4' ? '30px 38px 30px 76px' : '15px 38px 15px 76px'} !important;
+                box-sizing: border-box !important;
+                box-shadow: none !important;
+                border: none !important;
             }
+            .raport-print-metadata {
+                left: 20mm !important;
+                right: 10mm !important;
+                bottom: 6mm !important;
+            }
+            .raport-header-flex {
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+            }
+            .raport-logo-box {
+                flex-shrink: 0 !important;
+                align-self: center !important;
+                display: block !important;
+            }
+            .raport-logo-box:first-child {
+                margin-right: 12px !important;
+                margin-left: 0 !important;
+            }
+            .raport-logo-box:last-child {
+                margin-left: 12px !important;
+                margin-right: 0 !important;
+            }
+            .raport-logo-box img {
+                display: block !important;
+                object-fit: contain !important;
+            }
+            .raport-header-center {
+                flex: 1 !important;
+                text-align: center !important;
+                min-width: 0 !important;
+                align-self: center !important;
+            }
+            .school-name-ar, .school-subtitle-ar, .school-name-id, .school-address {
+                text-align: center !important;
+            }
+            .school-name-ar, .school-subtitle-ar {
+                direction: ltr !important;
+                font-family: 'Traditional Arabic', Amiri, Georgia, serif !important;
+            }
+            .divider-gradient { background: ${settings.report_color_primary || '#1a5c35'} !important; }
             [style*="Traditional Arabic"], [dir="rtl"], .font-arabic, h1[style*="Amiri"], h2[style*="Amiri"], .school-name-ar, .school-subtitle-ar, [style*="rtl"] {
                 letter-spacing: normal !important;
             }
@@ -251,7 +303,7 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef,
                 box-sizing: border-box !important;
             }
             img {
-                mix-blend-mode: multiply !important;
+                mix-blend-mode: normal !important;
             }
         `
         styleClones.forEach(s => wrapper.appendChild(s))
@@ -328,7 +380,9 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef,
                 printContainerRef.current.appendChild(cardEl)
             }
             if (document.body.contains(wrapper)) document.body.removeChild(wrapper)
-            setPrintQueue([]); setPrintRenderedCount(0)
+            setPrintQueue([])
+            setPrintRenderedCount(0)
+            if (silentPrintRef) silentPrintRef.current = false
         }
     }, [bulanObj, selectedMonth, selectedYear, printContainerRef, setPrintQueue, setPrintRenderedCount, pageSize])
 

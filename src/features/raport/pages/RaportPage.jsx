@@ -1425,7 +1425,7 @@ export default function RaportPage() {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Outfit:wght@700;900&family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;900&display=block" rel="stylesheet">
     <style>
-        @page { size: ${pageSize === 'f4' ? '215mm 330mm' : 'A4'}; margin: ${pageSize === 'f4' ? '8mm 10mm 8mm 20mm' : '4mm 10mm 4mm 20mm'}; }
+        @page { size: ${pageSize === 'f4' ? '215mm 330mm' : 'A4'}; margin: 0; }
         
         /* CSS variables biar konsisten */
         :root {
@@ -1452,11 +1452,11 @@ export default function RaportPage() {
             position: relative; 
             overflow: hidden; 
             background: white !important; 
-            width: 100% !important;
-            min-width: 100% !important;
-            height: 100% !important;
-            min-height: 100% !important;
-            padding: 0 !important;
+            width: ${pageSize === 'f4' ? '215mm' : '210mm'} !important;
+            min-width: ${pageSize === 'f4' ? '215mm' : '210mm'} !important;
+            height: ${pageSize === 'f4' ? '330mm' : '297mm'} !important;
+            min-height: ${pageSize === 'f4' ? '330mm' : '297mm'} !important;
+            padding: ${pageSize === 'f4' ? '8mm 10mm 8mm 20mm' : '4mm 10mm 4mm 20mm'} !important;
             box-sizing: border-box !important;
         }
         .raport-print-metadata {
@@ -1468,7 +1468,7 @@ export default function RaportPage() {
         
         @media print {
             body { background: white; }
-            .raport-card { box-shadow: none !important; border: none !important; margin: 0 !important; padding: 0 !important; width: 100% !important; min-width: 100% !important; height: 100% !important; min-height: 100% !important; }
+            .raport-card { box-shadow: none !important; border: none !important; margin: 0 auto !important; padding: ${pageSize === 'f4' ? '8mm 10mm 8mm 20mm' : '4mm 10mm 4mm 20mm'} !important; width: ${pageSize === 'f4' ? '215mm' : '210mm'} !important; min-width: ${pageSize === 'f4' ? '215mm' : '210mm'} !important; height: ${pageSize === 'f4' ? '330mm' : '297mm'} !important; min-height: ${pageSize === 'f4' ? '330mm' : '297mm'} !important; }
         }
     </style>
 </head><body>${html}</body></html>`)
@@ -1532,7 +1532,7 @@ export default function RaportPage() {
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
                 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Outfit:wght@700;900&family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
                 <style>
-                    @page{size:${pageSize === 'f4' ? '215mm 330mm' : 'A4'};margin:${pageSize === 'f4' ? '8mm 10mm 8mm 20mm' : '4mm 10mm 4mm 20mm'}}body{margin:0;padding:0;font-family:'Inter',sans-serif;background:white}.raport-card{page-break-after:always;box-sizing:border-box;width:100%!important;min-width:100%!important;height:100%!important;min-height:100%!important;padding:0!important;margin:0!important}.raport-print-metadata{left:0!important;right:0!important;bottom:0!important}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}[style*="Traditional Arabic"],[dir="rtl"],.font-arabic,h1[style*="Amiri"],h2[style*="Amiri"],.school-name-ar,.school-subtitle-ar,[style*="rtl"]{letter-spacing:normal!important}
+                    @page{size:${pageSize === 'f4' ? '215mm 330mm' : 'A4'};margin:0}body{margin:0;padding:0;font-family:'Inter',sans-serif;background:white}.raport-card{page-break-after:always;box-sizing:border-box;width:${pageSize === 'f4' ? '215mm' : '210mm'}!important;min-width:${pageSize === 'f4' ? '215mm' : '210mm'}!important;height:${pageSize === 'f4' ? '330mm' : '297mm'}!important;min-height:${pageSize === 'f4' ? '330mm' : '297mm'}!important;padding:${pageSize === 'f4' ? '8mm 10mm 8mm 20mm' : '4mm 10mm 4mm 20mm'}!important;margin:0 auto!important}.raport-print-metadata{left:0!important;right:0!important;bottom:0!important}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}[style*="Traditional Arabic"],[dir="rtl"],.font-arabic,h1[style*="Amiri"],h2[style*="Amiri"],.school-name-ar,.school-subtitle-ar,[style*="rtl"]{letter-spacing:normal!important}
                 </style></head><body>${html}</body></html>`)
             win.document.close();
             win.focus();
