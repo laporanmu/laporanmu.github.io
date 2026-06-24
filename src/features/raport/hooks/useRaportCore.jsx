@@ -741,28 +741,30 @@ export function useRaportCore() {
     }, [students, scores, extras, reportType, selectedClass, completedCount, addToast, _doSaveAll])
 
     // ── Copy from last month ──
-    const copyFromLastMonth = useCallback(async (fromMonth, fromYear) => {
+    const copyFromLastMonth = useCallback(async (fromMonth, fromYear, studentIds = null, overwriteAll = false) => {
         if (reportType !== 'bulanan') return
         if (!selectedClassId || !students.length) return
         const targetMonth = fromMonth ?? (selectedMonth === 1 ? 12 : selectedMonth - 1)
         const targetYear = fromYear ?? (selectedMonth === 1 ? selectedYear - 1 : selectedYear)
         setCopyingLastMonth(true)
         try {
-            const ids = students.map(s => s.id)
+            const ids = studentIds ?? students.map(s => s.id)
             const { data } = await supabase.from('student_monthly_reports').select('*').in('student_id', ids).eq('month', targetMonth).eq('year', targetYear)
             if (!data?.length) { addToast(`Tidak ada data untuk bulan ${BULAN.find(b => b.id === targetMonth)?.id_str} ${targetYear}`, 'warning'); return }
             
             const rtObj = RAPORT_TYPES[reportType]
             const criteria = rtObj.getCriteria(selectedClass)
 
-            const toCopy = data.filter(rep => {
-                const cur = scores[rep.student_id] || {}
-                return criteria.every(k => cur[k.key] === '' || cur[k.key] === null || cur[k.key] === undefined)
-            })
+            const toCopy = overwriteAll
+                ? data
+                : data.filter(rep => {
+                    const cur = scores[rep.student_id] || {}
+                    return criteria.every(k => cur[k.key] === '' || cur[k.key] === null || cur[k.key] === undefined)
+                })
             const copied = toCopy.length
             setScores(prev => { const next = { ...prev }; for (const rep of toCopy) { next[rep.student_id] = { nilai_akhlak: rep.nilai_akhlak ?? '', nilai_ibadah: rep.nilai_ibadah ?? '', nilai_kebersihan: rep.nilai_kebersihan ?? '', nilai_quran: rep.nilai_quran ?? '', nilai_bahasa: rep.nilai_bahasa ?? '' } }; return next })
             setExtras(prev => { const next = { ...prev }; for (const rep of data) { const cur = next[rep.student_id] || {}; if (!cur.berat_badan && !cur.tinggi_badan) next[rep.student_id] = { ...cur, berat_badan: rep.berat_badan ?? '', tinggi_badan: rep.tinggi_badan ?? '' } }; return next })
-            const copiedIds = new Set(data.map(rep => rep.student_id))
+            const copiedIds = new Set(toCopy.map(rep => rep.student_id))
             setSavedIds(prev => { const next = new Set(prev); for (const id of copiedIds) next.delete(id); return next })
             addToast(`Disalin dari ${BULAN.find(b => b.id === targetMonth)?.id_str} ${targetYear} — ${copied} santri`, 'success')
         } catch (e) { addToast('Gagal menyalin data', 'error'); console.error('copyFromLastMonth error:', e) }

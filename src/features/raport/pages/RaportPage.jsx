@@ -3535,7 +3535,7 @@ export default function RaportPage() {
                     icon={confirmModal?.icon}
                     iconBg={confirmModal?.iconBg}
                     iconColor={confirmModal?.iconColor}
-                    size="sm"
+                    size={confirmModal?.size ?? 'sm'}
                     mobileVariant="bottom-sheet"
                     footer={confirmModal && (
                         <div className="flex items-center w-full gap-3">

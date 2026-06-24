@@ -11,6 +11,7 @@ const WhatsAppIcon = (props) => (
     </svg>
 )
 import { EmptyState, Modal } from '@shared/components'
+import RichSelect from '@shared/components/RichSelect'
 import StudentRow, { ExtraInput, ExtraTextarea } from './RaportRecordRow'
 import BulkActionBar from './BulkActionBar'
 import { RadarChart } from './RaportCharts'
@@ -135,152 +136,223 @@ const MobileSkeleton = () => (
         </div>
     </div>
 )
-const CopyMonthlyDataModalBody = ({
-    students,
-    scores,
-    extras,
-    currentMonth,
-    currentYear,
-    onSourceChange
-}) => {
+const SCORE_KEYS = [
+    { key: 'nilai_akhlak', short: 'AKH' },
+    { key: 'nilai_ibadah', short: 'IBA' },
+    { key: 'nilai_kebersihan', short: 'KEB' },
+    { key: 'nilai_quran', short: "QUR" },
+    { key: 'nilai_bahasa', short: 'BHS' },
+]
+const scoreColor = (v, maxScore = 100) => {
+    if (v === null || v === undefined || v === '') return 'bg-[var(--color-surface-alt)] text-[var(--color-text-muted)]'
+    const n = Number(v)
+    const normalized = maxScore <= 10 ? (n * 100) / maxScore : n
+    if (normalized >= 90) return 'bg-emerald-500/15 text-emerald-700'
+    if (normalized >= 75) return 'bg-indigo-500/15 text-indigo-700'
+    if (normalized >= 60) return 'bg-amber-500/15 text-amber-700'
+    return 'bg-rose-500/15 text-rose-700'
+}
+
+const CopyDataModal = ({ isOpen, onClose, students, scores, extras, currentMonth, currentYear, copyFromLastMonth, maxScore }) => {
     const defaultMonth = currentMonth === 1 ? 12 : currentMonth - 1
     const defaultYear = currentMonth === 1 ? currentYear - 1 : currentYear
-
     const [sourceMonth, setSourceMonth] = useState(defaultMonth)
     const [sourceYear, setSourceYear] = useState(defaultYear)
     const [loading, setLoading] = useState(false)
-    const [prevCount, setPrevCount] = useState(0)
+    const [sourceData, setSourceData] = useState({})
+    const [selectedIds, setSelectedIds] = useState(new Set())
+    const [overwriteAll, setOverwriteAll] = useState(false)
+    const [executing, setExecuting] = useState(false)
 
     const years = useMemo(() => {
-        const current = new Date().getFullYear()
-        return Array.from({ length: 5 }, (_, i) => current - 3 + i)
+        const cur = new Date().getFullYear()
+        return Array.from({ length: 5 }, (_, i) => cur - 3 + i)
     }, [])
 
     useEffect(() => {
+        if (!isOpen) return
         let active = true
-        const checkData = async () => {
-            setLoading(true)
+        setLoading(true)
+        const run = async () => {
             try {
                 const ids = students.map(s => s.id)
                 const { data } = await supabase
                     .from('student_monthly_reports')
                     .select('student_id,nilai_akhlak,nilai_ibadah,nilai_kebersihan,nilai_quran,nilai_bahasa')
-                    .in('student_id', ids)
-                    .eq('month', sourceMonth)
-                    .eq('year', sourceYear)
-
+                    .in('student_id', ids).eq('month', sourceMonth).eq('year', sourceYear)
                 if (!active) return
-
-                const hasPrevScores = (studentId) => {
-                    const r = data?.find(x => x.student_id === studentId)
-                    if (!r) return false
-                    return Object.values(r).some(v => v !== null && v !== undefined && v !== '')
-                }
-
-                const count = students.filter(s => hasPrevScores(s.id)).length
-                setPrevCount(count)
-            } catch (e) {
-                console.error(e)
-                if (active) setPrevCount(0)
+                const map = {}
+                for (const r of (data || [])) map[r.student_id] = r
+                setSourceData(map)
+                // auto-select all students with source data
+                setSelectedIds(new Set(Object.keys(map).filter(id => {
+                    const r = map[id]
+                    return SCORE_KEYS.some(k => r[k.key] !== null && r[k.key] !== undefined)
+                })))
             } finally {
                 if (active) setLoading(false)
             }
         }
-        checkData()
-        onSourceChange(sourceMonth, sourceYear)
+        run()
         return () => { active = false }
-    }, [sourceMonth, sourceYear, students, onSourceChange])
+    }, [sourceMonth, sourceYear, students, isOpen])
 
-    const overwrittenStudents = useMemo(() => {
-        const hasCurrentScores = (studentId) => {
-            const sc = scores[studentId]
-            const ex = extras[studentId]
-            const hasSc = sc && Object.values(sc).some(v => v !== null && v !== undefined && v !== '')
-            const hasEx = ex && Object.values(ex).some(v => v !== null && v !== undefined && v !== '')
-            return !!(hasSc || hasEx)
-        }
-        return students.filter(s => hasCurrentScores(s.id))
-    }, [students, scores, extras])
+    const hasCurrent = (id) => {
+        const sc = scores[id], ex = extras[id]
+        return (sc && Object.values(sc).some(v => v !== '' && v !== null && v !== undefined)) ||
+               (ex && Object.values(ex).some(v => v !== '' && v !== null && v !== undefined))
+    }
+    const hasSource = (id) => {
+        const r = sourceData[id]
+        return r && SCORE_KEYS.some(k => r[k.key] !== null && r[k.key] !== undefined)
+    }
 
-    const currentOverwriteCount = overwrittenStudents.length
+    const studentsWithSource = students.filter(s => hasSource(s.id))
+    const conflicts = students.filter(s => hasSource(s.id) && hasCurrent(s.id))
+    const selectedCount = selectedIds.size
+
+    const toggleAll = () => {
+        if (selectedIds.size === studentsWithSource.length)
+            setSelectedIds(new Set())
+        else
+            setSelectedIds(new Set(studentsWithSource.map(s => s.id)))
+    }
+    const toggleOne = (id) => {
+        setSelectedIds(prev => {
+            const n = new Set(prev)
+            n.has(id) ? n.delete(id) : n.add(id)
+            return n
+        })
+    }
+
+    const handleConfirm = async () => {
+        if (!selectedCount) return
+        setExecuting(true)
+        try {
+            await copyFromLastMonth(sourceMonth, sourceYear, Array.from(selectedIds), overwriteAll)
+            onClose()
+        } finally { setExecuting(false) }
+    }
 
     return (
-        <div className="space-y-4">
-            <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed font-bold">
-                Pilih bulan dan tahun sumber data nilai yang ingin Anda salin ke bulan aktif saat ini.
-            </p>
-
-            <div className="grid grid-cols-2 gap-3 p-3.5 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-sm">
-                <div className="space-y-1.5">
-                    <label className="text-[9px] font-black uppercase text-[var(--color-text-muted)] tracking-wider">Bulan Sumber</label>
-                    <select
-                        value={sourceMonth}
-                        onChange={e => setSourceMonth(Number(e.target.value))}
-                        className="w-full h-9 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-black text-[var(--color-text)] outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 transition-all cursor-pointer"
-                    >
-                        {BULAN.map(b => (
-                            <option key={b.id} value={b.id}>{b.id_str} ({b.ar})</option>
-                        ))}
-                    </select>
-                </div>
-                <div className="space-y-1.5">
-                    <label className="text-[9px] font-black uppercase text-[var(--color-text-muted)] tracking-wider">Tahun Sumber</label>
-                    <select
-                        value={sourceYear}
-                        onChange={e => setSourceYear(Number(e.target.value))}
-                        className="w-full h-9 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[11px] font-black text-[var(--color-text)] outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 transition-all cursor-pointer"
-                    >
-                        {years.map(y => (
-                            <option key={y} value={y}>{y}</option>
-                        ))}
-                    </select>
-                </div>
-            </div>
-
-            {loading ? (
-                <div className="p-3.5 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 text-[10px] text-[var(--color-text-muted)] font-black flex items-center justify-center gap-2 animate-pulse">
-                    <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
-                    <span>Memeriksa data nilai sumber...</span>
-                </div>
-            ) : (
-                <>
-                    <div className="p-3.5 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 text-[10px] text-[var(--color-text-muted)] font-black flex items-center justify-between">
-                        <span>Data bulan terpilih ditemukan untuk:</span>
-                        <span className="bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-lg font-black text-[11px]">
-                            {prevCount} dari {students.length} santri
-                        </span>
+        <Modal isOpen={isOpen} onClose={onClose} title="Salin Data Nilai" description="Preview dan pilih santri yang akan disalin nilainya"
+            icon={Copy} iconBg="bg-amber-500/10" iconColor="text-amber-600" size="lg" mobileVariant="bottom-sheet"
+            footer={
+                <div className="flex items-center w-full gap-3">
+                    <button onClick={onClose} className="h-10 px-5 rounded-xl border border-[var(--color-border)] text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)] transition-all">Batal</button>
+                    <div className="flex-1" />
+                    <div className="flex items-center gap-2 text-[10px] font-black text-amber-700">
+                        <button onClick={() => setOverwriteAll(v => !v)}
+                            className={`flex items-center gap-1.5 px-3 h-8 rounded-lg border transition-all ${overwriteAll ? 'bg-amber-500/15 border-amber-500/30 text-amber-700' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'}`}>
+                            <AlertTriangle className="w-3 h-3" />
+                            <span>Timpa semua</span>
+                        </button>
                     </div>
-                    {prevCount === 0 && (
-                        <div className="p-3.5 rounded-2xl bg-rose-500/5 border border-rose-500/10 text-[10px] text-rose-700 font-bold flex items-start gap-2">
-                            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                            <span>
-                                <span className="font-black text-rose-800 block mb-0.5">Peringatan Kosong</span>
-                                Tidak ditemukan data nilai pada periode terpilih. Melanjutkan akan menyalin nilai kosong.
-                            </span>
+                    <button onClick={handleConfirm} disabled={!selectedCount || executing}
+                        className="h-10 px-6 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-500/20 transition-all flex items-center gap-2 disabled:opacity-50">
+                        {executing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+                        Salin {selectedCount > 0 ? `(${selectedCount})` : ''}
+                    </button>
+                </div>
+            }>
+            <div className="space-y-4">
+                {/* Unified Source Selector & Stats */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-2xl bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
+                    {/* selectors */}
+                    <div className="flex items-center gap-2 flex-grow sm:flex-grow-0">
+                        <div className="flex-1 sm:w-44">
+                            <RichSelect value={sourceMonth} onChange={v => setSourceMonth(Number(v))}
+                                options={BULAN.map(b => ({ id: b.id, name: `${b.id_str} (${b.ar})` }))} small />
                         </div>
-                    )}
-                </>
-            )}
-
-            {currentOverwriteCount > 0 && (
-                <div className="p-3.5 rounded-2xl bg-amber-500/5 border border-amber-500/10 text-[10px] text-amber-700 font-bold space-y-2">
-                    <div className="flex items-start gap-2">
-                        <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                        <span>
-                            <span className="font-black text-amber-800 block mb-0.5">Peringatan Tertimpa</span>
-                            Ada <span className="font-black">{currentOverwriteCount} santri</span> yang nilainya sudah terisi di bulan ini dan akan <span className="font-black text-amber-800 uppercase tracking-wider">tertimpa</span> data salinan:
-                        </span>
+                        <div className="flex-1 sm:w-28">
+                            <RichSelect value={sourceYear} onChange={v => setSourceYear(Number(v))}
+                                options={years.map(y => ({ id: y, name: String(y) }))} small />
+                        </div>
                     </div>
-                    <div className="mt-2 flex flex-wrap gap-1 max-h-24 overflow-y-auto p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/15">
-                        {overwrittenStudents.map(s => (
-                            <span key={s.id} className="px-1.5 py-0.5 rounded bg-white text-amber-800 text-[9px] font-black border border-amber-500/10">
-                                {s.name}
-                            </span>
-                        ))}
+                    {/* stats */}
+                    <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-500/5 border border-emerald-500/10 text-emerald-700 text-[10px] font-black">
+                            <span>Tersedia:</span>
+                            <span className="bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded-md font-black text-[10px] min-w-[18px] text-center">{studentsWithSource.length}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-500/5 border border-amber-500/10 text-amber-700 text-[10px] font-black">
+                            <span>Konflik:</span>
+                            <span className="bg-amber-500/10 text-amber-600 px-1.5 py-0.5 rounded-md font-black text-[10px] min-w-[18px] text-center">{conflicts.length}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-indigo-500/5 border border-indigo-500/10 text-indigo-750 text-[10px] font-black">
+                            <span>Dipilih:</span>
+                            <span className="bg-indigo-500/10 text-indigo-600 px-1.5 py-0.5 rounded-md font-black text-[10px] min-w-[18px] text-center">{selectedCount}</span>
+                        </div>
                     </div>
                 </div>
-            )}
-        </div>
+
+                {/* Student List */}
+                {loading ? (
+                    <div className="flex items-center justify-center gap-2 py-8 text-[10px] font-black text-[var(--color-text-muted)] animate-pulse">
+                        <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
+                        Memuat data nilai sumber...
+                    </div>
+                ) : studentsWithSource.length === 0 ? (
+                    <div className="flex items-center gap-2 p-4 rounded-xl bg-rose-500/5 border border-rose-500/10 text-[10px] text-rose-700 font-bold">
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                        Tidak ada data nilai untuk periode ini.
+                    </div>
+                ) : (
+                    <div className="border border-[var(--color-border)] rounded-2xl bg-[var(--color-surface)] overflow-hidden shadow-sm">
+                        {/* Select All header */}
+                        <div className="flex items-center justify-between px-4 py-3 bg-[var(--color-surface-alt)] border-b border-[var(--color-border)]">
+                            <button onClick={toggleAll} className="flex items-center gap-2 text-[10px] font-black text-[var(--color-text)] hover:text-indigo-600 transition-colors">
+                                <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${selectedIds.size === studentsWithSource.length ? 'bg-indigo-500 border-indigo-500' : 'border-[var(--color-border)] bg-white'}`}>
+                                    {selectedIds.size === studentsWithSource.length && <Check className="w-2.5 h-2.5 text-white" />}
+                                </div>
+                                Pilih Semua ({studentsWithSource.length})
+                            </button>
+                            <span className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">Preview Nilai Sumber</span>
+                        </div>
+                        {/* Scrollable list */}
+                        <div className="p-3 space-y-1.5 max-h-[160px] overflow-y-auto custom-scrollbar bg-[var(--color-surface)]">
+                            {students.map((s, idx) => {
+                                const src = sourceData[s.id]
+                                const hasData = hasSource(s.id)
+                                const isConflict = hasData && hasCurrent(s.id)
+                                const isSelected = selectedIds.has(s.id)
+                                return (
+                                    <button key={s.id} type="button"
+                                        onClick={() => hasData && toggleOne(s.id)}
+                                        disabled={!hasData}
+                                        className={`w-full flex items-center gap-3 p-2.5 rounded-xl border text-left transition-all ${isSelected ? 'bg-indigo-500/5 border-indigo-500/20' : hasData ? 'border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]' : 'border-[var(--color-border)]/40 opacity-40 cursor-not-allowed'}`}>
+                                        {/* Checkbox */}
+                                        <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${isSelected ? 'bg-indigo-500 border-indigo-500' : 'border-[var(--color-border)] bg-white'}`}>
+                                            {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
+                                        </div>
+                                        {/* Index + Name */}
+                                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                                            <span className="text-[9px] font-black text-[var(--color-text-muted)] w-5 shrink-0">{idx + 1}</span>
+                                            <div className="min-w-0">
+                                                <div className="text-[11px] font-black text-[var(--color-text)] truncate">{s.name}</div>
+                                                {isConflict && <div className="text-[9px] font-bold text-amber-600 flex items-center gap-1"><AlertTriangle className="w-2.5 h-2.5" />Ada nilai aktif</div>}
+                                            </div>
+                                        </div>
+                                        {/* Score chips */}
+                                        <div className="flex items-center gap-1 shrink-0">
+                                            {SCORE_KEYS.map(({ key, short }) => {
+                                                const v = src?.[key]
+                                                return (
+                                                    <div key={key} className={`w-9 h-7 rounded-lg flex flex-col items-center justify-center ${scoreColor(v, maxScore)}`} title={short}>
+                                                        <span className="text-[8px] font-black leading-none opacity-60">{short}</span>
+                                                        <span className="text-[10px] font-black leading-none">{v ?? '—'}</span>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </Modal>
     )
 }
 
@@ -374,43 +446,8 @@ export default function RaportInputTable({
     const getGrade = (val) => getGradePredicate(val, reportType, classLevel)
 
     const [isBulkModalOpen, setIsBulkModalOpen] = useState(false)
-    const copySourceRef = useRef({
-        month: selectedMonth === 1 ? 12 : selectedMonth - 1,
-        year: selectedMonth === 1 ? selectedYear - 1 : selectedYear
-    })
+    const [isCopyModalOpen, setIsCopyModalOpen] = useState(false)
 
-    const handleCopyDataModal = () => {
-        const defaultMonth = selectedMonth === 1 ? 12 : selectedMonth - 1
-        const defaultYear = selectedMonth === 1 ? selectedYear - 1 : selectedYear
-        copySourceRef.current = { month: defaultMonth, year: defaultYear }
-
-        setConfirmModal({
-            title: 'Salin Data Nilai?',
-            description: 'Salin nilai dari bulan/tahun pilihan Anda',
-            body: (
-                <CopyMonthlyDataModalBody
-                    students={students}
-                    scores={scores}
-                    extras={extras}
-                    currentMonth={selectedMonth}
-                    currentYear={selectedYear}
-                    onSourceChange={(m, y) => {
-                        copySourceRef.current = { month: m, year: y }
-                    }}
-                />
-            ),
-            icon: Zap,
-            iconBg: 'bg-amber-500/10',
-            iconColor: 'text-amber-600',
-            variant: 'amber',
-            confirmLabel: 'Ya, Salin Data',
-            confirmIcon: Zap,
-            onConfirm: () => {
-                setConfirmModal(null)
-                copyFromLastMonth(copySourceRef.current.month, copySourceRef.current.year)
-            }
-        })
-    }
 
     const classStats = React.useMemo(() => {
         const activeCriteria = criteria || []
@@ -613,7 +650,7 @@ export default function RaportInputTable({
                     </button>
 
                     <button
-                        onClick={handleCopyDataModal}
+                        onClick={() => setIsCopyModalOpen(true)}
                         disabled={copyingLastMonth || !canEdit}
                         className="h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 flex items-center justify-center transition-all hover:bg-amber-500/20 disabled:opacity-50"
                         title="Salin Data Nilai"
@@ -880,7 +917,7 @@ export default function RaportInputTable({
                                 <WhatsAppIcon className="w-3 h-3" /> <span className="hidden lg:inline">Blast WA</span>
                             </button>
 
-                            <button onClick={handleCopyDataModal} disabled={copyingLastMonth || !canEdit} className="h-9 px-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 text-[9px] font-black flex items-center justify-center gap-1.5 transition-all hover:bg-amber-500/20 disabled:opacity-50 flex-grow min-w-[36px] shrink-0" title="Salin Data Periode">
+                            <button onClick={() => setIsCopyModalOpen(true)} disabled={copyingLastMonth || !canEdit} className="h-9 px-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 text-[9px] font-black flex items-center justify-center gap-1.5 transition-all hover:bg-amber-500/20 disabled:opacity-50 flex-grow min-w-[36px] shrink-0" title="Salin Data Periode">
                                 {copyingLastMonth ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
                                 <span className="hidden lg:inline">Salin Data</span>
                             </button>
@@ -1591,6 +1628,18 @@ export default function RaportInputTable({
                         )
                     })}
                 </div>
+
+                <CopyDataModal
+                    isOpen={isCopyModalOpen}
+                    onClose={() => setIsCopyModalOpen(false)}
+                    students={students}
+                    scores={scores}
+                    extras={extras}
+                    currentMonth={selectedMonth}
+                    currentYear={selectedYear}
+                    copyFromLastMonth={copyFromLastMonth}
+                    maxScore={maxScore}
+                />
             </div>
         </div>
     )
