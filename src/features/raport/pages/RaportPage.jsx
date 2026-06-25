@@ -2302,24 +2302,24 @@ export default function RaportPage() {
                             </div>
 
                             {/* Row 2 & 3: Controls */}
-                            <div className="flex flex-wrap items-center justify-start sm:justify-end gap-1.5 w-full sm:flex-1">
+                            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-start sm:justify-end gap-1.5 w-full sm:flex-1">
                                 {/* Page Size selector */}
-                                <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-10 shrink-0">
-                                    <button onClick={() => setPageSize('a4')} className={`px-3 h-8 rounded-lg text-[10px] font-black transition-all ${pageSize === 'a4' ? 'bg-amber-500 text-white shadow-sm' : 'text-[var(--color-text-muted)]'}`}>A4</button>
-                                    <button onClick={() => setPageSize('f4')} className={`px-3 h-8 rounded-lg text-[10px] font-black transition-all ${pageSize === 'f4' ? 'bg-amber-500 text-white shadow-sm' : 'text-[var(--color-text-muted)]'}`}>F4</button>
+                                <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-10 w-full sm:w-auto shrink-0 justify-center">
+                                    <button onClick={() => setPageSize('a4')} className={`flex-1 sm:flex-none px-3 h-8 rounded-lg text-[10px] font-black transition-all ${pageSize === 'a4' ? 'bg-amber-500 text-white shadow-sm' : 'text-[var(--color-text-muted)]'}`}>A4</button>
+                                    <button onClick={() => setPageSize('f4')} className={`flex-1 sm:flex-none px-3 h-8 rounded-lg text-[10px] font-black transition-all ${pageSize === 'f4' ? 'bg-amber-500 text-white shadow-sm' : 'text-[var(--color-text-muted)]'}`}>F4</button>
                                 </div>
 
                                 {/* Language selector */}
-                                <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-10 shrink-0">
-                                    <button onClick={() => setLang('ar')} className={`px-3 h-8 rounded-lg text-[10px] font-black transition-all ${lang === 'ar' ? 'bg-indigo-500 text-white shadow-sm' : 'text-[var(--color-text-muted)]'}`}>AR</button>
-                                    <button onClick={() => setLang('id')} className={`px-3 h-8 rounded-lg text-[10px] font-black transition-all ${lang === 'id' ? 'bg-indigo-500 text-white shadow-sm' : 'text-[var(--color-text-muted)]'}`}>ID</button>
+                                <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-10 w-full sm:w-auto shrink-0 justify-center">
+                                    <button onClick={() => setLang('ar')} className={`flex-1 sm:flex-none px-3 h-8 rounded-lg text-[10px] font-black transition-all ${lang === 'ar' ? 'bg-indigo-500 text-white shadow-sm' : 'text-[var(--color-text-muted)]'}`}>AR</button>
+                                    <button onClick={() => setLang('id')} className={`flex-1 sm:flex-none px-3 h-8 rounded-lg text-[10px] font-black transition-all ${lang === 'id' ? 'bg-indigo-500 text-white shadow-sm' : 'text-[var(--color-text-muted)]'}`}>ID</button>
                                 </div>
 
                                 {/* Group: Signature Dropdown Selector */}
-                                <div className="relative flex items-center shrink-0" data-sig-dropdown-anchor>
+                                <div className="relative flex items-center w-full sm:w-auto shrink-0" data-sig-dropdown-anchor>
                                     <button
                                         onClick={() => setShowSigDropdown(p => !p)}
-                                        className="h-10 px-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm text-[10px] font-black text-[var(--color-text)] flex items-center gap-1.5 hover:bg-[var(--color-surface-alt)] active:scale-95 transition-all select-none whitespace-nowrap"
+                                        className="w-full sm:w-auto h-10 px-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm text-[10px] font-black text-[var(--color-text)] flex items-center justify-between sm:justify-start gap-1.5 hover:bg-[var(--color-surface-alt)] active:scale-95 transition-all select-none whitespace-nowrap"
                                     >
                                         <span className="flex items-center gap-1.5">
                                             {signMode === 'digital' ? (
@@ -2333,7 +2333,7 @@ export default function RaportPage() {
                                     </button>
 
                                     {showSigDropdown && (
-                                        <div className="absolute right-0 top-full mt-1.5 w-36 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl z-50 overflow-hidden py-1 animate-in fade-in slide-in-from-top-1 duration-100">
+                                        <div className="absolute right-0 top-full mt-1.5 w-full sm:w-36 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl z-50 overflow-hidden py-1 animate-in fade-in slide-in-from-top-1 duration-100">
                                             <button
                                                 onClick={() => {
                                                     if (signMode !== 'basah') handleToggleSignMode();
@@ -2359,8 +2359,8 @@ export default function RaportPage() {
                                 </div>
 
                                 {/* Zoom Control */}
-                                <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-10 shrink-0">
-                                    <button onClick={() => { manualZoomRef.current = true; setPreviewZoom(p => Math.max(0.3, p - 0.1)) }} className="w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><Search className="w-3 h-3 mr-0.5" />-</button>
+                                <div className="flex items-center justify-between sm:justify-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-10 w-full sm:w-auto shrink-0">
+                                    <button onClick={() => { manualZoomRef.current = true; setPreviewZoom(p => Math.max(0.3, p - 0.1)) }} className="flex-1 sm:flex-none h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><Search className="w-3 h-3 mr-0.5" />-</button>
                                     <button
                                         onClick={() => {
                                             manualZoomRef.current = false
@@ -2372,16 +2372,16 @@ export default function RaportPage() {
                                             setPreviewZoom(Math.min(1, Math.max(0.3, Math.floor((availW / docW) * 100) / 100)))
                                         }}
                                         title="Fit ke lebar layar"
-                                        className="text-[9px] font-black w-10 text-center text-indigo-500 tabular-nums hover:text-indigo-700 transition-colors cursor-pointer select-none"
+                                        className="flex-1 sm:flex-none text-[9px] font-black w-10 text-center text-indigo-500 tabular-nums hover:text-indigo-700 transition-colors cursor-pointer select-none"
                                     >{Math.round(previewZoom * 100)}%</button>
-                                    <button onClick={() => { manualZoomRef.current = true; setPreviewZoom(p => Math.min(1.5, p + 0.1)) }} className="w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><Search className="w-3 h-3 mr-0.5" />+</button>
+                                    <button onClick={() => { manualZoomRef.current = true; setPreviewZoom(p => Math.min(1.5, p + 0.1)) }} className="flex-1 sm:flex-none h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><Search className="w-3 h-3 mr-0.5" />+</button>
                                 </div>
 
                                 {/* Action Dropdown Selector */}
-                                <div className="relative flex items-center shrink-0" data-action-dropdown-anchor>
+                                <div className="relative flex items-center w-full sm:w-auto col-span-2 sm:col-span-1 shrink-0" data-action-dropdown-anchor>
                                     <button
                                         onClick={() => setShowActionDropdown(p => !p)}
-                                        className="h-10 px-3.5 rounded-xl bg-indigo-500 text-white text-[10px] font-black flex items-center gap-1.5 hover:bg-indigo-600 active:scale-95 transition-all select-none shadow-lg shadow-indigo-500/20"
+                                        className="w-full sm:w-auto h-10 px-3.5 rounded-xl bg-indigo-500 text-white text-[10px] font-black flex items-center justify-center gap-1.5 hover:bg-indigo-600 active:scale-95 transition-all select-none shadow-lg shadow-indigo-500/20"
                                     >
                                         <Sliders className="w-3.5 h-3.5" />
                                         <span>Aksi Raport</span>
@@ -2389,7 +2389,7 @@ export default function RaportPage() {
                                     </button>
 
                                     {showActionDropdown && (
-                                        <div className="absolute right-0 top-full mt-1.5 w-44 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl z-50 overflow-hidden py-1 animate-in fade-in slide-in-from-top-1 duration-100">
+                                        <div className="absolute right-0 top-full mt-1.5 w-full sm:w-44 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl z-50 overflow-hidden py-1 animate-in fade-in slide-in-from-top-1 duration-100">
                                             <button
                                                 onClick={() => {
                                                     setShowActionDropdown(false);
