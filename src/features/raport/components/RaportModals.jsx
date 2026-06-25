@@ -2,7 +2,7 @@ import { memo, useState } from 'react'
 import {
     Keyboard, X, ChevronLeft, ChevronRight,
     Search, Info, Lightbulb, Save,
-    Table, Check, Archive, Paintbrush, FileText, ClipboardList, Eye
+    Table, Check, Archive, Paintbrush, FileText, ClipboardList, Eye, Loader2, Download
 } from 'lucide-react'
 import Modal from '@shared/components/Modal'
 import RichSelect from '@shared/components/RichSelect'
@@ -54,7 +54,7 @@ export const ShortcutModalContent = memo(() => {
 
 // ─── WA Blast Confirm Content ────────────────────────────────────────────────
 
-export const WaBlastConfirmContent = memo(({ isOpen, onClose, queue, onConfirm, onCancel, lang, setLang, pageSize, setPageSize, buildWaMessage, onPreviewStudent }) => {
+export const WaBlastConfirmContent = memo(({ isOpen, onClose, queue, onConfirm, onCancel, lang, setLang, pageSize, setPageSize, buildWaMessage, onPreviewStudent, handleDownloadPdf, generatingPdfIds }) => {
     const [selectedIds, setSelectedIds] = useState(new Set(queue.map(s => s.id)))
     const [isDebug, setIsDebug] = useState(false)
     const [showPreviewMsg, setShowPreviewMsg] = useState(false)
@@ -217,6 +217,26 @@ export const WaBlastConfirmContent = memo(({ isOpen, onClose, queue, onConfirm, 
                                             <Eye className="w-3.5 h-3.5" />
                                         </button>
                                     )}
+
+                                    {/* Action button to download PDF raport */}
+                                    {handleDownloadPdf && (
+                                        <button
+                                            type="button"
+                                            disabled={generatingPdfIds?.has(s.id)}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDownloadPdf(s);
+                                            }}
+                                            className="p-1 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-500 dark:text-zinc-400 transition-colors shrink-0 flex items-center justify-center animate-in fade-in duration-200 disabled:opacity-50"
+                                            title="Download PDF Raport"
+                                        >
+                                            {generatingPdfIds?.has(s.id) ? (
+                                                <Loader2 className="w-3.5 h-3.5 animate-spin text-green-600" />
+                                            ) : (
+                                                <Download className="w-3.5 h-3.5" />
+                                            )}
+                                        </button>
+                                    )}
                                 </div>
                             )
                         })}
@@ -234,31 +254,48 @@ export const WaBlastConfirmContent = memo(({ isOpen, onClose, queue, onConfirm, 
                             >
                                 <FileText className="w-3.5 h-3.5" />
                                 {showPreviewMsg ? 'Sembunyikan Preview Pesan' : 'Lihat Preview Pesan (Simulasi)'}
-                              </button>
-                          </div>
-                          {showPreviewMsg && firstSelectedStudent && (
-                              <div className="p-3 rounded-2xl bg-[#e5ddd5] dark:bg-zinc-800 border border-[var(--color-border)] space-y-1.5 max-h-[220px] overflow-y-auto custom-scrollbar shadow-inner text-left">
-                                  <div className="text-[9px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest flex items-center justify-between">
-                                      <span>WhatsApp Bubble Preview</span>
-                                      {onPreviewStudent && (
-                                          <button
-                                              type="button"
-                                              onClick={() => onPreviewStudent(firstSelectedStudent.id)}
-                                              className="bg-green-600 hover:bg-green-700 text-white font-black text-[9px] uppercase tracking-wider px-2.5 py-0.5 rounded transition-all flex items-center gap-1"
-                                          >
-                                              👁️ Preview Raport
-                                          </button>
-                                      )}
-                                  </div>
-                                  <div 
-                                      className="bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 p-3 rounded-lg rounded-tl-none relative shadow-sm border border-zinc-200/50 dark:border-zinc-700 font-mono text-[10.5px] leading-relaxed whitespace-pre-wrap select-text"
-                                      style={{ fontFamily: "Segoe UI, -apple-system, sans-serif" }}
-                                  >
-                                      <div className="absolute top-0 -left-2 w-0 h-0 border-[8px] border-transparent border-t-white dark:border-t-zinc-900 border-r-white dark:border-r-zinc-900" />
-                                      {buildWaMessage(firstSelectedStudent, `https://laporanmu.github.io/raport_${firstSelectedStudent.name.toLowerCase().replace(/\s+/g, '_')}.pdf`)}
-                                  </div>
-                              </div>
-                          )}
+                            </button>
+                        </div>
+                        {showPreviewMsg && firstSelectedStudent && (
+                            <div className="p-3 rounded-2xl bg-[#e5ddd5] dark:bg-zinc-800 border border-[var(--color-border)] space-y-1.5 max-h-[220px] overflow-y-auto custom-scrollbar shadow-inner text-left">
+                                <div className="text-[9px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest flex items-center justify-between">
+                                    <span>WhatsApp Bubble Preview</span>
+                                    <div className="flex items-center gap-1.5">
+                                        {onPreviewStudent && (
+                                            <button
+                                                type="button"
+                                                onClick={() => onPreviewStudent(firstSelectedStudent.id)}
+                                                className="bg-green-600 hover:bg-green-700 text-white font-black text-[9px] uppercase tracking-wider px-2.5 py-0.5 rounded transition-all flex items-center gap-1"
+                                            >
+                                                👁️ Preview Raport
+                                            </button>
+                                        )}
+                                        {handleDownloadPdf && (
+                                            <button
+                                                type="button"
+                                                disabled={generatingPdfIds?.has(firstSelectedStudent.id)}
+                                                onClick={() => handleDownloadPdf(firstSelectedStudent)}
+                                                className="bg-zinc-600 hover:bg-zinc-700 disabled:bg-zinc-400 text-white font-black text-[9px] uppercase tracking-wider px-2 py-0.5 rounded transition-all flex items-center gap-1.5"
+                                            >
+                                                {generatingPdfIds?.has(firstSelectedStudent.id) ? (
+                                                    <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                                                ) : (
+                                                    <Download className="w-2.5 h-2.5" />
+                                                )}
+                                                Download PDF
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                <div 
+                                    className="bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 p-3 rounded-lg rounded-tl-none relative shadow-sm border border-zinc-200/50 dark:border-zinc-700 font-mono text-[10.5px] leading-relaxed whitespace-pre-wrap select-text"
+                                    style={{ fontFamily: "Segoe UI, -apple-system, sans-serif" }}
+                                >
+                                    <div className="absolute top-0 -left-2 w-0 h-0 border-[8px] border-transparent border-t-white dark:border-t-zinc-900 border-r-white dark:border-r-zinc-900" />
+                                    {buildWaMessage(firstSelectedStudent, `https://laporanmu.github.io/raport_${firstSelectedStudent.name.toLowerCase().replace(/\s+/g, '_')}.pdf`)}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

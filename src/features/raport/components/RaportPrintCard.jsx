@@ -329,30 +329,26 @@ const RaportPrintCard = memo(({
                         right: 10mm !important;
                         bottom: 6mm !important;
                     }
-                    .raport-header-flex {
-                        display: flex !important;
-                        align-items: center !important;
-                        justify-content: space-between !important;
-                        gap: 10px !important;
-                        padding-bottom: 8px !important;
+                    .raport-header-table {
+                        width: 100% !important;
+                        border-collapse: collapse !important;
+                        border: none !important;
+                        margin: 0 0 10px 0 !important;
                     }
                     .raport-logo-box {
-                        flex-shrink: 0 !important;
                         width: ${isLisan ? '60pt' : '68pt'} !important;
-                        height: ${isLisan ? '60pt' : '68pt'} !important;
-                        display: flex !important;
-                        align-items: center !important;
-                        justify-content: center !important;
+                        vertical-align: middle !important;
+                        text-align: center !important;
                     }
                     .raport-logo-box img {
-                        width: ${isLisan ? '60pt' : '68pt'} !important;
-                        height: ${isLisan ? '60pt' : '68pt'} !important;
+                        max-width: ${isLisan ? '60pt' : '68pt'} !important;
+                        max-height: ${isLisan ? '60pt' : '68pt'} !important;
                         object-fit: contain !important;
+                        display: inline-block !important;
                     }
                     .raport-header-center {
-                        flex: 1 !important;
                         text-align: center !important;
-                        min-width: 0 !important;
+                        vertical-align: middle !important;
                     }
                     .school-name-ar {
                         font-size: ${isLisan ? '26pt' : '30pt'} !important;
@@ -380,52 +376,70 @@ const RaportPrintCard = memo(({
             `}</style>
             {/* Header Sekolah */}
             <div style={{ marginBottom: isLisan ? (isA4 ? 4 : 6) : (isA4 ? 6 : 12) }}>
-                <div className="raport-header-flex" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, paddingBottom: isLisan ? (isA4 ? 2 : 4) : (isA4 ? 4 : 8) }}>
-                    {/* Logo Kiri (Unit/Sekolah) */}
-                    <div className="raport-logo-box" style={{ flexShrink: 0, width: isLisan ? '60pt' : '68pt', height: isLisan ? '60pt' : '68pt', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <img src={unitLogo || settings.logo_url || mbsLogo} alt="Logo sekolah" style={{ width: isLisan ? '60pt' : '68pt', height: isLisan ? '60pt' : '68pt', objectFit: 'contain', display: 'block' }} />
-                    </div>
-                    {/* Tengah (Nama Sekolah) */}
-                    <div className="raport-header-center" style={{ flex: 1, textAlign: 'center', minWidth: 0 }}>
-                        {settings.school_subtitle_ar && (
-                            <div className="school-subtitle-ar" style={{ fontSize: subtitleArFontSize, color: '#444', direction: 'rtl', marginBottom: 2, fontFamily: "'Traditional Arabic', serif", fontWeight: 700, lineHeight: 1.3, whiteSpace: 'nowrap' }}>
-                                {settings.school_subtitle_ar}
-                            </div>
-                        )}
-                        <div className="school-name-ar" style={{
-                            fontSize: isLisan ? '26pt' : '30pt', fontWeight: 900, color: settings.report_color_primary || '#1a5c35',
-                            direction: 'rtl', fontFamily: "'Traditional Arabic', serif", letterSpacing: 'normal',
-                            lineHeight: 1.05, marginBottom: 4,
-                            textShadow: '0.4px 0 0 currentColor, -0.4px 0 0 currentColor'
-                        }}>{settings.school_name_ar || ''}</div>
-                        <div className="school-name-id" style={{
-                            fontSize: isLisan ? '13pt' : '15pt',
-                            fontWeight: 800,
-                            letterSpacing: 0.8,
-                            color: '#111',
-                            marginTop: 2
-                        }}>{settings.school_name_id || ''}</div>
-                        {isTanggul ? (
-                            <div className="school-address" style={{
-                                fontSize: '8.1pt',
-                                color: '#333',
-                                marginTop: 3,
-                                lineHeight: 1.35,
-                                fontWeight: 600,
-                                fontFamily: "'Segoe Print', 'Segoe Script', 'Monotype Corsiva', cursive, sans-serif"
+                <table className="raport-header-table" style={{ width: '100%', borderCollapse: 'collapse', border: 'none', margin: '0 0 10px 0', padding: 0 }}>
+                    <tbody>
+                        <tr>
+                            {/* Logo Kiri (Unit/Sekolah) */}
+                            <td className="raport-logo-box" style={{
+                                width: isLisan ? '60pt' : '68pt',
+                                padding: 0,
+                                verticalAlign: 'middle',
+                                textAlign: 'center'
                             }}>
-                                <div>Jl. Pemandian No. 88 Dusun Krajan II Patemon Tanggul Jember 68155</div>
-                                <div>Asrama Tahfidz Al-Qur'an Bambu Kuning Jl. Teratai No. 11 Tanggul Jember 68155</div>
-                            </div>
-                        ) : (
-                            <div className="school-address" style={{ fontSize: '8.5pt', color: '#666', marginTop: 3, lineHeight: 1.3 }}>{settings.school_address || ''}</div>
-                        )}
-                    </div>
-                    {/* Logo Kanan (Pondok/Lembaga) */}
-                    <div className="raport-logo-box" style={{ flexShrink: 0, width: isLisan ? '60pt' : '68pt', height: isLisan ? '60pt' : '68pt', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <img src={settings.logo_url || mbsLogo} alt="Logo pondok" style={{ width: isLisan ? '60pt' : '68pt', height: isLisan ? '60pt' : '68pt', objectFit: 'contain', display: 'block' }} />
-                    </div>
-                </div>
+                                <img crossOrigin="anonymous" src={unitLogo || settings.logo_url || mbsLogo} alt="Logo sekolah" style={{ maxWidth: isLisan ? '60pt' : '68pt', maxHeight: isLisan ? '60pt' : '68pt', objectFit: 'contain', display: 'block', margin: '0 auto' }} />
+                            </td>
+                            {/* Tengah (Nama Sekolah) */}
+                            <td className="raport-header-center" style={{
+                                padding: '0 10px',
+                                verticalAlign: 'middle',
+                                textAlign: 'center'
+                            }}>
+                                {settings.school_subtitle_ar && (
+                                    <div className="school-subtitle-ar" style={{ fontSize: subtitleArFontSize, color: '#444', direction: 'rtl', marginBottom: 2, fontFamily: "'Traditional Arabic', serif", fontWeight: 700, lineHeight: 1.3, whiteSpace: 'nowrap' }}>
+                                        {settings.school_subtitle_ar}
+                                    </div>
+                                )}
+                                <div className="school-name-ar" style={{
+                                    fontSize: isLisan ? '26pt' : '30pt', fontWeight: 900, color: settings.report_color_primary || '#1a5c35',
+                                    direction: 'rtl', fontFamily: "'Traditional Arabic', serif", letterSpacing: 'normal',
+                                    lineHeight: 1.05, marginBottom: 4,
+                                    textShadow: '0.4px 0 0 currentColor, -0.4px 0 0 currentColor'
+                                }}>{settings.school_name_ar || ''}</div>
+                                <div className="school-name-id" style={{
+                                    fontSize: isLisan ? '13pt' : '15pt',
+                                    fontWeight: 800,
+                                    letterSpacing: 0.8,
+                                    color: '#111',
+                                    marginTop: 2
+                                }}>{settings.school_name_id || ''}</div>
+                                {isTanggul ? (
+                                    <div className="school-address" style={{
+                                        fontSize: '8.1pt',
+                                        color: '#333',
+                                        marginTop: 3,
+                                        lineHeight: 1.35,
+                                        fontWeight: 600,
+                                        fontFamily: "'Segoe Print', 'Segoe Script', 'Monotype Corsiva', cursive, sans-serif"
+                                    }}>
+                                        <div>Jl. Pemandian No. 88 Dusun Krajan II Patemon Tanggul Jember 68155</div>
+                                        <div>Asrama Tahfidz Al-Qur'an Bambu Kuning Jl. Teratai No. 11 Tanggul Jember 68155</div>
+                                    </div>
+                                ) : (
+                                    <div className="school-address" style={{ fontSize: '8.5pt', color: '#666', marginTop: 3, lineHeight: 1.3 }}>{settings.school_address || ''}</div>
+                                )}
+                            </td>
+                            {/* Logo Kanan (Pondok/Lembaga) */}
+                            <td className="raport-logo-box" style={{
+                                width: isLisan ? '60pt' : '68pt',
+                                padding: 0,
+                                verticalAlign: 'middle',
+                                textAlign: 'center'
+                            }}>
+                                <img crossOrigin="anonymous" src={settings.logo_url || mbsLogo} alt="Logo pondok" style={{ maxWidth: isLisan ? '60pt' : '68pt', maxHeight: isLisan ? '60pt' : '68pt', objectFit: 'contain', display: 'block', margin: '0 auto' }} />
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
                 <div className="divider-gradient" style={{ height: 3, background: `linear-gradient(90deg, ${settings.report_color_primary || '#1a5c35'}, ${settings.report_color_secondary || '#c8a400'}, ${settings.report_color_primary || '#1a5c35'})`, marginBottom: 0 }} />
                 <div style={{ borderBottom: `3px double ${settings.report_color_primary || '#1a5c35'}`, marginTop: 3 }} />
             </div>
@@ -434,8 +448,8 @@ const RaportPrintCard = memo(({
             <div style={{
                 textAlign: 'center',
                 margin: isLisan
-                    ? (isA4 ? '2px 0 4px' : '2px 0 6px')
-                    : (isA4 ? (isAr ? '4px 0 6px' : '12px 0 18px') : (isAr ? '6px 0 10px' : '18px 0 26px')),
+                    ? (isA4 ? '2px 0 2px' : '2px 0 4px')
+                    : (isA4 ? (isAr ? '4px 0 4px' : '6px 0 8px') : (isAr ? '6px 0 6px' : '12px 0 16px')),
                 fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit'
             }}>
                 <div style={{ fontSize: isAr ? '28pt' : (isLisan ? '14pt' : '18pt'), fontWeight: 900, direction: isAr ? 'rtl' : 'ltr', lineHeight: isAr ? 1.15 : 1.3 }}>{getReportTitle()}</div>
@@ -828,6 +842,7 @@ const RaportPrintCard = memo(({
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <img
+                        crossOrigin="anonymous"
                         src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&format=svg&ecc=L&qzone=1&data=${encodeURIComponent(getVerificationUrl())}`}
                         alt="Verification QR"
                         style={{ width: '42px', height: '42px', display: 'block', backgroundColor: '#fff', padding: '2px', border: '1px solid #eee', borderRadius: '4px' }}

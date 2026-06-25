@@ -22,6 +22,138 @@ const withTimeout = (promise, ms, label = 'Operasi') =>
         new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timeout setelah ${ms / 1000}s`)), ms)),
     ])
 
+/**
+ * Mengonversi seluruh element <img> di dalam cloneEl menjadi Base64 data URL.
+ * Menggunakan element gambar asli (origEl) yang sudah pasti ter-load di DOM.
+ * Ini krusial karena Browserless di cloud tidak bisa mengakses local dev assets
+ * (seperti http://localhost:5173/src/assets/logo.png) atau relative paths.
+ */
+const convertImagesToBase64 = async (origEl, cloneEl) => {
+    const origImgs = Array.from(origEl.querySelectorAll('img'))
+    const cloneImgs = Array.from(cloneEl.querySelectorAll('img'))
+
+    await Promise.all(cloneImgs.map(async (cloneImg, idx) => {
+        const origImg = origImgs[idx]
+        if (!origImg) return
+        if (cloneImg.src.startsWith('data:')) return
+
+        const getCanvasBase64 = (img) => {
+            const canvas = document.createElement('canvas')
+            canvas.width = img.naturalWidth
+            canvas.height = img.naturalHeight
+            const ctx = canvas.getContext('2d')
+            ctx.drawImage(img, 0, 0)
+            return canvas.toDataURL('image/png')
+        }
+
+        // 1. Coba convert dengan Canvas menggunakan gambar asli (sangat cepat & aman jika loaded + CORS ok)
+        try {
+            if (origImg.naturalWidth > 0) {
+                cloneImg.src = getCanvasBase64(origImg)
+                return
+            }
+        } catch (e) {
+            console.warn('[PDF Logo] Canvas conversion failed on original image, trying dynamic load:', e)
+        }
+
+        // 2. Coba buat new Image dengan crossOrigin='anonymous' (untuk local asset / Supabase URL yang belum ter-CORS di DOM asli)
+        try {
+            const base64 = await new Promise((resolve, reject) => {
+                const img = new Image()
+                img.crossOrigin = 'anonymous'
+                img.onload = () => {
+                    try {
+                        resolve(getCanvasBase64(img))
+                    } catch (err) {
+                        reject(err)
+                    }
+                }
+                img.onerror = () => reject(new Error('Failed to load image dynamically'))
+                img.src = cloneImg.src
+            })
+            cloneImg.src = base64
+            return
+        } catch (e) {
+            console.warn('[PDF Logo] Dynamic image canvas conversion failed, falling back to fetch:', e)
+        }
+
+        // 3. Fallback: Fetch file lalu convert ke base64
+        try {
+            const res = await fetch(cloneImg.src)
+            const blob = await res.blob()
+            const base64 = await new Promise((resolve) => {
+                const reader = new FileReader()
+                reader.onloadend = () => resolve(reader.result)
+                reader.readAsDataURL(blob)
+            })
+            cloneImg.src = base64
+        } catch (e) {
+            console.error('Failed to convert image to base64:', cloneImg.src, e)
+            // Pastikan URL minimal absolut agar Browserless bisa mencobanya jika itu domain publik
+            if (cloneImg.src.startsWith('/') || cloneImg.src.startsWith('./')) {
+                cloneImg.src = new URL(cloneImg.src, window.location.origin).href
+            }
+        }
+    }))
+}
+
+/**
+ * Serialisasi cardEl ke HTML string self-contained untuk Browserless.
+ * Mengambil semua CSS rule aktif di halaman agar font, warna, dan layout
+ * dirender persis sama seperti di browser preview.
+ */
+const buildHTMLString = (cardEl, pageSize = 'f4') => {
+    // Kumpulkan semua CSS rules dari semua stylesheet aktif
+    const allCss = Array.from(document.styleSheets).flatMap(sheet => {
+        try {
+            return Array.from(sheet.cssRules).map(r => r.cssText)
+        } catch {
+            // Cross-origin stylesheet, skip
+            return []
+        }
+    }).join('\n')
+
+    const cardHTML = cardEl.outerHTML
+    const pageW = pageSize === 'f4' ? '215mm' : '210mm'
+    const pageH = pageSize === 'f4' ? '330mm' : '297mm'
+
+    return `<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: ${pageW};
+      min-height: ${pageH};
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .raport-card {
+      width: ${pageW} !important;
+      min-width: ${pageW} !important;
+      min-height: ${pageH} !important;
+      box-shadow: none !important;
+      margin: 0 !important;
+      box-sizing: border-box !important;
+    }
+    /* Semua CSS dari aplikasi */
+    ${allCss}
+  </style>
+</head>
+<body>
+  ${cardHTML}
+</body>
+</html>`
+}
+
+
 // Helper to check if a public URL exists (e.g. not deleted from Supabase)
 const checkUrlExists = async (url) => {
     if (!url) return false
@@ -197,18 +329,17 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef,
     }, [buildWaMessage, sendFonnteMessage, addToast])
 
     // ── Generate PDF Blob ──
+    // Menggunakan Browserless.io via Supabase Edge Function untuk rendering pixel-perfect.
+    // Fallback ke html2canvas+jsPDF jika Edge Function tidak tersedia.
     const generatePDFBlob = useCallback(async (student, contextOverride = {}) => {
-        const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
-            import('html2canvas'),
-            import('jspdf')
-        ])
         const activeBulanObj = contextOverride.bulanObj ?? bulanObj
         const activeYear = contextOverride.year ?? selectedYear
         const bulanStr = activeBulanObj?.id_str || String(contextOverride.month ?? selectedMonth)
         const safeName = student.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '')
         const filename = `${safeName}_${bulanStr}_${activeYear}.pdf`
+        const storagePath = `${activeYear}/${bulanStr}/${filename}`
 
-        // Pastikan card sudah di-render di printContainerRef (area tersembunyi yg sudah ada font + gambar)
+        // Pastikan card sudah di-render di printContainerRef
         let cardEl = printContainerRef.current?.querySelector(`.raport-card[data-student-id="${student.id}"]`)
         if (!cardEl) {
             if (silentPrintRef) silentPrintRef.current = true
@@ -224,23 +355,14 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef,
         }
         if (!cardEl) throw new Error('Gagal render raport card')
 
-        // ── Dimensi target PDF dalam pixel (96dpi) ──
-        // A4 = 210×297mm → 794×1123px | F4 = 215×330mm → 812×1247px
-        const W = pageSize === 'f4' ? 812 : 794
-        const H = pageSize === 'f4' ? 1247 : 1123
-
-        // ── Tunggu font & gambar di cardEl (di printContainerRef) sudah siap ──
+        // Tunggu font & gambar siap
         if (document.fonts) {
             try {
                 await Promise.all([
                     document.fonts.load('400 16px Amiri'),
                     document.fonts.load('700 16px Amiri'),
-                    document.fonts.load('400 32px Amiri'),
-                    document.fonts.load('700 32px Amiri'),
                     document.fonts.load('400 16px Cairo'),
                     document.fonts.load('700 16px Cairo'),
-                    document.fonts.load('400 16px "Traditional Arabic"'),
-                    document.fonts.load('700 16px "Traditional Arabic"'),
                 ])
             } catch (e) { console.warn('Font load warning:', e) }
         }
@@ -252,145 +374,134 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef,
             if (img.complete && img.naturalWidth > 0) return res()
             img.onload = res; img.onerror = res
         })))
-        await new Promise(r => setTimeout(r, 400))
+        await new Promise(r => setTimeout(r, 300))
 
-        // ── Ukur cardEl yang sesungguhnya di printContainerRef ──
-        // printContainerRef biasanya off-screen (left:-9999px) tapi tetap dirender oleh browser
-        // sehingga offsetWidth/offsetHeight memberikan ukuran asli elemen
+        // ── Coba Browserless via Supabase Edge Function (primary) ──
+        try {
+            // Buat clone untuk modifikasi image ke base64 agar tidak merusak DOM asli/preview
+            const cardCloneForHTML = cardEl.cloneNode(true)
+            await convertImagesToBase64(cardEl, cardCloneForHTML)
+            const htmlContent = buildHTMLString(cardCloneForHTML, pageSize)
+
+            const { data: edgeData, error: edgeError } = await supabase.functions.invoke(
+                'generate-raport-pdf',
+                {
+                    body: { htmlContent, filename, storagePath, pageSize },
+                }
+            )
+
+            if (edgeError) throw edgeError
+            if (!edgeData?.path) throw new Error('Edge function tidak mengembalikan path')
+
+            // Ambil blob dari Supabase Storage
+            const { data: blobData, error: downloadError } = await supabase.storage
+                .from('raport-mbs')
+                .download(edgeData.path)
+
+            if (downloadError) throw downloadError
+            if (!blobData) throw new Error('Gagal download PDF dari storage')
+
+            if (silentPrintRef) silentPrintRef.current = false
+            setPrintQueue([])
+            setPrintRenderedCount(0)
+
+            return { blob: blobData, filename }
+
+        } catch (browserlessErr) {
+            // ── Fallback ke html2canvas + jsPDF ──
+            console.warn('Browserless Edge Function gagal, fallback ke html2canvas:', browserlessErr)
+            return await _generatePDFBlobFallback({ cardEl, filename, pageSize })
+        }
+
+    }, [bulanObj, selectedMonth, selectedYear, printContainerRef, setPrintQueue, setPrintRenderedCount, pageSize])
+
+    // ── Fallback: html2canvas + jsPDF (jika Browserless tidak tersedia) ──
+    const _generatePDFBlobFallback = useCallback(async ({ cardEl, filename, pageSize: ps }) => {
+        const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+            import('html2canvas'),
+            import('jspdf')
+        ])
+
+        const W = ps === 'f4' ? 812 : 794
+        const H = ps === 'f4' ? 1247 : 1123
         const naturalW = cardEl.offsetWidth || cardEl.scrollWidth || W
         const naturalH = cardEl.offsetHeight || cardEl.scrollHeight || H
 
-        // Scale factor: seberapa besar kita perlu memperbesar/memperkecil cardEl
-        // agar hasilnya pas ke dimensi kertas PDF (W×H)
-        const scaleX = W / naturalW
-        const scaleY = H / naturalH
-        // Ambil scale terkecil supaya tidak ada overflow (letterbox style)
-        // Tapi biasanya scaleX ≈ scaleY untuk raport A4/F4
-        const layoutScale = Math.min(scaleX, scaleY)
-
-        // ── Buat wrapper off-screen untuk capture ──
-        // Wrapper berukuran persis W×H agar html2canvas menghasilkan canvas yang tepat
         const wrapper = document.createElement('div')
         wrapper.style.cssText = [
-            'position:fixed',
-            'left:-99999px',
-            'top:0',
-            `width:${W}px`,
-            `height:${H}px`,
-            'overflow:hidden',
-            'background:white',
-            'z-index:-9999',
+            'position:absolute', 'left:-99999px', 'top:-99999px',
+            `width:${naturalW}px`, `height:${naturalH}px`,
+            'overflow:hidden', 'background:white', 'z-index:-9999',
         ].join(';')
 
-        // Clone cardEl — JANGAN pindahkan aslinya agar printContainerRef tetap intact
         const cardClone = cardEl.cloneNode(true)
-
-        // ── Terapkan style ke clone: scale agar match ukuran kertas ──
-        // transform-origin: top left agar scaling mulai dari pojok kiri atas
         cardClone.style.cssText += [
-            'position:absolute',
-            'top:0',
-            'left:0',
-            `width:${naturalW}px`,
-            `min-width:${naturalW}px`,
-            `height:${naturalH}px`,
-            'transform-origin:top left',
-            `transform:scale(${scaleX},${scaleY})`,
-            'margin:0',
-            'box-shadow:none',
-            'border:none',
-            'border-radius:0',
+            'position:relative', 'top:0', 'left:0',
+            `width:${naturalW}px`, `min-width:${naturalW}px`, `height:${naturalH}px`,
+            'margin:0', 'box-shadow:none', 'border:none', 'border-radius:0',
         ].join(';')
 
-        // Clone semua stylesheet dari dokumen aktif ke dalam wrapper
-        // agar font Arab, Tailwind, dll terbaca html2canvas
         document.querySelectorAll('style, link[rel="stylesheet"]').forEach(el => {
             wrapper.appendChild(el.cloneNode(true))
         })
 
-        // Override tambahan untuk memastikan warna & Arabic direction benar di clone
         const overrideStyle = document.createElement('style')
         overrideStyle.textContent = `
-            .school-name-ar, .school-subtitle-ar {
-                direction: rtl !important;
-                unicode-bidi: embed !important;
-                letter-spacing: normal !important;
-                white-space: nowrap !important;
+            @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;700&display=swap');
+            .divider-gradient { background: linear-gradient(90deg, #1a5c35, #c8a400, #1a5c35) !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .raport-card table:not(.raport-header-table) td,
+            .raport-card table:not(.raport-header-table) th {
+                vertical-align: middle !important;
+                padding-top: 3px !important;
+                padding-bottom: 3px !important;
+                line-height: 1.2 !important;
             }
-            .divider-gradient {
-                background: ${settings.report_color_primary || '#1a5c35'} !important;
-            }
-            * {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-            img { mix-blend-mode: normal !important; }
         `
         wrapper.appendChild(overrideStyle)
         wrapper.appendChild(cardClone)
         document.body.appendChild(wrapper)
 
-        // Preload semua img di clone (canvas QR sudah ikut via cloneNode)
         const cloneImgs = cardClone.querySelectorAll('img')
         await Promise.allSettled(Array.from(cloneImgs).map(img => new Promise(res => {
             if (img.complete && img.naturalWidth > 0) return res()
             img.onload = res; img.onerror = res
-            if (!img.complete) {
-                const s = img.src; img.src = ''; img.crossOrigin = 'anonymous'; img.src = s
-            }
+            if (!img.complete) { const s = img.src; img.src = ''; img.crossOrigin = 'anonymous'; img.src = s }
         })))
         await new Promise(r => setTimeout(r, 300))
 
         try {
-            // Scale 3 untuk ketajaman teks — html2canvas mengambil gambar di W×H
             const canvas = await withTimeout(
                 html2canvas(wrapper, {
-                    scale: 3,
-                    useCORS: true,
-                    allowTaint: false,
-                    backgroundColor: '#ffffff',
-                    width: W,
-                    height: H,
-                    scrollX: 0,
-                    scrollY: 0,
-                    logging: false,
-                    imageTimeout: 15000,
+                    scale: 3, useCORS: true, allowTaint: false,
+                    backgroundColor: '#ffffff', width: naturalW, height: naturalH,
+                    scrollX: 0, scrollY: 0, logging: false, imageTimeout: 15000,
                     onclone: (doc) => {
-                        // Pastikan Arabic direction benar di cloned doc html2canvas
                         doc.querySelectorAll('.school-name-ar, .school-subtitle-ar, [dir="rtl"]').forEach(el => {
-                            el.style.direction = 'rtl'
-                            el.style.unicodeBidi = 'embed'
-                            el.style.whiteSpace = 'nowrap'
+                            el.style.direction = 'rtl'; el.style.unicodeBidi = 'embed'; el.style.whiteSpace = 'nowrap'
+                        })
+                        doc.querySelectorAll('table:not(.raport-header-table) td, table:not(.raport-header-table) th').forEach(cell => {
+                            cell.style.setProperty('vertical-align', 'middle', 'important')
+                            cell.style.setProperty('padding-top', '3px', 'important')
+                            cell.style.setProperty('padding-bottom', '3px', 'important')
+                            cell.style.setProperty('line-height', '1.2', 'important')
                         })
                     }
                 }),
-                25000,
-                'Render PDF'
+                25000, 'Render PDF'
             )
-
-            const pdf = new jsPDF({
-                unit: 'mm',
-                format: pageSize === 'f4' ? [215, 330] : 'a4',
-                orientation: 'portrait',
-                compress: true
-            })
-            const pdfW = pageSize === 'f4' ? 215 : 210
-            const pdfH = pageSize === 'f4' ? 330 : 297
-
-            // PNG untuk kualitas teks & garis tabel yang tajam
-            pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pdfW, pdfH)
-
+            const pdf = new jsPDF({ unit: 'mm', format: ps === 'f4' ? [215, 330] : 'a4', orientation: 'portrait', compress: true })
+            pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, ps === 'f4' ? 215 : 210, ps === 'f4' ? 330 : 297)
             const blob = pdf.output('blob')
-            if (!blob || blob.size < 5000) throw new Error('PDF terlalu kecil, kemungkinan render gagal')
+            if (!blob || blob.size < 5000) throw new Error('PDF terlalu kecil')
             return { blob, filename }
         } finally {
-            // Hapus wrapper — cardEl asli di printContainerRef tidak disentuh
             if (document.body.contains(wrapper)) document.body.removeChild(wrapper)
             setPrintQueue([])
             setPrintRenderedCount(0)
             if (silentPrintRef) silentPrintRef.current = false
         }
-    }, [bulanObj, selectedMonth, selectedYear, printContainerRef, setPrintQueue, setPrintRenderedCount, pageSize])
+    }, [setPrintQueue, setPrintRenderedCount])
 
     // ── Upload to Supabase ──
     const uploadToSupabase = useCallback(async (blob, filename) => {
@@ -481,7 +592,7 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef,
                 if (!phone) { failed++; continue }
 
                 let url = 'https://laporanmu.github.io/mock_debug_preview.pdf'
-                
+
                 if (!isDebug) {
                     url = getCachedRaportLink(student.id)
                     if (url) {
@@ -514,7 +625,7 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef,
 
                 // Gunakan sendFonnteMessage (teks) dengan menyisipkan URL PDF karena Fonnte Free tidak support file
                 const message = buildWaMessage(student, url)
-                
+
                 let sent = false
                 if (isDebug) {
                     console.log(`%c[WA BLAST SIMULASI] Nomor: ${phone} (${student.name})\nPesan:\n${message}`, 'background: #e1f5fe; color: #0277bd; padding: 4px; border-radius: 4px;')

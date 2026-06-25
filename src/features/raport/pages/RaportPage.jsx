@@ -175,6 +175,38 @@ export default function RaportPage() {
     // ── Archive tab (list | ringkasan)
     const [archiveTab, setArchiveTab] = useState('list')
     const [tempSelectedClassId, setTempSelectedClassId] = useState('')
+
+    const [generatingPdfIds, setGeneratingPdfIds] = useState(new Set())
+
+    const handleDownloadPdf = useCallback(async (student) => {
+        if (!student) return
+        setGeneratingPdfIds(prev => {
+            const next = new Set(prev)
+            next.add(student.id)
+            return next
+        })
+        try {
+            const { blob, filename } = await generatePDFBlob(student)
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = filename
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            URL.revokeObjectURL(url)
+            addToast(`✅ PDF ${student.name} berhasil diunduh`, 'success')
+        } catch (err) {
+            console.error(err)
+            addToast('Gagal mengunduh PDF: ' + err.message, 'error')
+        } finally {
+            setGeneratingPdfIds(prev => {
+                const next = new Set(prev)
+                next.delete(student.id)
+                return next
+            })
+        }
+    }, [generatePDFBlob, addToast])
     const [classSelectionType, setClassSelectionType] = useState('all')
     const [classSelectionGrade, setClassSelectionGrade] = useState('all')
 
@@ -2296,6 +2328,22 @@ export default function RaportPage() {
                                         </button>
                                     )}
 
+                                    {previewStudent && (
+                                        <button
+                                            disabled={generatingPdfIds.has(previewStudent.id)}
+                                            onClick={() => handleDownloadPdf(previewStudent)}
+                                            className="h-10 px-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-700 text-[10px] font-black flex items-center justify-center gap-2 flex-1 sm:flex-initial transition-all disabled:opacity-50"
+                                            title="Download PDF Raport"
+                                        >
+                                            {generatingPdfIds.has(previewStudent.id) ? (
+                                                <Loader2 className="w-3.5 h-3.5 animate-spin mr-1 text-indigo-600" />
+                                            ) : (
+                                                <Download className="w-3.5 h-3.5 mr-1" />
+                                            )}
+                                            <span className="hidden xs:inline">Download PDF</span>
+                                        </button>
+                                    )}
+
                                     <button onClick={() => openPrintWindow([previewStudent].filter(Boolean))} className="h-10 px-5 rounded-xl bg-emerald-500 text-white text-[10px] font-black flex items-center justify-center gap-2 flex-1 sm:flex-initial shadow-lg shadow-emerald-500/20">
                                         <Printer className="w-3.5 h-3.5 mr-1" /> <span className="hidden xs:inline">Cetak</span>
                                     </button>
@@ -3245,6 +3293,8 @@ export default function RaportPage() {
                             setPreviewStudentId(studentId)
                             setIsFullScreenPreview(true)
                         }}
+                        handleDownloadPdf={handleDownloadPdf}
+                        generatingPdfIds={generatingPdfIds}
                         onConfirm={(selectedQueue, isDebug) => {
                             setWaBlastConfirm(null)
                             // Tunggu satu frame agar React selesai me-render printContainerRef dengan opsi baru
@@ -3633,6 +3683,20 @@ export default function RaportPage() {
                                         <span className="text-slate-300">|</span>
                                         <span className="text-[9px] font-black text-slate-500">LANG {lang.toUpperCase()}</span>
                                     </div>
+                                    {fsStudent && (
+                                        <button
+                                            disabled={generatingPdfIds.has(fsStudent.id)}
+                                            onClick={() => handleDownloadPdf(fsStudent)}
+                                            className="w-9 h-9 sm:w-8 sm:h-8 rounded-lg bg-indigo-50 hover:bg-indigo-100 disabled:bg-slate-100 text-indigo-600 disabled:text-slate-400 border border-indigo-200/50 flex items-center justify-center transition-all"
+                                            title="Download PDF Raport"
+                                        >
+                                            {generatingPdfIds.has(fsStudent.id) ? (
+                                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                            ) : (
+                                                <Download className="w-3.5 h-3.5" />
+                                            )}
+                                        </button>
+                                    )}
                                     <button
                                         onClick={() => openPrintWindow([fsStudent].filter(Boolean))}
                                         className="w-9 h-9 sm:w-8 sm:h-8 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white shadow-md shadow-indigo-500/30 flex items-center justify-center transition-all"
