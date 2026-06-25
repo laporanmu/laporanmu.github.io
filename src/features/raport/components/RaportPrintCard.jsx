@@ -5,6 +5,7 @@ import { RAPORT_TYPES, getClassLevel, getGradePredicate } from '@features/raport
 import mbsLogo from '@assets/images/logos/logo-mbs.png'
 import smpLogo from '@assets/images/logos/logo-smp.png'
 import smaLogo from '@assets/images/logos/logo-sma.jpg'
+import SignatureBlock from '@/components/SignatureBlock'
 
 const printCardAreEqual = (prev, next) => {
     if (prev.lang !== next.lang) return false
@@ -19,6 +20,8 @@ const printCardAreEqual = (prev, next) => {
     if (prev.reportType !== next.reportType) return false
     if (prev.selectedSemester !== next.selectedSemester) return false
     if (prev.academicYear !== next.academicYear) return false
+    if (prev.signMode !== next.signMode) return false
+    if (JSON.stringify(prev.signatures) !== JSON.stringify(next.signatures)) return false
 
     // Deep-compare scores
     if (JSON.stringify(prev.scores) !== JSON.stringify(next.scores)) return false
@@ -48,7 +51,9 @@ const RaportPrintCard = memo(({
     selectedSemester = 1,
     academicYear = '',
     selectedClass,
-    layoutConfig = {}
+    layoutConfig = {},
+    signMode = 'basah',
+    signatures = null
 }) => {
     // Resolve layoutConfig values with fallback defaults
     const lc = {
@@ -801,26 +806,56 @@ const RaportPrintCard = memo(({
             <div style={{ display: 'flex', marginTop: isLisan ? (isA4 ? 6 : 8) : (isA4 ? 12 : 36), flexDirection: 'row', justifyContent: 'space-between', direction: isAr ? 'rtl' : 'ltr', gap: 10 }}>
                 {(isAr ? [
                     {
+                        key: 'pengasuh',
                         label: settings.headmaster_title_ar || 'مدير المعهد\nمعهد محمدية تانجول',
-                        sub: isAr ? (settings.headmaster_name_ar || '—') : (settings.headmaster_name_id || '—')
+                        nama: signatures?.pengasuh?.nama ?? settings.headmaster_name_ar ?? 'Ir. Muhammad Ali Maksum',
+                        signatureUrl: signatures?.pengasuh?.url ?? null,
+                        mode: signMode
                     },
-                    { label: isLisan ? 'رائد الفصل' : L.musyrif, sub: displayMusyrif || '......................' },
-                    { label: L.guardian, sub: '' },
-                ] : [
-                    { label: L.guardian, sub: '' },
-                    { label: isLisan ? 'Wali Kelas' : L.musyrif, sub: displayMusyrif || '......................' },
                     {
-                        label: settings.headmaster_title_id || 'Pengasuh\nMuhammadiyah Boarding School Tanggul',
-                        sub: settings.headmaster_name_id || '—'
+                        key: 'wali_kelas',
+                        label: isLisan ? 'رائد الفصل' : L.musyrif,
+                        nama: signatures?.wali_kelas?.nama ?? displayMusyrif ?? '......................',
+                        signatureUrl: signatures?.wali_kelas?.url ?? null,
+                        mode: signMode
                     },
-                ]).map((item, i) => (
-                    <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', fontFamily: isAr ? "'Traditional Arabic', serif" : 'inherit', fontSize: isAr ? '14pt' : '10pt', maxWidth: '32%', minWidth: 0 }}>
-                        <div style={{ fontWeight: 700, whiteSpace: 'pre-line', height: isLisan ? '2.8em' : '4.2em', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', fontSize: isAr ? '14.5pt' : '9.5pt', lineHeight: 1.25, marginBottom: 8 }}>{item.label}</div>
-                        <div style={{ height: isLisan ? (isA4 ? 35 : 45) : (isA4 ? 50 : 90) }} />
-                        <div style={{ borderTop: '1px solid #333', paddingTop: 4, width: '90%', fontWeight: 700, fontSize: isAr ? '16pt' : '10.5pt' }}>
-                            {item.sub || '......................'}
-                        </div>
-                    </div>
+                    {
+                        key: 'wali_santri',
+                        label: L.guardian,
+                        nama: student?.metadata?.nama_wali || '......................',
+                        signatureUrl: null,
+                        mode: 'basah'
+                    }
+                ] : [
+                    {
+                        key: 'wali_santri',
+                        label: L.guardian,
+                        nama: student?.metadata?.nama_wali || '......................',
+                        signatureUrl: null,
+                        mode: 'basah'
+                    },
+                    {
+                        key: 'wali_kelas',
+                        label: isLisan ? 'Wali Kelas' : L.musyrif,
+                        nama: signatures?.wali_kelas?.nama ?? displayMusyrif ?? '......................',
+                        signatureUrl: signatures?.wali_kelas?.url ?? null,
+                        mode: signMode
+                    },
+                    {
+                        key: 'pengasuh',
+                        label: settings.headmaster_title_id || 'Pengasuh\nMuhammadiyah Boarding School Tanggul',
+                        nama: signatures?.pengasuh?.nama ?? settings.headmaster_name_id ?? 'Ir. Muhammad Ali Maksum',
+                        signatureUrl: signatures?.pengasuh?.url ?? null,
+                        mode: signMode
+                    }
+                ]).map((block) => (
+                    <SignatureBlock
+                        key={block.key}
+                        label={block.label}
+                        nama={block.nama}
+                        signatureUrl={block.signatureUrl}
+                        mode={block.mode}
+                    />
                 ))}
             </div>
 

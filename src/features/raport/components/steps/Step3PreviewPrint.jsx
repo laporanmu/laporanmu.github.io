@@ -123,7 +123,7 @@ export default function Step3PreviewPrint({
                                 className="flex-1 h-10 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-between gap-2 overflow-hidden"
                             >
                                 <div className="flex items-center gap-2 truncate min-w-0">
-                                    {isComplete(scores[previewStudentId || students[0]?.id] || {}) ? (
+                                    {isComplete(scores[previewStudentId || students[0]?.id] || {}, criteria) ? (
                                         <CheckCircle2 className="w-3 h-3 shrink-0 text-emerald-500" />
                                     ) : (
                                         <AlertCircle className="w-3 h-3 shrink-0 text-amber-500" />
@@ -186,7 +186,7 @@ export default function Step3PreviewPrint({
                         {/* DESKTOP: Vertical Sidebar List */}
                         <div className="hidden lg:flex flex-col gap-1.5 h-[calc(100vh-320px)] min-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                             {students.map(s => {
-                                const complete = isComplete(scores[s.id] || {})
+                                const complete = isComplete(scores[s.id] || {}, criteria)
                                 const active = previewStudentId === s.id
                                 return (
                                     <button

@@ -26,6 +26,7 @@ import mbsLogo from '@assets/images/logos/logo-mbs.png'
 const TABS = [
     { id: 'flags', label: 'Feature Flags', icon: faToggleOn },
     { id: 'raport', label: 'Raport', icon: faFileLines },
+    { id: 'signatures', label: 'Tanda Tangan', icon: faUpload },
     { id: 'activity', label: 'Aktivitas', icon: faHistory },
     { id: 'danger', label: 'Bahaya', icon: faSkull },
 ]
@@ -785,6 +786,139 @@ export default function AdminSettingsPage() {
     const hasDbCredentials = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY)
 
     const [activeTab, setActiveTab] = useState('flags')
+
+    // --- Signatures management states ---
+    const [signaturesList, setSignaturesList] = useState([])
+    const [teachersList, setTeachersList] = useState([])
+    const [loadingSignatures, setLoadingSignatures] = useState(false)
+    const [newSigRole, setNewSigRole] = useState('wali_kelas')
+    const [newSigTeacherId, setNewSigTeacherId] = useState('')
+    const [newSigFile, setNewSigFile] = useState(null)
+    const [uploadingSig, setUploadingSig] = useState(false)
+    const sigFileInputRef = useRef(null)
+
+    const fetchSignaturesAndTeachers = async () => {
+        setLoadingSignatures(true)
+        try {
+            // Fetch active teachers
+            const { data: teachersData, error: teachersErr } = await supabase
+                .from('teachers')
+                .select('id, name')
+                .order('name')
+            if (teachersErr) throw teachersErr
+            setTeachersList(teachersData || [])
+
+            // Fetch signatures list
+            const { data: sigsData, error: sigsErr } = await supabase
+                .from('signatures')
+                .select('id, role, signature_url, person_id, is_active, teachers:person_id(name)')
+                .order('created_at', { ascending: false })
+            if (sigsErr) throw sigsErr
+            setSignaturesList(sigsData || [])
+        } catch (err) {
+            console.error(err)
+            addToast('Gagal memuat data tanda tangan: ' + (err.message || err), 'error')
+        } finally {
+            setLoadingSignatures(false)
+        }
+    }
+
+    useEffect(() => {
+        if (activeTab === 'signatures') {
+            fetchSignaturesAndTeachers()
+        }
+    }, [activeTab])
+
+    const handleDeleteSignature = async (sig) => {
+        if (!confirm(`Hapus tanda tangan digital untuk ${sig.teachers?.name || 'guru ini'}?`)) return
+        try {
+            // Delete DB row
+            const { error: dbErr } = await supabase
+                .from('signatures')
+                .delete()
+                .eq('id', sig.id)
+            if (dbErr) throw dbErr
+
+            // Also try to delete file from storage if it is in our bucket
+            if (sig.signature_url) {
+                const urlParts = sig.signature_url.split('/signatures/')
+                if (urlParts.length > 1) {
+                    const filePath = urlParts[1]
+                    await supabase.storage.from('signatures').remove([filePath])
+                }
+            }
+
+            addToast('Tanda tangan berhasil dihapus', 'success')
+            fetchSignaturesAndTeachers()
+        } catch (err) {
+            console.error(err)
+            addToast('Gagal menghapus: ' + (err.message || err), 'error')
+        }
+    }
+
+    const handleUploadSignature = async (e) => {
+        e.preventDefault()
+        if (!newSigTeacherId) {
+            addToast('Silakan pilih guru terlebih dahulu', 'warning')
+            return
+        }
+        if (!newSigFile) {
+            addToast('Silakan pilih file gambar tanda tangan', 'warning')
+            return
+        }
+        setUploadingSig(true)
+        try {
+            // Generate unique filename
+            const ext = newSigFile.name.split('.').pop()
+            const fileName = `${newSigRole}_${newSigTeacherId}_${Date.now()}.${ext}`
+
+            // 1. Upload to storage
+            const { error: uploadErr } = await supabase.storage
+                .from('signatures')
+                .upload(fileName, newSigFile, { upsert: true })
+            if (uploadErr) throw uploadErr
+
+            // Get public URL
+            const { data: urlData } = supabase.storage
+                .from('signatures')
+                .getPublicUrl(fileName)
+            const publicUrl = urlData.publicUrl
+
+            // 2. Set all other signatures for this person/role as inactive if exists
+            await supabase
+                .from('signatures')
+                .update({ is_active: false })
+                .eq('person_id', newSigTeacherId)
+                .eq('is_active', true)
+
+            // 3. Insert new row
+            const { error: insertErr } = await supabase
+                .from('signatures')
+                .insert({
+                    role: newSigRole,
+                    person_id: newSigTeacherId,
+                    signature_url: publicUrl,
+                    is_active: true
+                })
+            if (insertErr) throw insertErr
+
+            addToast('Tanda tangan digital berhasil ditambahkan', 'success')
+            
+            // Reset form
+            setNewSigTeacherId('')
+            setNewSigFile(null)
+            if (sigFileInputRef.current) sigFileInputRef.current.value = ''
+            
+            // Refresh list
+            fetchSignaturesAndTeachers()
+        } catch (err) {
+            console.error(err)
+            addToast('Gagal mengunggah tanda tangan: ' + (err.message || err), 'error')
+        } finally {
+            setUploadingSig(false)
+        }
+    }
+
     const [activeCategory, setActiveCategory] = useState('module')
     const [flags, setFlags] = useState([])
     const [loading, setLoading] = useState(true)
@@ -949,7 +1083,7 @@ export default function AdminSettingsPage() {
 
                 {/* ── Tab bar ─────────────────────────────────────────── */}
                 <div className="mb-6">
-                    <div className="inline-grid grid-cols-4 sm:flex w-full sm:w-fit bg-[var(--color-surface-alt)]/50 backdrop-blur-sm rounded-2xl border border-[var(--color-border)] p-1.5 gap-1 shadow-sm">
+                    <div className="inline-grid grid-cols-5 sm:flex w-full sm:w-fit bg-[var(--color-surface-alt)]/50 backdrop-blur-sm rounded-2xl border border-[var(--color-border)] p-1.5 gap-1 shadow-sm">
                         {TABS.map(t => (
                             <button
                                 key={t.id} onClick={() => setActiveTab(t.id)} type="button"
@@ -1182,6 +1316,178 @@ export default function AdminSettingsPage() {
                     {activeTab === 'activity' && (
                         <ActivityFeed refreshKey={activityKey} flags={flags} />
                     )}
+
+                {/* ══════════════════════════════════════════════════════
+                    TAB: SIGNATURES (TANDA TANGAN)
+                ══════════════════════════════════════════════════════ */}
+                {activeTab === 'signatures' && (
+                    <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6 items-start animate-in fade-in duration-200">
+                        {/* Left: Add/Upload Signature Form */}
+                        <div className="glass rounded-2xl border border-[var(--color-border)] overflow-hidden shadow-sm">
+                            <div className="px-5 py-4 border-b border-[var(--color-border)] bg-gradient-to-r from-indigo-500/8 to-transparent flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 shrink-0">
+                                    <FontAwesomeIcon icon={faUpload} />
+                                </div>
+                                <div>
+                                    <p className="font-black text-[13px] text-[var(--color-text)] leading-tight">Unggah Tanda Tangan</p>
+                                    <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">Tambah TTD digital guru & pengasuh</p>
+                                </div>
+                            </div>
+                            
+                            <form onSubmit={handleUploadSignature} className="p-5 space-y-4">
+                                <div>
+                                    <FL>Pilih Guru / Staff</FL>
+                                    <select
+                                        value={newSigTeacherId}
+                                        onChange={e => setNewSigTeacherId(e.target.value)}
+                                        className="input-field text-sm h-11 w-full"
+                                        required
+                                    >
+                                        <option value="">-- Pilih Guru --</option>
+                                        {teachersList.map(t => (
+                                            <option key={t.id} value={t.id}>{t.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <FL>Peran TTD</FL>
+                                    <select
+                                        value={newSigRole}
+                                        onChange={e => setNewSigRole(e.target.value)}
+                                        className="input-field text-sm h-11 w-full"
+                                        required
+                                    >
+                                        <option value="wali_kelas">Wali Kelas / Musyrif</option>
+                                        <option value="pengasuh">Pengasuh / Direktur</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <FL>File Gambar TTD (PNG Transparan)</FL>
+                                    <input
+                                        ref={sigFileInputRef}
+                                        type="file"
+                                        accept="image/png,image/jpeg,image/webp"
+                                        onChange={e => setNewSigFile(e.target.files[0])}
+                                        className="input-field text-xs py-2 w-full h-auto cursor-pointer"
+                                        required
+                                    />
+                                    <p className="text-[10px] text-[var(--color-text-muted)] mt-1.5 leading-snug">
+                                        Disarankan menggunakan file **PNG transparan** agar hasil cetak rapi.
+                                    </p>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={uploadingSig || loadingSignatures}
+                                    className="w-full h-11 rounded-xl bg-[var(--color-primary)] hover:opacity-90 text-white text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-[var(--color-primary)]/15 disabled:opacity-60 transition-all"
+                                >
+                                    {uploadingSig ? (
+                                        <>
+                                            <FontAwesomeIcon icon={faSpinner} className="animate-spin" />
+                                            <span>Mengunggah...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <FontAwesomeIcon icon={faUpload} />
+                                            <span>Simpan Tanda Tangan</span>
+                                        </>
+                                    )}
+                                </button>
+                            </form>
+                        </div>
+
+                        {/* Right: Active Signatures Grid */}
+                        <div className="space-y-4 min-w-0">
+                            <div className="glass rounded-2xl border border-[var(--color-border)] overflow-hidden shadow-sm">
+                                <div className="px-5 py-4 border-b border-[var(--color-border)] bg-slate-50/30 dark:bg-slate-800/20 flex items-center justify-between">
+                                    <div>
+                                        <p className="font-black text-[13px] text-[var(--color-text)]">Daftar Tanda Tangan Digital</p>
+                                        <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">Tanda tangan yang aktif digunakan di sistem raport</p>
+                                    </div>
+                                    <div className="px-2.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[9px] font-black uppercase tracking-widest text-indigo-600">
+                                        {signaturesList.length} Total
+                                    </div>
+                                </div>
+
+                                {loadingSignatures && signaturesList.length === 0 ? (
+                                    <div className="p-12 text-center">
+                                        <FontAwesomeIcon icon={faSpinner} className="animate-spin text-2xl text-[var(--color-text-muted)]" />
+                                        <p className="text-[11px] text-[var(--color-text-muted)] mt-2 font-bold uppercase tracking-widest">Memuat data...</p>
+                                    </div>
+                                ) : signaturesList.length === 0 ? (
+                                    <div className="p-12 flex flex-col items-center justify-center text-center opacity-40">
+                                        <div className="w-16 h-16 rounded-2xl bg-[var(--color-surface-alt)] flex items-center justify-center mb-3">
+                                            <FontAwesomeIcon icon={faUpload} className="text-xl text-[var(--color-text-muted)]" />
+                                        </div>
+                                        <p className="text-[13px] font-black text-[var(--color-text)]">Belum ada tanda tangan digital</p>
+                                        <p className="text-[11px] text-[var(--color-text-muted)] mt-1 max-w-[280px]">
+                                            Silakan unggah tanda tangan digital guru/pengasuh melalui panel di sebelah kiri.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                        {signaturesList.map(sig => (
+                                            <div key={sig.id} className="group relative rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-3 overflow-hidden">
+                                                {/* Header card info */}
+                                                <div>
+                                                    <div className="flex items-center justify-between gap-2 mb-1">
+                                                        <span className={`text-[9px] font-black tracking-widest uppercase px-2 py-0.5 rounded-full ${
+                                                            sig.role === 'pengasuh' 
+                                                                ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' 
+                                                                : 'bg-indigo-500/10 text-indigo-600 border border-indigo-500/20'
+                                                        }`}>
+                                                            {sig.role === 'pengasuh' ? 'Pengasuh' : 'Wali Kelas'}
+                                                        </span>
+                                                        <span className="text-[8px] font-black text-[var(--color-text-muted)] tracking-wider">
+                                                            {sig.is_active ? '● Aktif' : 'Non-aktif'}
+                                                        </span>
+                                                    </div>
+                                                    <h4 className="text-[13px] font-black text-[var(--color-text)] truncate" title={sig.teachers?.name}>
+                                                        {sig.teachers?.name || '—'}
+                                                    </h4>
+                                                </div>
+
+                                                {/* Image preview area with checkerboard background */}
+                                                <div 
+                                                    className="w-full h-24 rounded-lg border border-[var(--color-border)]/60 bg-[var(--color-surface-alt)] flex items-center justify-center p-3 relative overflow-hidden"
+                                                    style={{
+                                                        backgroundImage: 'radial-gradient(rgba(0,0,0,0.05) 20%, transparent 20%), radial-gradient(rgba(0,0,0,0.05) 20%, transparent 20%)',
+                                                        backgroundSize: '8px 8px',
+                                                        backgroundPosition: '0 0, 4px 4px'
+                                                    }}
+                                                >
+                                                    <img
+                                                        src={sig.signature_url}
+                                                        alt={`TTD ${sig.teachers?.name}`}
+                                                        className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform"
+                                                        crossOrigin="anonymous"
+                                                    />
+                                                </div>
+
+                                                {/* Footer actions */}
+                                                <div className="flex justify-between items-center pt-2 border-t border-[var(--color-border)]/50">
+                                                    <span className="text-[8px] text-[var(--color-text-muted)] truncate max-w-[150px] font-mono opacity-60">
+                                                        {sig.signature_url.split('/').pop()}
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDeleteSignature(sig)}
+                                                        className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center"
+                                                        title="Hapus Tanda Tangan"
+                                                    >
+                                                        <FontAwesomeIcon icon={faTrash} className="text-xs" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* ══════════════════════════════════════════════════════
                     TAB: RAPORT

@@ -7,7 +7,11 @@ import {
     Zap, X, School, ClipboardList, Users, MoonStar, BookOpen, Brush, Languages, Star,
     Scale, Ruler, HeartPulse, DoorOpen, UploadCloud, FileText, FileSpreadsheet, FileArchive,
     Archive, Sliders, Plus, Filter, Sparkles, TrendingUp, TrendingDown, HelpCircle, Info,
-    SortAsc, Wifi, Keyboard, Lightbulb, Moon, Sun, Maximize2, Minimize2, ChevronDown, Upload, ChevronUp
+    SortAsc, Wifi, Keyboard, Lightbulb, Moon, Sun, Maximize2, Minimize2, ChevronDown, Upload, ChevronUp,
+    PenTool, Fingerprint,
+    Cog,
+    ActivityIcon,
+    SlidersHorizontal
 } from 'lucide-react'
 const WhatsAppIcon = (props) => (
     <svg viewBox="0 0 448 512" fill="currentColor" {...props}>
@@ -41,7 +45,6 @@ import { RadarChart, SparklineTrend } from '@features/raport/components/RaportCh
 import RaportPrintCard from '@features/raport/components/RaportPrintCard'
 import RaportLayoutSettings, { loadLayoutConfig } from '@features/raport/components/RaportLayoutSettings'
 import StudentRow, { ExtraInput, ExtraTextarea } from '@features/raport/components/RaportRecordRow'
-import BulkActionBar from '@features/raport/components/BulkActionBar'
 import { ShortcutModalContent, WaBlastConfirmContent, WaBlastProgressContent, ZipBlastProgressContent } from '@features/raport/components/RaportModals'
 import Skeleton from '@shared/components/Skeleton'
 import { useRaportCore } from '@hooks/reports/useRaportCore'
@@ -151,7 +154,8 @@ export default function RaportPage() {
         waBlastAbortRef, zipAbortRef,
         buildWaMessage, sendWATextOnly, generatePDFBlob, uploadToSupabase,
         generateAndSendWA, runWaBlast, runZipBlast,
-        handleExportCSV, handleExportExcel, handleExportAllClasses, handleExportZip, handlePrintAll
+        handleExportCSV, handleExportExcel, handleExportAllClasses, handleExportZip, handlePrintAll,
+        signMode, handleToggleSignMode, signatures
     } = importExport
 
     // ── Archive state
@@ -271,6 +275,8 @@ export default function RaportPage() {
     const [showFullScreenHud, setShowFullScreenHud] = useState(true)
     const [isMobileViewport, setIsMobileViewport] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 768 : false))
     const [showMobileStudentPicker, setShowMobileStudentPicker] = useState(false)
+    const [showSigDropdown, setShowSigDropdown] = useState(false)
+    const [showActionDropdown, setShowActionDropdown] = useState(false)
     const previewContainerRef = useRef(null)
     const fullScreenScrollRef = useRef(null)
     const fullScreenHudTimerRef = useRef(null)
@@ -284,6 +290,24 @@ export default function RaportPage() {
     const fullScreenInnerWrapperRef = useRef(null)
     const fullScreenZoomLabelRef = useRef(null)
     const tempFullScreenZoomRef = useRef(fullScreenZoom)
+
+    useEffect(() => {
+        if (!showSigDropdown) return
+        const handler = (e) => {
+            if (!e.target.closest('[data-sig-dropdown-anchor]')) setShowSigDropdown(false)
+        }
+        document.addEventListener('mousedown', handler)
+        return () => document.removeEventListener('mousedown', handler)
+    }, [showSigDropdown])
+
+    useEffect(() => {
+        if (!showActionDropdown) return
+        const handler = (e) => {
+            if (!e.target.closest('[data-action-dropdown-anchor]')) setShowActionDropdown(false)
+        }
+        document.addEventListener('mousedown', handler)
+        return () => document.removeEventListener('mousedown', handler)
+    }, [showActionDropdown])
 
     useEffect(() => {
         tempFullScreenZoomRef.current = fullScreenZoom
@@ -490,7 +514,7 @@ export default function RaportPage() {
     const filteredDebounceRef = useRef(null)
     useEffect(() => {
         const next = showIncompleteOnly
-            ? baseFiltered.filter(s => !isComplete(scores[s.id] || {}))
+            ? baseFiltered.filter(s => !isComplete(scores[s.id] || {}, activeCriteria))
             : baseFiltered
         if (!showIncompleteOnly) {
             // Tanpa filter incomplete — update langsung, tidak perlu debounce, hindari re-render jika referensi sama
@@ -555,15 +579,6 @@ export default function RaportPage() {
                         r.nilai_kebersihan,
                         r.nilai_quran,
                         r.nilai_bahasa,
-                        r.berat_badan,
-                        r.tinggi_badan,
-                        r.hari_sakit,
-                        r.hari_izin,
-                        r.hari_alpa,
-                        r.hari_pulang,
-                        r.ziyadah,
-                        r.murojaah,
-                        r.catatan,
                     ]
                     const filled = progressFields.filter(v => v !== '' && v !== null && v !== undefined).length
                     curProgressByStudent[r.student_id] = filled / progressFields.length
@@ -2133,7 +2148,7 @@ export default function RaportPage() {
 
     const renderStep3 = () => {
         const previewStudent = previewStudentId ? students.find(s => s.id === previewStudentId) : students[0]
-        const completeCount = students.filter(s => isComplete(scores[s.id] || {})).length
+        const completeCount = students.filter(s => isComplete(scores[s.id] || {}, activeCriteria)).length
         const totalCount = students.length
         const pct = totalCount ? Math.round((completeCount / totalCount) * 100) : 0
 
@@ -2173,7 +2188,7 @@ export default function RaportPage() {
                                     className="flex-1 h-10 px-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] flex items-center justify-between gap-2 overflow-hidden"
                                 >
                                     <div className="flex items-center gap-2 truncate min-w-0">
-                                        {isComplete(scores[previewStudentId || students[0]?.id] || {}) ? (
+                                        {isComplete(scores[previewStudentId || students[0]?.id] || {}, activeCriteria) ? (
                                             <CheckCircle2 className="w-3 h-3 shrink-0 text-emerald-500" />
                                         ) : (
                                             <AlertCircle className="w-3 h-3 shrink-0 text-amber-500" />
@@ -2205,7 +2220,7 @@ export default function RaportPage() {
                             >
                                 <div className="space-y-2 max-h-[60vh] overflow-y-auto custom-scrollbar pr-1">
                                     {students.map(s => {
-                                        const complete = isComplete(scores[s.id] || {})
+                                        const complete = isComplete(scores[s.id] || {}, activeCriteria)
                                         const active = (previewStudentId || students[0]?.id) === s.id
                                         return (
                                             <button
@@ -2231,7 +2246,7 @@ export default function RaportPage() {
                             {/* DESKTOP: Vertical Sidebar List */}
                             <div className="hidden lg:flex flex-col gap-1.5 h-[calc(100vh-320px)] min-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                                 {students.map(s => {
-                                    const complete = isComplete(scores[s.id] || {})
+                                    const complete = isComplete(scores[s.id] || {}, activeCriteria)
                                     const active = previewStudentId === s.id
                                     return (
                                         <button
@@ -2268,8 +2283,8 @@ export default function RaportPage() {
                     </div>
 
                     {/* Right: Preview Area - Unified in one card */}
-                    <div className="flex-1 flex flex-col rounded-[32px] border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden shadow-sm">
-                        <div className="px-4 py-4 border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex-1 flex flex-col rounded-[32px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
+                        <div className="px-4 py-4 rounded-t-[32px] border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             {/* Row 1: Title & Mobile Toggle */}
                             <div className="flex items-center justify-between w-full sm:w-auto">
                                 <div className="flex items-center gap-2">
@@ -2280,87 +2295,159 @@ export default function RaportPage() {
                                 </div>
                                 <button
                                     onClick={() => setIsFullScreenPreview(true)}
-                                    className="h-8 w-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] flex items-center justify-center sm:hidden"
+                                    className="h-10 w-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] flex sm:hidden items-center justify-center hover:text-indigo-500 transition-all"
                                 >
                                     <Maximize2 className="w-3 h-3" />
                                 </button>
                             </div>
 
                             {/* Row 2 & 3: Controls */}
-                            <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-                                {/* Group: Format & Lang - Stretching on Mobile */}
-                                <div className="flex items-center gap-2 w-full sm:w-auto">
-                                    <div className="flex-1 sm:flex-initial flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-10">
-                                        <button onClick={() => setPageSize('a4')} className={`flex-1 sm:px-3 h-8 rounded-lg text-[10px] font-black transition-all ${pageSize === 'a4' ? 'bg-amber-500 text-white shadow-sm' : 'text-[var(--color-text-muted)]'}`}>A4</button>
-                                        <button onClick={() => setPageSize('f4')} className={`flex-1 sm:px-3 h-8 rounded-lg text-[10px] font-black transition-all ${pageSize === 'f4' ? 'bg-amber-500 text-white shadow-sm' : 'text-[var(--color-text-muted)]'}`}>F4</button>
-                                    </div>
-                                    <div className="flex-1 sm:flex-initial flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-10">
-                                        <button onClick={() => setLang('ar')} className={`flex-1 sm:px-3 h-8 rounded-lg text-[10px] font-black transition-all ${lang === 'ar' ? 'bg-indigo-500 text-white shadow-sm' : 'text-[var(--color-text-muted)]'}`}>AR</button>
-                                        <button onClick={() => setLang('id')} className={`flex-1 sm:px-3 h-8 rounded-lg text-[10px] font-black transition-all ${lang === 'id' ? 'bg-indigo-500 text-white shadow-sm' : 'text-[var(--color-text-muted)]'}`}>ID</button>
-                                    </div>
+                            <div className="flex flex-wrap items-center justify-start sm:justify-end gap-1.5 w-full sm:flex-1">
+                                {/* Page Size selector */}
+                                <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-10 shrink-0">
+                                    <button onClick={() => setPageSize('a4')} className={`px-3 h-8 rounded-lg text-[10px] font-black transition-all ${pageSize === 'a4' ? 'bg-amber-500 text-white shadow-sm' : 'text-[var(--color-text-muted)]'}`}>A4</button>
+                                    <button onClick={() => setPageSize('f4')} className={`px-3 h-8 rounded-lg text-[10px] font-black transition-all ${pageSize === 'f4' ? 'bg-amber-500 text-white shadow-sm' : 'text-[var(--color-text-muted)]'}`}>F4</button>
                                 </div>
 
-                                {/* Group: Zoom & Actions - Stretching on Mobile */}
-                                <div className="flex items-center gap-2 w-full sm:w-auto">
-                                    {/* Zoom Control stretches on mobile */}
-                                    <div className="flex-1 sm:flex-initial flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-10">
-                                        <button onClick={() => { manualZoomRef.current = true; setPreviewZoom(p => Math.max(0.3, p - 0.1)) }} className="flex-1 sm:w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><Search className="w-3 h-3 mr-0.5" />-</button>
-                                        {/* #3: Fit-Width shortcut — tap sekali langsung fit ke lebar container */}
-                                        <button
-                                            onClick={() => {
-                                                manualZoomRef.current = false
-                                                const el = previewContainerRef.current
-                                                if (!el) return
-                                                const padding = window.innerWidth < 640 ? 24 : 80
-                                                const availW = el.clientWidth - padding
-                                                const docW = pageSize === 'f4' ? 215 * 3.7795275591 : 210 * 3.7795275591
-                                                setPreviewZoom(Math.min(1, Math.max(0.3, Math.floor((availW / docW) * 100) / 100)))
-                                            }}
-                                            title="Fit ke lebar layar"
-                                            className="text-[9px] font-black w-10 text-center text-indigo-500 tabular-nums hover:text-indigo-700 transition-colors cursor-pointer select-none"
-                                        >{Math.round(previewZoom * 100)}%</button>
-                                        <button onClick={() => { manualZoomRef.current = true; setPreviewZoom(p => Math.min(1.5, p + 0.1)) }} className="flex-1 sm:w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><Search className="w-3 h-3 mr-0.5" />+</button>
-                                    </div>
+                                {/* Language selector */}
+                                <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-10 shrink-0">
+                                    <button onClick={() => setLang('ar')} className={`px-3 h-8 rounded-lg text-[10px] font-black transition-all ${lang === 'ar' ? 'bg-indigo-500 text-white shadow-sm' : 'text-[var(--color-text-muted)]'}`}>AR</button>
+                                    <button onClick={() => setLang('id')} className={`px-3 h-8 rounded-lg text-[10px] font-black transition-all ${lang === 'id' ? 'bg-indigo-500 text-white shadow-sm' : 'text-[var(--color-text-muted)]'}`}>ID</button>
+                                </div>
 
-                                    {previewStudent?.phone && (
-                                        <button onClick={() => sendWATextOnly(previewStudent)} className="h-10 px-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-700 text-[10px] font-black flex items-center justify-center gap-2 flex-1 sm:flex-initial">
-                                            <WhatsAppIcon className="w-3.5 h-3.5 mr-1" /> <span className="hidden xs:inline">Whatsapp</span>
-                                        </button>
-                                    )}
-
-                                    {previewStudent && (
-                                        <button
-                                            disabled={generatingPdfIds.has(previewStudent.id)}
-                                            onClick={() => handleDownloadPdf(previewStudent)}
-                                            className="h-10 px-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-700 text-[10px] font-black flex items-center justify-center gap-2 flex-1 sm:flex-initial transition-all disabled:opacity-50"
-                                            title="Download PDF Raport"
-                                        >
-                                            {generatingPdfIds.has(previewStudent.id) ? (
-                                                <Loader2 className="w-3.5 h-3.5 animate-spin mr-1 text-indigo-600" />
-                                            ) : (
-                                                <Download className="w-3.5 h-3.5 mr-1" />
-                                            )}
-                                            <span className="hidden xs:inline">Download PDF</span>
-                                        </button>
-                                    )}
-
-                                    <button onClick={() => openPrintWindow([previewStudent].filter(Boolean))} className="h-10 px-5 rounded-xl bg-emerald-500 text-white text-[10px] font-black flex items-center justify-center gap-2 flex-1 sm:flex-initial shadow-lg shadow-emerald-500/20">
-                                        <Printer className="w-3.5 h-3.5 mr-1" /> <span className="hidden xs:inline">Cetak</span>
-                                    </button>
-
+                                {/* Group: Signature Dropdown Selector */}
+                                <div className="relative flex items-center shrink-0" data-sig-dropdown-anchor>
                                     <button
-                                        onClick={() => setIsFullScreenPreview(true)}
-                                        className="h-10 w-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hidden sm:flex items-center justify-center hover:text-indigo-500 transition-all"
+                                        onClick={() => setShowSigDropdown(p => !p)}
+                                        className="h-10 px-3 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm text-[10px] font-black text-[var(--color-text)] flex items-center gap-1.5 hover:bg-[var(--color-surface-alt)] active:scale-95 transition-all select-none whitespace-nowrap"
                                     >
-                                        <Maximize2 className="w-3.5 h-3.5" />
+                                        <span className="flex items-center gap-1.5">
+                                            {signMode === 'digital' ? (
+                                                <Fingerprint className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                                            ) : (
+                                                <PenTool className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                                            )}
+                                            {signMode === 'digital' ? 'TTD Digital' : 'TTD Basah'}
+                                        </span>
+                                        <ChevronDown className={`w-3.5 h-3.5 text-[var(--color-text-muted)] transition-transform duration-200 ${showSigDropdown ? 'rotate-180' : ''}`} />
                                     </button>
+
+                                    {showSigDropdown && (
+                                        <div className="absolute right-0 top-full mt-1.5 w-36 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl z-50 overflow-hidden py-1 animate-in fade-in slide-in-from-top-1 duration-100">
+                                            <button
+                                                onClick={() => {
+                                                    if (signMode !== 'basah') handleToggleSignMode();
+                                                    setShowSigDropdown(false);
+                                                }}
+                                                className={`w-full px-3.5 py-2.5 text-left text-[10px] font-black transition-colors flex items-center gap-2 ${signMode === 'basah' ? 'bg-[var(--color-surface-alt)] text-indigo-500' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]/50'}`}
+                                            >
+                                                <PenTool className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                                                <span>TTD Basah</span>
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    if (signMode !== 'digital') handleToggleSignMode();
+                                                    setShowSigDropdown(false);
+                                                }}
+                                                className={`w-full px-3.5 py-2.5 text-left text-[10px] font-black transition-colors flex items-center gap-2 ${signMode === 'digital' ? 'bg-[var(--color-surface-alt)] text-emerald-500' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]/50'}`}
+                                            >
+                                                <Fingerprint className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                                                <span>TTD Digital</span>
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
+
+                                {/* Zoom Control */}
+                                <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm h-10 shrink-0">
+                                    <button onClick={() => { manualZoomRef.current = true; setPreviewZoom(p => Math.max(0.3, p - 0.1)) }} className="w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><Search className="w-3 h-3 mr-0.5" />-</button>
+                                    <button
+                                        onClick={() => {
+                                            manualZoomRef.current = false
+                                            const el = previewContainerRef.current
+                                            if (!el) return
+                                            const padding = window.innerWidth < 640 ? 24 : 80
+                                            const availW = el.clientWidth - padding
+                                            const docW = pageSize === 'f4' ? 215 * 3.7795275591 : 210 * 3.7795275591
+                                            setPreviewZoom(Math.min(1, Math.max(0.3, Math.floor((availW / docW) * 100) / 100)))
+                                        }}
+                                        title="Fit ke lebar layar"
+                                        className="text-[9px] font-black w-10 text-center text-indigo-500 tabular-nums hover:text-indigo-700 transition-colors cursor-pointer select-none"
+                                    >{Math.round(previewZoom * 100)}%</button>
+                                    <button onClick={() => { manualZoomRef.current = true; setPreviewZoom(p => Math.min(1.5, p + 0.1)) }} className="w-8 h-8 text-[11px] text-[var(--color-text-muted)] hover:text-indigo-500 flex items-center justify-center"><Search className="w-3 h-3 mr-0.5" />+</button>
+                                </div>
+
+                                {/* Action Dropdown Selector */}
+                                <div className="relative flex items-center shrink-0" data-action-dropdown-anchor>
+                                    <button
+                                        onClick={() => setShowActionDropdown(p => !p)}
+                                        className="h-10 px-3.5 rounded-xl bg-indigo-500 text-white text-[10px] font-black flex items-center gap-1.5 hover:bg-indigo-600 active:scale-95 transition-all select-none shadow-lg shadow-indigo-500/20"
+                                    >
+                                        <Sliders className="w-3.5 h-3.5" />
+                                        <span>Aksi Raport</span>
+                                        <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showActionDropdown ? 'rotate-180' : ''}`} />
+                                    </button>
+
+                                    {showActionDropdown && (
+                                        <div className="absolute right-0 top-full mt-1.5 w-44 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl z-50 overflow-hidden py-1 animate-in fade-in slide-in-from-top-1 duration-100">
+                                            <button
+                                                onClick={() => {
+                                                    setShowActionDropdown(false);
+                                                    openPrintWindow([previewStudent].filter(Boolean));
+                                                }}
+                                                className="w-full px-3.5 py-2.5 text-left text-[10px] font-bold text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all flex items-center gap-2"
+                                            >
+                                                <Printer className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                                                <span>Cetak Raport</span>
+                                            </button>
+
+                                            {previewStudent && (
+                                                <button
+                                                    disabled={generatingPdfIds.has(previewStudent.id)}
+                                                    onClick={() => {
+                                                        setShowActionDropdown(false);
+                                                        handleDownloadPdf(previewStudent);
+                                                    }}
+                                                    className="w-full px-3.5 py-2.5 text-left text-[10px] font-bold text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all flex items-center gap-2 disabled:opacity-50"
+                                                >
+                                                    {generatingPdfIds.has(previewStudent.id) ? (
+                                                        <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-500 shrink-0" />
+                                                    ) : (
+                                                        <Download className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                                                    )}
+                                                    <span>Download PDF</span>
+                                                </button>
+                                            )}
+
+                                            {previewStudent?.phone && (
+                                                <button
+                                                    onClick={() => {
+                                                        setShowActionDropdown(false);
+                                                        sendWATextOnly(previewStudent);
+                                                    }}
+                                                    className="w-full px-3.5 py-2.5 text-left text-[10px] font-bold text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-all flex items-center gap-2"
+                                                >
+                                                    <WhatsAppIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                                                    <span>WhatsApp</span>
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <button
+                                    onClick={() => setIsFullScreenPreview(true)}
+                                    className="h-10 w-10 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hidden sm:flex items-center justify-center hover:text-indigo-500 transition-all shrink-0"
+                                    title="Fullscreen Preview"
+                                >
+                                    <Maximize2 className="w-3.5 h-3.5" />
+                                </button>
                             </div>
                         </div>
 
                         <div
                             ref={previewContainerRef}
-                            className="flex-1 overflow-y-auto overflow-x-hidden bg-slate-200 dark:bg-slate-700 flex flex-col items-center custom-scrollbar p-3 sm:p-10"
+                            className="flex-1 overflow-y-auto overflow-x-hidden bg-slate-200 dark:bg-slate-700 flex flex-col items-center custom-scrollbar p-3 sm:p-10 rounded-b-[31px]"
                             style={{ minHeight: window.innerWidth < 768 ? 300 : 600 }}
                             /* #5: Pinch-to-zoom gesture */
                             onTouchStart={e => {
@@ -2437,6 +2524,8 @@ export default function RaportPage() {
                                                     academicYear={academicYear}
                                                     selectedClass={selectedClass}
                                                     layoutConfig={layoutConfig}
+                                                    signMode={signMode}
+                                                    signatures={signatures}
                                                 />
                                             )}
                                         </div>
@@ -2544,7 +2633,7 @@ export default function RaportPage() {
                             <div className="flex flex-col gap-1.5 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                                 {pStu.map(s => {
                                     const sc = editSc(s.id) || {}
-                                    const complete = isComplete(sc)
+                                    const complete = isComplete(sc, activeCriteria)
                                     const active = previewStudentId === s.id
                                     return (
                                         <button
@@ -3240,7 +3329,7 @@ export default function RaportPage() {
                 {printQueue.length > 0 && (
                     <div ref={printContainerRef} style={{ position: 'fixed', left: '-9999px', top: 0, width: '1000px', visibility: 'hidden', pointerEvents: 'none' }}>
                         {printStudents.filter(s => printQueue.includes(s.id)).map(s => (
-                            <RaportPrintCard key={s.id} student={s} scores={printScores[s.id]} extra={printExtras[s.id]} bulanObj={printBulan} tahun={printYear} musyrif={printMusyrif} className={printClass} lang={printLang} settings={settings} pageSize={pageSize} catatanArab={catatanArabMap[s.id]} studentIndex={printStudents.findIndex(x => x.id === s.id) + 1} onRendered={() => setPrintRenderedCount(c => c + 1)} reportType={printReportType} selectedSemester={printSemester} academicYear={printAcademicYear} selectedClass={printSelectedClassResolved} layoutConfig={layoutConfig} />
+                            <RaportPrintCard key={s.id} student={s} scores={printScores[s.id]} extra={printExtras[s.id]} bulanObj={printBulan} tahun={printYear} musyrif={printMusyrif} className={printClass} lang={printLang} settings={settings} pageSize={pageSize} catatanArab={catatanArabMap[s.id]} studentIndex={printStudents.findIndex(x => x.id === s.id) + 1} onRendered={() => setPrintRenderedCount(c => c + 1)} reportType={printReportType} selectedSemester={printSemester} academicYear={printAcademicYear} selectedClass={printSelectedClassResolved} layoutConfig={layoutConfig} signMode={isArchiveMode ? 'basah' : signMode} signatures={isArchiveMode ? null : signatures} />
                         ))}
                     </div>
                 )}
@@ -3682,6 +3771,8 @@ export default function RaportPage() {
                                         <span className="text-[9px] font-black text-slate-500">SIZE {pageSize.toUpperCase()}</span>
                                         <span className="text-slate-300">|</span>
                                         <span className="text-[9px] font-black text-slate-500">LANG {lang.toUpperCase()}</span>
+                                        <span className="text-slate-300">|</span>
+                                        <span className="text-[9px] font-black text-slate-500">TTD {isArchiveMode ? 'BASAH' : signMode.toUpperCase()}</span>
                                     </div>
                                     {fsStudent && (
                                         <button
@@ -3811,6 +3902,8 @@ export default function RaportPage() {
                                                         academicYear={fsAcademicYear}
                                                         selectedClass={fsSelectedClass}
                                                         layoutConfig={layoutConfig}
+                                                        signMode={isArchiveMode ? 'basah' : signMode}
+                                                        signatures={isArchiveMode ? null : signatures}
                                                     />
                                                 )}
                                             </div>

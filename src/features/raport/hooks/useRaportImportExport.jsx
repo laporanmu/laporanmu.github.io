@@ -201,6 +201,90 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef,
     const [isImportModalOpen, setIsImportModalOpen] = useState(false)
     const [isExportModalOpen, setIsExportOpen] = useState(false)
 
+    // Digital/Wet Signature States
+    const [signMode, setSignMode] = useState(() => {
+        try {
+            return localStorage.getItem('raport_sign_mode') ?? 'basah'
+        } catch {
+            return 'basah'
+        }
+    }) // 'basah' | 'digital'
+    const [signatures, setSignatures] = useState(null)
+    const signaturesCache = useRef(null) // cache agar tidak re-fetch tiap toggle
+
+    // Untuk reset cache saat kelas berubah
+    useEffect(() => {
+        signaturesCache.current = null
+        setSignatures(null)
+    }, [selectedClass?.id])
+
+    // Fungsi fetch — panggil saat signMode berubah ke 'digital'
+    const fetchSignatures = async (classId) => {
+        if (!classId) return
+        if (signaturesCache.current) {
+            setSignatures(signaturesCache.current)
+            return
+        }
+
+        try {
+            // Step 1: ambil homeroom_teacher_id dari class
+            const { data: classData, error: classErr } = await supabase
+                .from('classes')
+                .select('homeroom_teacher_id')
+                .eq('id', classId)
+                .single()
+
+            if (classErr) throw classErr
+            const homeroomTeacherId = classData?.homeroom_teacher_id
+
+            // Step 2: ambil TTD pengasuh + wali kelas sekaligus
+            const { data: sigs, error: sigsErr } = await supabase
+                .from('signatures')
+                .select('role, signature_url, person_id, teachers:person_id(name)')
+                .eq('is_active', true)
+                .in('person_id', [homeroomTeacherId, import.meta.env.VITE_PENGASUH_ID].filter(Boolean))
+
+            if (sigsErr) throw sigsErr
+
+            const result = {
+                pengasuh: {
+                    nama: sigs?.find(s => s.role === 'pengasuh')?.teachers?.name ?? null,
+                    url: sigs?.find(s => s.role === 'pengasuh')?.signature_url ?? null
+                },
+                wali_kelas: {
+                    nama: sigs?.find(s => s.role === 'wali_kelas')?.teachers?.name ?? null,
+                    url: sigs?.find(s => s.role === 'wali_kelas')?.signature_url ?? null
+                }
+            }
+
+            signaturesCache.current = result
+            setSignatures(result)
+        } catch (err) {
+            console.error('[Signatures] Error fetching signatures:', err)
+        }
+    }
+
+    // Toggle handler
+    const handleToggleSignMode = () => {
+        const next = signMode === 'basah' ? 'digital' : 'basah'
+        setSignMode(next)
+        try {
+            localStorage.setItem('raport_sign_mode', next)
+        } catch (e) {
+            console.error(e)
+        }
+        if (next === 'digital') {
+            fetchSignatures(selectedClass?.id)
+        }
+    }
+
+    // Fetch signatures on init if mode is digital
+    useEffect(() => {
+        if (signMode === 'digital' && selectedClass?.id) {
+            fetchSignatures(selectedClass.id)
+        }
+    }, [signMode, selectedClass?.id])
+
     // Helper to get cached link
     const getCachedRaportLink = useCallback((studentId) => {
         const key = getCacheKey(studentId, reportType, selectedMonth, selectedYear, selectedSemester, academicYear)
@@ -1019,6 +1103,7 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef,
         buildWaMessage, sendWATextOnly, generatePDFBlob, uploadToSupabase,
         generateAndSendWA, runWaBlast, runZipBlast,
         handleExportCSV: handleExportCSVModal, handleExportExcel: handleExportExcelModal, handleExportAllClasses: handleExportAllClassesModal,
-        handleExportZip: handleExportZipModal, handlePrintAll: handlePrintAllModal
+        handleExportZip: handleExportZipModal, handlePrintAll: handlePrintAllModal,
+        signMode, handleToggleSignMode, signatures
     }
 }
