@@ -90,6 +90,15 @@ const RaportPrintCard = memo(({
         : (isA4 ? '3.5px 14px' : '5.5px 14px')
     const arFont = "'Traditional Arabic', serif"
 
+    const subtitleArFontSize = (() => {
+        const text = settings.school_subtitle_ar || ''
+        const len = text.length
+        if (len > 70) return isLisan ? '10.5pt' : '12.5pt'
+        if (len > 50) return isLisan ? '11pt' : '13pt'
+        if (len > 30) return isLisan ? '11.5pt' : '13.5pt'
+        return isLisan ? '12pt' : '14pt'
+    })()
+
     // Dimensi kertas: A4 (210x297) vs F4/Folio (215x330)
     const pageW = pageSize === 'f4' ? '215mm' : '210mm'
     const pageH = pageSize === 'f4' ? '330mm' : '297mm'
@@ -350,8 +359,9 @@ const RaportPrintCard = memo(({
                         line-height: 1.05 !important;
                     }
                     .school-subtitle-ar {
-                        font-size: ${isLisan ? '12pt' : '14pt'} !important;
+                        font-size: ${subtitleArFontSize} !important;
                         line-height: 1.3 !important;
+                        white-space: nowrap !important;
                     }
                     .school-name-id {
                         font-size: ${isLisan ? '13pt' : '15pt'} !important;
@@ -378,7 +388,7 @@ const RaportPrintCard = memo(({
                     {/* Tengah (Nama Sekolah) */}
                     <div className="raport-header-center" style={{ flex: 1, textAlign: 'center', minWidth: 0 }}>
                         {settings.school_subtitle_ar && (
-                            <div className="school-subtitle-ar" style={{ fontSize: isLisan ? '12pt' : '14pt', color: '#444', direction: 'rtl', marginBottom: 2, fontFamily: "'Traditional Arabic', serif", fontWeight: 700, lineHeight: 1.3 }}>
+                            <div className="school-subtitle-ar" style={{ fontSize: subtitleArFontSize, color: '#444', direction: 'rtl', marginBottom: 2, fontFamily: "'Traditional Arabic', serif", fontWeight: 700, lineHeight: 1.3, whiteSpace: 'nowrap' }}>
                                 {settings.school_subtitle_ar}
                             </div>
                         )}
@@ -523,10 +533,10 @@ const RaportPrintCard = memo(({
                 <thead>
                     <tr style={{ background: '#f0f4f8' }}>
                         {isAr ? <>
-                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 8px`, width: `${lc.gradeColWidth}%`, fontFamily: arFont, textAlign: 'center', fontWeight: 800, color: '#000', fontSize: isLisan ? '16pt' : '14.5pt' }}>{L.grade}</th>
-                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 6px`, width: `${lc.scoreColWidth}%`, fontFamily: arFont, textAlign: 'center', fontWeight: 800, color: '#000', fontSize: isLisan ? '16pt' : '14.5pt' }}>{L.score}</th>
-                            <th colSpan={2} style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 10px`, fontFamily: arFont, textAlign: 'center', fontWeight: 800, color: '#000', fontSize: isLisan ? '16pt' : '14.5pt' }}>{L.subject}</th>
-                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 6px`, width: `${lc.numColWidth}%`, fontFamily: arFont, textAlign: 'center', fontWeight: 800, color: '#000', fontSize: isLisan ? '16pt' : '14.5pt' }}>{L.num}</th>
+                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 8px`, width: `${lc.gradeColWidth}%`, fontFamily: arFont, textAlign: 'center', fontWeight: 800, color: '#000', fontSize: isLisan ? '16pt' : '14.5pt', lineHeight: 1.1 }}>{L.grade}</th>
+                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 6px`, width: `${lc.scoreColWidth}%`, fontFamily: arFont, textAlign: 'center', fontWeight: 800, color: '#000', fontSize: isLisan ? '16pt' : '14.5pt', lineHeight: 1.1 }}>{L.score}</th>
+                            <th colSpan={2} style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 10px`, fontFamily: arFont, textAlign: 'center', fontWeight: 800, color: '#000', fontSize: isLisan ? '16pt' : '14.5pt', lineHeight: 1.1 }}>{L.subject}</th>
+                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 6px`, width: `${lc.numColWidth}%`, fontFamily: arFont, textAlign: 'center', fontWeight: 800, color: '#000', fontSize: isLisan ? '16pt' : '14.5pt', lineHeight: 1.1 }}>{L.num}</th>
                         </> : <>
                             <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 6px`, width: `${lc.numColWidth}%`, textAlign: 'center', fontWeight: 800, color: '#000', textTransform: 'uppercase' }}>{L.num}</th>
                             <th colSpan={2} style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 10px`, textAlign: 'center', fontWeight: 800, color: '#000', textTransform: 'uppercase' }}>{L.subject}</th>
@@ -583,8 +593,8 @@ const RaportPrintCard = memo(({
                     <tbody>
                         <tr>
                             {isAr ? <>
-                                <td style={{ border: '1px solid #999', padding: '4px 16px', textAlign: 'center', fontWeight: 700, fontFamily: "'Traditional Arabic', serif", fontSize: '12pt', background: '#f0f4f8', width: '25%' }}>{toArabicNum(lisanTotal)}</td>
-                                <td style={{ border: '1px solid #999', padding: '4px 14px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif", fontSize: '12pt', fontWeight: 700 }}>المجموع الإجمالي</td>
+                                <td style={{ border: '1px solid #999', padding: '4px 16px', textAlign: 'center', fontWeight: 700, fontFamily: "'Traditional Arabic', serif", fontSize: '12pt', background: '#f0f4f8', width: '25%', lineHeight: 1.15 }}>{toArabicNum(lisanTotal)}</td>
+                                <td style={{ border: '1px solid #999', padding: '4px 14px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif", fontSize: '12pt', fontWeight: 700, lineHeight: 1.15 }}>المجموع الإجمالي</td>
                             </> : <>
                                 <td style={{ border: '1px solid #999', padding: '4px 14px', textAlign: 'left', fontWeight: 700 }}>Jumlah Total</td>
                                 <td style={{ border: '1px solid #999', padding: '4px 16px', textAlign: 'center', fontWeight: 700, background: '#f0f4f8', width: '25%' }}>{lisanTotal}</td>
@@ -592,8 +602,8 @@ const RaportPrintCard = memo(({
                         </tr>
                         <tr>
                             {isAr ? <>
-                                <td style={{ border: '1px solid #999', padding: '4px 16px', textAlign: 'center', fontWeight: 700, fontFamily: "'Traditional Arabic', serif", fontSize: '12pt', background: '#f0f4f8', width: '25%' }}>{toArabicNum(lisanAvg)}</td>
-                                <td style={{ border: '1px solid #999', padding: '4px 14px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif", fontSize: '12pt', fontWeight: 700 }}>المعدل</td>
+                                <td style={{ border: '1px solid #999', padding: '4px 16px', textAlign: 'center', fontWeight: 700, fontFamily: "'Traditional Arabic', serif", fontSize: '12pt', background: '#f0f4f8', width: '25%', lineHeight: 1.15 }}>{toArabicNum(lisanAvg)}</td>
+                                <td style={{ border: '1px solid #999', padding: '4px 14px', textAlign: 'right', fontFamily: "'Traditional Arabic', serif", fontSize: '12pt', fontWeight: 700, lineHeight: 1.15 }}>المعدل</td>
                             </> : <>
                                 <td style={{ border: '1px solid #999', padding: '4px 14px', textAlign: 'left', fontWeight: 700 }}>Nilai Rata-Rata</td>
                                 <td style={{ border: '1px solid #999', padding: '4px 16px', textAlign: 'center', fontWeight: 700, background: '#f0f4f8', width: '25%' }}>{lisanAvg}</td>
@@ -608,7 +618,7 @@ const RaportPrintCard = memo(({
                     {/* BB / TB */}
                     {rtObj.hasFisik && (
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                            <div style={{ fontSize: isAr ? (isLisan ? '16pt' : '14.5pt') : '9pt', fontWeight: 800, marginBottom: 0, textAlign: 'center', background: '#f0f4f8', border: '1px solid #999', borderBottom: 'none', padding: '3px 0', fontFamily: isAr ? arFont : 'inherit' }}>
+                            <div style={{ fontSize: isAr ? (isLisan ? '16pt' : '14.5pt') : '9pt', fontWeight: 800, marginBottom: 0, textAlign: 'center', background: '#f0f4f8', border: '1px solid #999', borderBottom: 'none', padding: '3px 0', fontFamily: isAr ? arFont : 'inherit', lineHeight: isAr ? 1.15 : 'normal' }}>
                                 {isAr ? 'التطور البدني' : 'PERKEMBANGAN FISIK'}
                             </div>
                             <table style={{ width: '100%', height: '100%', borderCollapse: 'collapse', fontSize: isAr ? '10pt' : '11.5pt', flex: 1 }}>
@@ -639,7 +649,7 @@ const RaportPrintCard = memo(({
                     {/* Ziyadah / Murojaah */}
                     {rtObj.hasHafalan && (
                         <div style={{ flex: 2, display: 'flex', flexDirection: 'column' }}>
-                            <div style={{ fontSize: isAr ? (isLisan ? '16pt' : '14.5pt') : '9pt', fontWeight: 800, marginBottom: 0, textAlign: 'center', background: '#f0f4f8', border: '1px solid #999', borderBottom: 'none', padding: '3px 0', fontFamily: isAr ? arFont : 'inherit' }}>
+                            <div style={{ fontSize: isAr ? (isLisan ? '16pt' : '14.5pt') : '9pt', fontWeight: 800, marginBottom: 0, textAlign: 'center', background: '#f0f4f8', border: '1px solid #999', borderBottom: 'none', padding: '3px 0', fontFamily: isAr ? arFont : 'inherit', lineHeight: isAr ? 1.15 : 'normal' }}>
                                 {isAr ? 'تطور الحفظ' : 'PERKEMBANGAN HAFALAN'}
                             </div>
                             <table style={{ width: '100%', height: '100%', borderCollapse: 'collapse', fontSize: isAr ? '10pt' : '11.5pt', flex: 1 }}>
@@ -670,7 +680,7 @@ const RaportPrintCard = memo(({
                     {/* Kehadiran */}
                     {rtObj.hasAttendance && (
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                            <div style={{ fontSize: isAr ? (isLisan ? '16pt' : '14.5pt') : '9pt', fontWeight: 800, marginBottom: 0, textAlign: 'center', background: '#f0f4f8', border: '1px solid #999', borderBottom: 'none', padding: '3px 0', fontFamily: isAr ? arFont : 'inherit' }}>
+                            <div style={{ fontSize: isAr ? (isLisan ? '16pt' : '14.5pt') : '9pt', fontWeight: 800, marginBottom: 0, textAlign: 'center', background: '#f0f4f8', border: '1px solid #999', borderBottom: 'none', padding: '3px 0', fontFamily: isAr ? arFont : 'inherit', lineHeight: isAr ? 1.15 : 'normal' }}>
                                 {isAr ? 'الغياب' : 'ABSENSI'}
                             </div>
                             <table style={{ width: '100%', height: '100%', borderCollapse: 'collapse', fontSize: isAr ? '9.5pt' : '11pt', flex: 1 }}>
@@ -710,7 +720,7 @@ const RaportPrintCard = memo(({
                     <table style={{ borderCollapse: 'collapse', fontSize: '9pt', direction: isAr ? 'rtl' : 'ltr' }}>
                         <thead>
                             <tr>
-                                <th colSpan={2} style={{ border: '1px solid #999', padding: isA4 ? '2px 16px' : '3px 16px', background: '#f0f4f8', fontFamily: isAr ? arFont : 'inherit', textAlign: 'center', fontWeight: 800, color: '#000', fontSize: isAr ? (isLisan ? '16pt' : '14.5pt') : '10.5pt', textTransform: isAr ? 'none' : 'uppercase' }}>
+                                <th colSpan={2} style={{ border: '1px solid #999', padding: isA4 ? '2px 16px' : '3px 16px', background: '#f0f4f8', fontFamily: isAr ? arFont : 'inherit', textAlign: 'center', fontWeight: 800, color: '#000', fontSize: isAr ? (isLisan ? '16pt' : '14.5pt') : '10.5pt', textTransform: isAr ? 'none' : 'uppercase', lineHeight: isAr ? 1.15 : 'normal' }}>
                                     {isAr ? 'نظام التقدير' : L.gradeScale}
                                 </th>
                             </tr>
@@ -729,7 +739,7 @@ const RaportPrintCard = memo(({
                         <table style={{ borderCollapse: 'collapse', fontSize: '9pt', direction: isAr ? 'rtl' : 'ltr' }}>
                             <thead>
                                 <tr>
-                                    <th colSpan={2} style={{ border: '1px solid #999', padding: isA4 ? '2px 16px' : '3px 16px', background: '#f0f4f8', fontFamily: isAr ? arFont : 'inherit', textAlign: 'center', fontWeight: 800, color: '#000', fontSize: isAr ? '11.5pt' : '10.5pt', textTransform: isAr ? 'none' : 'uppercase', whiteSpace: 'nowrap' }}>
+                                    <th colSpan={2} style={{ border: '1px solid #999', padding: isA4 ? '2px 16px' : '3px 16px', background: '#f0f4f8', fontFamily: isAr ? arFont : 'inherit', textAlign: 'center', fontWeight: 800, color: '#000', fontSize: isAr ? '11.5pt' : '10.5pt', textTransform: isAr ? 'none' : 'uppercase', whiteSpace: 'nowrap', lineHeight: isAr ? 1.15 : 'normal' }}>
                                         {isAr ? 'الاختبار التطبيقي' : 'Praktek Ibadah'}
                                     </th>
                                 </tr>

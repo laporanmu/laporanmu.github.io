@@ -3190,7 +3190,7 @@ export default function RaportPage() {
 
                 {/* ── Hidden print container ── */}
                 {printQueue.length > 0 && (
-                    <div ref={printContainerRef} style={{ position: 'fixed', left: '-9999px', top: 0, visibility: 'hidden', pointerEvents: 'none' }}>
+                    <div ref={printContainerRef} style={{ position: 'fixed', left: '-9999px', top: 0, width: '1000px', visibility: 'hidden', pointerEvents: 'none' }}>
                         {printStudents.filter(s => printQueue.includes(s.id)).map(s => (
                             <RaportPrintCard key={s.id} student={s} scores={printScores[s.id]} extra={printExtras[s.id]} bulanObj={printBulan} tahun={printYear} musyrif={printMusyrif} className={printClass} lang={printLang} settings={settings} pageSize={pageSize} catatanArab={catatanArabMap[s.id]} studentIndex={printStudents.findIndex(x => x.id === s.id) + 1} onRendered={() => setPrintRenderedCount(c => c + 1)} reportType={printReportType} selectedSemester={printSemester} academicYear={printAcademicYear} selectedClass={printSelectedClassResolved} layoutConfig={layoutConfig} />
                         ))}
@@ -3236,15 +3236,20 @@ export default function RaportPage() {
                         isOpen={!!waBlastConfirm}
                         onClose={() => setWaBlastConfirm(null)}
                         queue={waBlastConfirm.queue}
-                        currentLang={lang}
-                        currentPageSize={pageSize}
-                        onConfirm={(selectedQueue, newLang, newPageSize) => {
-                            setLang(newLang)
-                            setPageSize(newPageSize)
+                        lang={lang}
+                        setLang={setLang}
+                        pageSize={pageSize}
+                        setPageSize={setPageSize}
+                        buildWaMessage={buildWaMessage}
+                        onPreviewStudent={(studentId) => {
+                            setPreviewStudentId(studentId)
+                            setIsFullScreenPreview(true)
+                        }}
+                        onConfirm={(selectedQueue, isDebug) => {
                             setWaBlastConfirm(null)
                             // Tunggu satu frame agar React selesai me-render printContainerRef dengan opsi baru
                             setTimeout(() => {
-                                runWaBlast(selectedQueue, waBlastAbortRef)
+                                runWaBlast(selectedQueue, waBlastAbortRef, isDebug)
                             }, 150)
                         }}
                         onCancel={() => setWaBlastConfirm(null)}
@@ -3255,9 +3260,10 @@ export default function RaportPage() {
                 <Modal
                     isOpen={!!waBlast}
                     onClose={() => !waBlast?.active && setWaBlast(null)}
-                    title="WA Blast Progress"
-                    description="Pantau proses pengiriman pesan WhatsApp ke wali santri"
+                    title={waBlast?.status === 'simulating' ? "🧪 WA Blast - SIMULASI" : "WA Blast Progress"}
+                    description={waBlast?.status === 'simulating' ? "Simulasi proses pengiriman pesan WhatsApp (dry run)" : "Pantau proses pengiriman pesan WhatsApp ke wali santri"}
                     icon={WhatsAppIcon}
+                    variant={waBlast?.status === 'simulating' ? "amber" : "green"}
                     showClose={!waBlast?.active}
                 >
                     {waBlast && (

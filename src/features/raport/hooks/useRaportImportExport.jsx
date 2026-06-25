@@ -224,145 +224,150 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef,
         }
         if (!cardEl) throw new Error('Gagal render raport card')
 
-        const isLisan = reportType === 'pondok_lisan'
-        const isTanggul = String(settings.school_name_id || '').toLowerCase().includes('tanggul') ||
-            String(settings.school_address || '').toLowerCase().includes('tanggul')
+        // ── Dimensi target PDF dalam pixel (96dpi) ──
+        // A4 = 210×297mm → 794×1123px | F4 = 215×330mm → 812×1247px
+        const W = pageSize === 'f4' ? 812 : 794
+        const H = pageSize === 'f4' ? 1247 : 1123
 
-        // Buat wrapper sementara yang menyalin semua stylesheet dari dokumen aktif
-        // (agar font Arab, Segoe, dll tetap terbaca oleh html2canvas)
-        const W = pageSize === 'f4' ? 812.6 : 793.7
-        const H = pageSize === 'f4' ? 1247.2 : 1122.5
-        const wrapper = document.createElement('div')
-        wrapper.style.cssText = `position:fixed;left:-9999px;top:0;width:${W}px;height:${H}px;background:white;overflow:hidden;`
-
-        // Clone semua <style> dan <link rel=stylesheet> dari dokumen aktif ke wrapper
-        const styleClones = []
-        document.querySelectorAll('style, link[rel="stylesheet"]').forEach(el => {
-            styleClones.push(el.cloneNode(true))
-        })
-        // Override khusus raport card agar pas kertas yang dipilih
-        const overrideStyle = document.createElement('style')
-        overrideStyle.textContent = `
-            .raport-card {
-                width: ${W}px !important; min-width: ${W}px !important;
-                height: ${H}px !important; overflow: hidden !important;
-                background: white !important; margin: 0 !important; position: relative !important;
-                padding: ${pageSize === 'f4' ? '30px 38px 30px 76px' : '15px 38px 15px 76px'} !important;
-                box-sizing: border-box !important;
-                box-shadow: none !important;
-                border: none !important;
-            }
-            .raport-print-metadata {
-                left: 20mm !important;
-                right: 10mm !important;
-                bottom: 6mm !important;
-            }
-            .raport-header-flex {
-                display: flex !important;
-                flex-direction: row !important;
-                align-items: center !important;
-                justify-content: space-between !important;
-            }
-            .raport-logo-box {
-                flex-shrink: 0 !important;
-                align-self: center !important;
-                display: block !important;
-            }
-            .raport-logo-box:first-child {
-                margin-right: 12px !important;
-                margin-left: 0 !important;
-            }
-            .raport-logo-box:last-child {
-                margin-left: 12px !important;
-                margin-right: 0 !important;
-            }
-            .raport-logo-box img {
-                display: block !important;
-                object-fit: contain !important;
-            }
-            .raport-header-center {
-                flex: 1 !important;
-                text-align: center !important;
-                min-width: 0 !important;
-                align-self: center !important;
-            }
-            .school-name-ar, .school-subtitle-ar, .school-name-id, .school-address {
-                text-align: center !important;
-            }
-            .school-name-ar, .school-subtitle-ar {
-                direction: ltr !important;
-                font-family: 'Traditional Arabic', Amiri, Georgia, serif !important;
-            }
-            .divider-gradient { background: ${settings.report_color_primary || '#1a5c35'} !important; }
-            [style*="Traditional Arabic"], [dir="rtl"], .font-arabic, h1[style*="Amiri"], h2[style*="Amiri"], .school-name-ar, .school-subtitle-ar, [style*="rtl"] {
-                letter-spacing: normal !important;
-            }
-            * {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                box-sizing: border-box !important;
-            }
-            img {
-                mix-blend-mode: normal !important;
-            }
-        `
-        styleClones.forEach(s => wrapper.appendChild(s))
-        wrapper.appendChild(overrideStyle)
-        // Leverage existing DOM node directly to capture QR code canvas and loaded state correctly
-        wrapper.appendChild(cardEl)
-        document.body.appendChild(wrapper)
-
-        // Tunggu: font load + gambar QR load
+        // ── Tunggu font & gambar di cardEl (di printContainerRef) sudah siap ──
         if (document.fonts) {
             try {
                 await Promise.all([
                     document.fonts.load('400 16px Amiri'),
                     document.fonts.load('700 16px Amiri'),
+                    document.fonts.load('400 32px Amiri'),
+                    document.fonts.load('700 32px Amiri'),
                     document.fonts.load('400 16px Cairo'),
-                    document.fonts.load('700 16px Cairo')
+                    document.fonts.load('700 16px Cairo'),
+                    document.fonts.load('400 16px "Traditional Arabic"'),
+                    document.fonts.load('700 16px "Traditional Arabic"'),
                 ])
-            } catch (e) {
-                console.warn('Failed to load fonts explicitly:', e)
-            }
+            } catch (e) { console.warn('Font load warning:', e) }
         }
         await document.fonts.ready
-        await new Promise(r => setTimeout(r, 800))
 
-        // Preload semua gambar di dalam wrapper agar html2canvas tidak skip
-        const imgs = wrapper.querySelectorAll('img')
-        await Promise.allSettled(Array.from(imgs).map(img => new Promise(res => {
+        // Preload semua img di dalam cardEl
+        const cardImgs = cardEl.querySelectorAll('img')
+        await Promise.allSettled(Array.from(cardImgs).map(img => new Promise(res => {
             if (img.complete && img.naturalWidth > 0) return res()
             img.onload = res; img.onerror = res
-            // Force reload dengan crossOrigin jika gambar belum ter-load
-            if (!img.complete) { const s = img.src; img.src = ''; img.crossOrigin = 'anonymous'; img.src = s }
+        })))
+        await new Promise(r => setTimeout(r, 400))
+
+        // ── Ukur cardEl yang sesungguhnya di printContainerRef ──
+        // printContainerRef biasanya off-screen (left:-9999px) tapi tetap dirender oleh browser
+        // sehingga offsetWidth/offsetHeight memberikan ukuran asli elemen
+        const naturalW = cardEl.offsetWidth || cardEl.scrollWidth || W
+        const naturalH = cardEl.offsetHeight || cardEl.scrollHeight || H
+
+        // Scale factor: seberapa besar kita perlu memperbesar/memperkecil cardEl
+        // agar hasilnya pas ke dimensi kertas PDF (W×H)
+        const scaleX = W / naturalW
+        const scaleY = H / naturalH
+        // Ambil scale terkecil supaya tidak ada overflow (letterbox style)
+        // Tapi biasanya scaleX ≈ scaleY untuk raport A4/F4
+        const layoutScale = Math.min(scaleX, scaleY)
+
+        // ── Buat wrapper off-screen untuk capture ──
+        // Wrapper berukuran persis W×H agar html2canvas menghasilkan canvas yang tepat
+        const wrapper = document.createElement('div')
+        wrapper.style.cssText = [
+            'position:fixed',
+            'left:-99999px',
+            'top:0',
+            `width:${W}px`,
+            `height:${H}px`,
+            'overflow:hidden',
+            'background:white',
+            'z-index:-9999',
+        ].join(';')
+
+        // Clone cardEl — JANGAN pindahkan aslinya agar printContainerRef tetap intact
+        const cardClone = cardEl.cloneNode(true)
+
+        // ── Terapkan style ke clone: scale agar match ukuran kertas ──
+        // transform-origin: top left agar scaling mulai dari pojok kiri atas
+        cardClone.style.cssText += [
+            'position:absolute',
+            'top:0',
+            'left:0',
+            `width:${naturalW}px`,
+            `min-width:${naturalW}px`,
+            `height:${naturalH}px`,
+            'transform-origin:top left',
+            `transform:scale(${scaleX},${scaleY})`,
+            'margin:0',
+            'box-shadow:none',
+            'border:none',
+            'border-radius:0',
+        ].join(';')
+
+        // Clone semua stylesheet dari dokumen aktif ke dalam wrapper
+        // agar font Arab, Tailwind, dll terbaca html2canvas
+        document.querySelectorAll('style, link[rel="stylesheet"]').forEach(el => {
+            wrapper.appendChild(el.cloneNode(true))
+        })
+
+        // Override tambahan untuk memastikan warna & Arabic direction benar di clone
+        const overrideStyle = document.createElement('style')
+        overrideStyle.textContent = `
+            .school-name-ar, .school-subtitle-ar {
+                direction: rtl !important;
+                unicode-bidi: embed !important;
+                letter-spacing: normal !important;
+                white-space: nowrap !important;
+            }
+            .divider-gradient {
+                background: ${settings.report_color_primary || '#1a5c35'} !important;
+            }
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            img { mix-blend-mode: normal !important; }
+        `
+        wrapper.appendChild(overrideStyle)
+        wrapper.appendChild(cardClone)
+        document.body.appendChild(wrapper)
+
+        // Preload semua img di clone (canvas QR sudah ikut via cloneNode)
+        const cloneImgs = cardClone.querySelectorAll('img')
+        await Promise.allSettled(Array.from(cloneImgs).map(img => new Promise(res => {
+            if (img.complete && img.naturalWidth > 0) return res()
+            img.onload = res; img.onerror = res
+            if (!img.complete) {
+                const s = img.src; img.src = ''; img.crossOrigin = 'anonymous'; img.src = s
+            }
         })))
         await new Promise(r => setTimeout(r, 300))
 
         try {
+            // Scale 3 untuk ketajaman teks — html2canvas mengambil gambar di W×H
             const canvas = await withTimeout(
                 html2canvas(wrapper, {
-                    scale: 2.5,
+                    scale: 3,
                     useCORS: true,
                     allowTaint: false,
                     backgroundColor: '#ffffff',
                     width: W,
                     height: H,
-                    scrollX: 0, scrollY: 0,
+                    scrollX: 0,
+                    scrollY: 0,
                     logging: false,
-                    imageTimeout: 10000,
+                    imageTimeout: 15000,
                     onclone: (doc) => {
-                        // Pastikan raport-card di clone doc juga punya ukuran yang benar
-                        const clonedCard = doc.querySelector('.raport-card')
-                        if (clonedCard) {
-                            clonedCard.style.width = `${W}px`
-                            clonedCard.style.height = `${H}px`
-                            clonedCard.style.overflow = 'hidden'
-                        }
+                        // Pastikan Arabic direction benar di cloned doc html2canvas
+                        doc.querySelectorAll('.school-name-ar, .school-subtitle-ar, [dir="rtl"]').forEach(el => {
+                            el.style.direction = 'rtl'
+                            el.style.unicodeBidi = 'embed'
+                            el.style.whiteSpace = 'nowrap'
+                        })
                     }
                 }),
-                20000,
+                25000,
                 'Render PDF'
             )
+
             const pdf = new jsPDF({
                 unit: 'mm',
                 format: pageSize === 'f4' ? [215, 330] : 'a4',
@@ -371,14 +376,15 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef,
             })
             const pdfW = pageSize === 'f4' ? 215 : 210
             const pdfH = pageSize === 'f4' ? 330 : 297
-            pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, pdfW, pdfH)
+
+            // PNG untuk kualitas teks & garis tabel yang tajam
+            pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, pdfW, pdfH)
+
             const blob = pdf.output('blob')
-            if (!blob || blob.size < 5000) throw new Error('PDF terlalu kecil')
+            if (!blob || blob.size < 5000) throw new Error('PDF terlalu kecil, kemungkinan render gagal')
             return { blob, filename }
         } finally {
-            if (cardEl && printContainerRef.current && !printContainerRef.current.contains(cardEl)) {
-                printContainerRef.current.appendChild(cardEl)
-            }
+            // Hapus wrapper — cardEl asli di printContainerRef tidak disentuh
             if (document.body.contains(wrapper)) document.body.removeChild(wrapper)
             setPrintQueue([])
             setPrintRenderedCount(0)
@@ -463,9 +469,9 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef,
     }, [getCachedRaportLink, cacheRaportLink, generatePDFBlob, uploadToSupabase, sendFonnteMessage, buildWaMessage, addToast, reportType, selectedMonth, selectedYear, selectedSemester, academicYear])
 
     // ── Blast WA ──
-    const runWaBlast = useCallback(async (queue, abortRef) => {
+    const runWaBlast = useCallback(async (queue, abortRef, isDebug = false) => {
         let done = 0, failed = 0
-        setWaBlast({ queue, idx: 0, done: 0, failed: 0, active: true, status: 'generating' })
+        setWaBlast({ queue, idx: 0, done: 0, failed: 0, active: true, status: isDebug ? 'simulating' : 'generating' })
         for (let i = 0; i < queue.length; i++) {
             if (abortRef.current) break
             setWaBlast(prev => prev ? { ...prev, idx: i } : null)
@@ -474,48 +480,59 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef,
                 const phone = student.phone?.replace(/\D/g, '').replace(/^0/, '62')
                 if (!phone) { failed++; continue }
 
-                let url = getCachedRaportLink(student.id)
-                if (url) {
-                    const exists = await checkUrlExists(url)
-                    if (!exists) {
-                        const key = getCacheKey(student.id, reportType, selectedMonth, selectedYear, selectedSemester, academicYear)
-                        localStorage.removeItem(key)
-                        setRaportLinks(prev => {
-                            const next = { ...prev }
-                            delete next[student.id]
-                            return next
-                        })
-                        url = null
+                let url = 'https://laporanmu.github.io/mock_debug_preview.pdf'
+                
+                if (!isDebug) {
+                    url = getCachedRaportLink(student.id)
+                    if (url) {
+                        const exists = await checkUrlExists(url)
+                        if (!exists) {
+                            const key = getCacheKey(student.id, reportType, selectedMonth, selectedYear, selectedSemester, academicYear)
+                            localStorage.removeItem(key)
+                            setRaportLinks(prev => {
+                                const next = { ...prev }
+                                delete next[student.id]
+                                return next
+                            })
+                            url = null
+                        }
+                    }
+
+                    if (!url) {
+                        setWaBlast(prev => prev ? { ...prev, idx: i, status: 'generating' } : null)
+                        const { blob, filename } = await generatePDFBlob(student)
+                        if (abortRef.current) break
+
+                        setWaBlast(prev => prev ? { ...prev, idx: i, status: 'uploading' } : null)
+                        url = await uploadToSupabase(blob, filename)
+                        cacheRaportLink(student.id, url)
                     }
                 }
 
-                if (!url) {
-                    setWaBlast(prev => prev ? { ...prev, idx: i, status: 'generating' } : null)
-                    const { blob, filename } = await generatePDFBlob(student)
-                    if (abortRef.current) break
-
-                    setWaBlast(prev => prev ? { ...prev, idx: i, status: 'uploading' } : null)
-                    url = await uploadToSupabase(blob, filename)
-                    cacheRaportLink(student.id, url)
-                }
-
                 if (abortRef.current) break
-                setWaBlast(prev => prev ? { ...prev, idx: i, status: 'sending' } : null)
-                
+                setWaBlast(prev => prev ? { ...prev, idx: i, status: isDebug ? 'simulating' : 'sending' } : null)
+
                 // Gunakan sendFonnteMessage (teks) dengan menyisipkan URL PDF karena Fonnte Free tidak support file
                 const message = buildWaMessage(student, url)
-                const sent = await sendFonnteMessage(phone, message)
                 
+                let sent = false
+                if (isDebug) {
+                    console.log(`%c[WA BLAST SIMULASI] Nomor: ${phone} (${student.name})\nPesan:\n${message}`, 'background: #e1f5fe; color: #0277bd; padding: 4px; border-radius: 4px;')
+                    sent = true
+                    await new Promise(r => setTimeout(r, 200))
+                } else {
+                    sent = await sendFonnteMessage(phone, message)
+                    // Pause 1s to prevent rate limit
+                    await new Promise(r => setTimeout(r, 1000))
+                }
+
                 if (sent) done++
                 else failed++
-
-                // Pause 1s to prevent rate limit
-                await new Promise(r => setTimeout(r, 1000))
             } catch (e) { failed++; console.error('WA Blast item error:', e) }
             setWaBlast(prev => prev ? { ...prev, done, failed } : null)
         }
         setWaBlast(prev => prev ? { ...prev, active: false } : null)
-        addToast(`WA Blast selesai: ${done} terkirim, ${failed} gagal`, 'info')
+        addToast(isDebug ? `WA Blast Simulasi selesai: ${done} terproses (Lihat log di developer console!)` : `WA Blast selesai: ${done} terkirim, ${failed} gagal`, 'info')
     }, [getCachedRaportLink, cacheRaportLink, generatePDFBlob, uploadToSupabase, sendFonnteMessage, buildWaMessage, addToast, reportType, selectedMonth, selectedYear, selectedSemester, academicYear])
 
     // ── Blast ZIP ──
@@ -814,7 +831,7 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef,
 
                 const rows = classStudents.map((s, i) => {
                     const rep = allRep.find(r => r.student_id === s.id) || {}
-                    
+
                     const sc = {}
                     criteria.forEach(k => {
                         sc[k.key] = rep[k.key]
@@ -844,7 +861,7 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef,
                 })
 
                 const ws = XLSX.utils.aoa_to_sheet([headers, ...rows])
-                
+
                 // columns width
                 const colWidths = [{ wch: 4 }, { wch: 28 }]
                 criteria.forEach(() => {

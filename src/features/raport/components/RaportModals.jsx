@@ -2,7 +2,7 @@ import { memo, useState } from 'react'
 import {
     Keyboard, X, ChevronLeft, ChevronRight,
     Search, Info, Lightbulb, Save,
-    Table, Check, Archive, Paintbrush, FileText, ClipboardList
+    Table, Check, Archive, Paintbrush, FileText, ClipboardList, Eye
 } from 'lucide-react'
 import Modal from '@shared/components/Modal'
 import RichSelect from '@shared/components/RichSelect'
@@ -52,16 +52,15 @@ export const ShortcutModalContent = memo(() => {
     )
 })
 
-
 // ─── WA Blast Confirm Content ────────────────────────────────────────────────
 
-export const WaBlastConfirmContent = memo(({ isOpen, onClose, queue, onConfirm, onCancel, currentLang = 'id', currentPageSize = 'f4' }) => {
+export const WaBlastConfirmContent = memo(({ isOpen, onClose, queue, onConfirm, onCancel, lang, setLang, pageSize, setPageSize, buildWaMessage, onPreviewStudent }) => {
     const [selectedIds, setSelectedIds] = useState(new Set(queue.map(s => s.id)))
-    const [selectedLang, setSelectedLang] = useState(currentLang)
-    const [selectedPageSize, setSelectedPageSize] = useState(currentPageSize)
+    const [isDebug, setIsDebug] = useState(false)
+    const [showPreviewMsg, setShowPreviewMsg] = useState(false)
 
     const handleConfirm = () => {
-        onConfirm(queue.filter(s => selectedIds.has(s.id)), selectedLang, selectedPageSize)
+        onConfirm(queue.filter(s => selectedIds.has(s.id)), isDebug)
     }
 
     const toggleAll = () => {
@@ -86,6 +85,8 @@ export const WaBlastConfirmContent = memo(({ isOpen, onClose, queue, onConfirm, 
         { id: 'f4', name: 'F4 / Folio (215 × 330 mm)' }
     ]
 
+    const firstSelectedStudent = queue.find(s => selectedIds.has(s.id))
+
     return (
         <Modal
             isOpen={isOpen}
@@ -93,7 +94,7 @@ export const WaBlastConfirmContent = memo(({ isOpen, onClose, queue, onConfirm, 
             title="Konfirmasi WA Blast"
             description="Preview dan pilih wali santri target penerima raport"
             icon={WhatsAppIcon}
-            variant="green"
+            variant={isDebug ? "amber" : "green"}
             size="md"
             footer={
                 <div className="flex items-center w-full gap-3">
@@ -101,9 +102,13 @@ export const WaBlastConfirmContent = memo(({ isOpen, onClose, queue, onConfirm, 
                         Batal
                     </button>
                     <div className="flex-1" />
-                    <button onClick={handleConfirm} disabled={selectedIds.size === 0} className="h-10 px-6 rounded-xl bg-green-500 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-green-500/20 hover:bg-green-600 transition-all flex items-center gap-2 disabled:opacity-50">
+                    <button onClick={handleConfirm} disabled={selectedIds.size === 0} className={`h-10 px-6 rounded-xl text-white text-[10px] font-black uppercase tracking-widest shadow-lg transition-all flex items-center gap-2 disabled:opacity-50 ${
+                        isDebug
+                            ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20'
+                            : 'bg-green-500 hover:bg-green-600 shadow-green-500/20'
+                    }`}>
                         <WhatsAppIcon className="w-4 h-4" />
-                        Kirim ke {selectedIds.size} Santri
+                        {isDebug ? `Simulasikan Blast (${selectedIds.size})` : `Kirim ke ${selectedIds.size} Santri`}
                     </button>
                 </div>
             }
@@ -123,12 +128,12 @@ export const WaBlastConfirmContent = memo(({ isOpen, onClose, queue, onConfirm, 
                         <ClipboardList className="w-3.5 h-3.5 text-[var(--color-primary)]" />
                         <p className="text-[9px] font-black uppercase tracking-widest text-[var(--color-text)]">Pengaturan Dokumen Raport</p>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div className="space-y-0.5 text-left">
                             <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">Bahasa Raport</label>
                             <RichSelect
-                                value={selectedLang}
-                                onChange={setSelectedLang}
+                                value={lang}
+                                onChange={setLang}
                                 options={langOptions}
                                 small
                             />
@@ -136,11 +141,26 @@ export const WaBlastConfirmContent = memo(({ isOpen, onClose, queue, onConfirm, 
                         <div className="space-y-0.5 text-left">
                             <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-wider">Ukuran Kertas</label>
                             <RichSelect
-                                value={selectedPageSize}
-                                onChange={setSelectedPageSize}
+                                value={pageSize}
+                                onChange={setPageSize}
                                 options={pageSizeOptions}
                                 small
                             />
+                        </div>
+                        <div className="space-y-0.5 text-left flex flex-col justify-end">
+                            <label className="text-[9px] font-black text-[var(--color-text-muted)] uppercase tracking-wider block mb-1">Status Pengiriman</label>
+                            <button
+                                type="button"
+                                onClick={() => setIsDebug(d => !d)}
+                                className={`h-[34px] w-full flex items-center justify-center gap-1.5 px-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${
+                                    isDebug
+                                        ? 'bg-amber-500/10 border-amber-500/30 text-amber-600'
+                                        : 'bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-alt)]'
+                                }`}
+                            >
+                                <span className={`w-2 h-2 rounded-full ${isDebug ? 'bg-amber-500 animate-pulse' : 'bg-slate-300'}`} />
+                                {isDebug ? 'Mode Debug' : 'Kirim Asli'}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -162,29 +182,85 @@ export const WaBlastConfirmContent = memo(({ isOpen, onClose, queue, onConfirm, 
                         {queue.map((s, idx) => {
                             const isSelected = selectedIds.has(s.id)
                             return (
-                                <button key={s.id} type="button"
-                                    onClick={() => toggleOne(s.id)}
-                                    className={`w-full flex items-center gap-3 py-1.5 px-2.5 rounded-lg border text-left transition-all ${isSelected ? 'bg-green-500/5 border-green-500/20' : 'border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]'}`}>
-                                    {/* Checkbox */}
-                                    <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition-all ${isSelected ? 'bg-green-500 border-green-500' : 'border-[var(--color-border)] bg-white'}`}>
-                                        {isSelected && <Check className="w-2 h-2 text-white" />}
-                                    </div>
-                                    {/* Index + Name */}
-                                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                                        <span className="text-[9px] font-black text-[var(--color-text-muted)] w-5 shrink-0">{idx + 1}</span>
-                                        <div className="min-w-0">
-                                            <div className="text-[11px] font-black text-[var(--color-text)] truncate">{s.name}</div>
+                                <div key={s.id}
+                                    className={`w-full flex items-center gap-3 py-1.5 px-2.5 rounded-lg border transition-all ${isSelected ? 'bg-green-500/5 border-green-500/20' : 'border-[var(--color-border)] hover:bg-[var(--color-surface-alt)]'}`}>
+                                    {/* Clickable body area to toggle checkbox */}
+                                    <button type="button" onClick={() => toggleOne(s.id)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
+                                        {/* Checkbox */}
+                                        <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition-all ${isSelected ? 'bg-green-500 border-green-500' : 'border-[var(--color-border)] bg-white'}`}>
+                                            {isSelected && <Check className="w-2 h-2 text-white" />}
                                         </div>
-                                    </div>
-                                    {/* Phone Number */}
-                                    <div className="text-[10px] font-black text-[var(--color-text-muted)] px-2">
-                                        {s.phone ? (s.phone.length > 8 ? s.phone.substring(0, 4) + '****' + s.phone.slice(-4) : s.phone) : '—'}
-                                    </div>
-                                </button>
+                                        {/* Index + Name */}
+                                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                                            <span className="text-[9px] font-black text-[var(--color-text-muted)] w-5 shrink-0">{idx + 1}</span>
+                                            <div className="min-w-0">
+                                                <div className="text-[11px] font-black text-[var(--color-text)] truncate">{s.name}</div>
+                                            </div>
+                                        </div>
+                                        {/* Phone Number */}
+                                        <div className="text-[10px] font-black text-[var(--color-text-muted)] px-2">
+                                            {s.phone ? (s.phone.length > 8 ? s.phone.substring(0, 4) + '****' + s.phone.slice(-4) : s.phone) : '—'}
+                                        </div>
+                                    </button>
+
+                                    {/* Action button to preview digital raport */}
+                                    {onPreviewStudent && (
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onPreviewStudent(s.id);
+                                            }}
+                                            className="p-1 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-500 dark:text-zinc-400 transition-colors shrink-0 flex items-center justify-center animate-in fade-in duration-200"
+                                            title="Preview Raport Digital"
+                                        >
+                                            <Eye className="w-3.5 h-3.5" />
+                                        </button>
+                                    )}
+                                </div>
                             )
                         })}
                     </div>
                 </div>
+
+                {/* WhatsApp Message Preview Toggle & Panel */}
+                {selectedIds.size > 0 && buildWaMessage && (
+                    <div className="space-y-2">
+                        <div className="flex justify-end">
+                            <button
+                                type="button"
+                                onClick={() => setShowPreviewMsg(v => !v)}
+                                className="text-[10px] font-black text-green-600 hover:text-green-700 transition-colors uppercase tracking-wider flex items-center gap-1"
+                            >
+                                <FileText className="w-3.5 h-3.5" />
+                                {showPreviewMsg ? 'Sembunyikan Preview Pesan' : 'Lihat Preview Pesan (Simulasi)'}
+                              </button>
+                          </div>
+                          {showPreviewMsg && firstSelectedStudent && (
+                              <div className="p-3 rounded-2xl bg-[#e5ddd5] dark:bg-zinc-800 border border-[var(--color-border)] space-y-1.5 max-h-[220px] overflow-y-auto custom-scrollbar shadow-inner text-left">
+                                  <div className="text-[9px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest flex items-center justify-between">
+                                      <span>WhatsApp Bubble Preview</span>
+                                      {onPreviewStudent && (
+                                          <button
+                                              type="button"
+                                              onClick={() => onPreviewStudent(firstSelectedStudent.id)}
+                                              className="bg-green-600 hover:bg-green-700 text-white font-black text-[9px] uppercase tracking-wider px-2.5 py-0.5 rounded transition-all flex items-center gap-1"
+                                          >
+                                              👁️ Preview Raport
+                                          </button>
+                                      )}
+                                  </div>
+                                  <div 
+                                      className="bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 p-3 rounded-lg rounded-tl-none relative shadow-sm border border-zinc-200/50 dark:border-zinc-700 font-mono text-[10.5px] leading-relaxed whitespace-pre-wrap select-text"
+                                      style={{ fontFamily: "Segoe UI, -apple-system, sans-serif" }}
+                                  >
+                                      <div className="absolute top-0 -left-2 w-0 h-0 border-[8px] border-transparent border-t-white dark:border-t-zinc-900 border-r-white dark:border-r-zinc-900" />
+                                      {buildWaMessage(firstSelectedStudent, `https://laporanmu.github.io/raport_${firstSelectedStudent.name.toLowerCase().replace(/\s+/g, '_')}.pdf`)}
+                                  </div>
+                              </div>
+                          )}
+                    </div>
+                )}
             </div>
         </Modal>
     )
@@ -214,7 +290,7 @@ export const WaBlastProgressContent = memo(({ progress, total, done, failed, act
                     </div>
                     <div>
                         <p className="text-base font-black text-[var(--color-text)] tracking-tight">
-                            {isFinished ? 'Blast Selesai!' : 'Sedang Mengirim...'}
+                            {isFinished ? 'Blast Selesai!' : (status === 'simulating' ? 'Sedang Mensimulasikan...' : 'Sedang Mengirim...')}
                         </p>
                         <p className="text-xs text-[var(--color-text-muted)] font-bold">
                             {progress} dari {total} santri terproses
@@ -229,7 +305,7 @@ export const WaBlastProgressContent = memo(({ progress, total, done, failed, act
             {/* Progress Bar Container */}
             <div className="h-4 w-full rounded-full bg-[var(--color-surface-alt)] border border-[var(--color-border)] p-1">
                 <div
-                    className={`h-full rounded-full transition-all duration-500 ${isFinished ? 'bg-emerald-500' : 'bg-green-500'
+                    className={`h-full rounded-full transition-all duration-500 ${isFinished ? 'bg-emerald-500' : (status === 'simulating' ? 'bg-amber-500' : 'bg-green-500')
                         }`}
                     style={{ width: `${pct}%` }}
                 />
@@ -259,6 +335,7 @@ export const WaBlastProgressContent = memo(({ progress, total, done, failed, act
                             {status === 'generating' && 'Men-generate PDF raport...'}
                             {status === 'uploading' && 'Mengunggah PDF ke Supabase...'}
                             {status === 'sending' && 'Mengirim pesan WhatsApp...'}
+                            {status === 'simulating' && '🧪 Men-simulasikan pengiriman ke console...'}
                             {!status && 'Sekarang Mengirim Ke:'}
                         </p>
                         <p className="text-sm font-black text-[var(--color-text)] truncate">{activeName}</p>

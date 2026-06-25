@@ -309,6 +309,24 @@ export default function ParentCheckPage() {
                 import('html2canvas'),
                 import('jspdf')
             ])
+
+            // Preload Arabic fonts
+            if (document.fonts) {
+                try {
+                    await Promise.all([
+                        document.fonts.load('400 16px Amiri'),
+                        document.fonts.load('700 16px Amiri'),
+                        document.fonts.load('400 32px Amiri'),
+                        document.fonts.load('700 32px Amiri'),
+                        document.fonts.load('400 16px Cairo'),
+                        document.fonts.load('700 16px Cairo'),
+                        document.fonts.load('400 16px "Traditional Arabic"'),
+                        document.fonts.load('700 16px "Traditional Arabic"'),
+                    ])
+                } catch (e) { console.warn('Font load warning:', e) }
+            }
+            await document.fonts.ready
+
             // Set data → trigger JSX render
             setPrintRaportData({ r, student })
             setPrintRenderedCount(0)
@@ -324,17 +342,43 @@ export default function ParentCheckPage() {
                 }, 100)
             })
             if (!cardEl) throw new Error('Gagal render raport card')
+            
+            // Preload images inside cardEl
+            const cardImgs = cardEl.querySelectorAll('img')
+            await Promise.allSettled(Array.from(cardImgs).map(img => new Promise(res => {
+                if (img.complete && img.naturalWidth > 0) return res()
+                img.onload = res; img.onerror = res
+            })))
+            await new Promise(res => setTimeout(res, 300))
+
             // Snapshot — identik RaportPage
             const rootStyles = getComputedStyle(document.documentElement)
             const cssVars = ['--color-border', '--color-surface', '--color-surface-alt', '--color-text', '--color-text-muted'].map(v => `${v}: ${rootStyles.getPropertyValue(v).trim() || '#ccc'};`).join(' ')
             const A4W = 794, A4H = 1123, wrapper = document.createElement('div')
             wrapper.style.cssText = `position:fixed;left:-9999px;top:0;width:${A4W}px;height:${A4H}px;background:white;overflow:hidden;display:flex;align-items:flex-start;justify-content:center;font-family:'Times New Roman',serif;`
-            wrapper.innerHTML = `<style>:root{${cssVars}}*{box-sizing:border-box;-webkit-print-color-adjust:exact!important}img{mix-blend-mode:multiply}.raport-card{width:${A4W}px!important;min-width:${A4W}px!important;height:${A4H}px!important;overflow:hidden!important;background:white!important;margin:0!important}</style>${cardEl.outerHTML}`
+            wrapper.innerHTML = `<style>:root{${cssVars}}*{box-sizing:border-box;-webkit-print-color-adjust:exact!important}img{mix-blend-mode:multiply}.raport-card{width:${A4W}px!important;min-width:${A4W}px!important;height:${A4H}px!important;overflow:hidden!important;background:white!important;margin:0!important}.school-name-ar, .school-subtitle-ar { direction: rtl !important; unicode-bidi: embed !important; letter-spacing: normal !important; white-space: nowrap !important; }</style>${cardEl.outerHTML}`
             document.body.appendChild(wrapper)
             await new Promise(res => setTimeout(res, 700))
             try {
                 const canvas = await withTimeout(
-                    html2canvas(wrapper, { scale: 3, useCORS: true, allowTaint: true, backgroundColor: '#ffffff', width: A4W, height: A4H, scrollX: 0, scrollY: 0, logging: false }),
+                    html2canvas(wrapper, {
+                        scale: 3,
+                        useCORS: true,
+                        allowTaint: true,
+                        backgroundColor: '#ffffff',
+                        width: A4W,
+                        height: A4H,
+                        scrollX: 0,
+                        scrollY: 0,
+                        logging: false,
+                        onclone: (doc) => {
+                            doc.querySelectorAll('.school-name-ar, .school-subtitle-ar, [dir="rtl"]').forEach(el => {
+                                el.style.direction = 'rtl'
+                                el.style.unicodeBidi = 'embed'
+                                el.style.whiteSpace = 'nowrap'
+                            })
+                        }
+                    }),
                     15000, 'Render PDF'
                 )
                 const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true })
@@ -856,7 +900,7 @@ export default function ParentCheckPage() {
 
                     {/* Hidden container untuk render PDF — dikontrol oleh ENABLE_PDF_DOWNLOAD */}
                     {ENABLE_PDF_DOWNLOAD && printQueue.length > 0 && printRaportData && (
-                        <div ref={printContainerRef} style={{ position: 'fixed', left: '-9999px', top: 0, visibility: 'hidden', pointerEvents: 'none' }}>
+                        <div ref={printContainerRef} style={{ position: 'fixed', left: '-9999px', top: 0, width: '1000px', visibility: 'hidden', pointerEvents: 'none' }}>
                             <RaportPrintCard
                                 student={printRaportData.student}
                                 scores={{
