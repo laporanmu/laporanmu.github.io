@@ -414,12 +414,12 @@ const RaportPrintCard = memo(({
                                 }}>{settings.school_name_id || ''}</div>
                                 {isTanggul ? (
                                     <div className="school-address" style={{
-                                        fontSize: '8.1pt',
-                                        color: '#333',
-                                        marginTop: 3,
+                                        fontSize: '8.2pt',
+                                        color: '#555',
+                                        marginTop: 4,
                                         lineHeight: 1.35,
-                                        fontWeight: 600,
-                                        fontFamily: "'Segoe Print', 'Segoe Script', 'Monotype Corsiva', cursive, sans-serif"
+                                        fontWeight: 500,
+                                        fontFamily: "Inter, 'Segoe UI', Roboto, system-ui, sans-serif"
                                     }}>
                                         <div>Jl. Pemandian No. 88 Dusun Krajan II Patemon Tanggul Jember 68155</div>
                                         <div>Asrama Tahfidz Al-Qur'an Bambu Kuning Jl. Teratai No. 11 Tanggul Jember 68155</div>
