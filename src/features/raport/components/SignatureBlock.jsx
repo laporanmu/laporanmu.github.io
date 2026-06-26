@@ -1,4 +1,5 @@
 import React from 'react';
+import { RAPORT_AR_FONT } from '@features/raport/utils/raportFonts';
 
 const blockStyle = {
   flex: 1,
@@ -9,8 +10,11 @@ const blockStyle = {
   textAlign: 'center',
 };
 
-export default function SignatureBlock({ label, nama, signatureUrl, mode }) {
+export default function SignatureBlock({ label, nama, signatureUrl, mode, isAr = false }) {
   const isDigital = mode === 'digital' && signatureUrl;
+  const labelSize = isAr ? '13pt' : '10.5pt';
+  const nameSize = isAr ? '14pt' : '11.5pt';
+  const labelHeight = isAr ? '56px' : '48px';
 
   return (
     <div className="raport-signature-block" style={blockStyle}>
@@ -18,15 +22,16 @@ export default function SignatureBlock({ label, nama, signatureUrl, mode }) {
       <div
         className="raport-signature-label"
         style={{
-          height: '48px',
+          minHeight: labelHeight,
           width: '100%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: '9.5pt',
+          fontSize: labelSize,
           fontWeight: 700,
+          fontFamily: isAr ? RAPORT_AR_FONT : 'inherit',
           whiteSpace: 'pre-line',
-          lineHeight: 1.25,
+          lineHeight: isAr ? 1.35 : 1.25,
           marginBottom: '8px',
           textAlign: 'center',
           color: '#111827',
@@ -60,7 +65,7 @@ export default function SignatureBlock({ label, nama, signatureUrl, mode }) {
       <div
         className="raport-signature-line"
         style={{
-          width: '128px',
+          width: isAr ? '148px' : '128px',
           borderTop: '1px solid rgb(156, 163, 175)',
           marginTop: '8px',
         }}
@@ -72,10 +77,12 @@ export default function SignatureBlock({ label, nama, signatureUrl, mode }) {
         style={{
           width: '100%',
           fontWeight: 700,
-          fontSize: '10.5pt',
+          fontSize: nameSize,
+          fontFamily: isAr ? RAPORT_AR_FONT : 'inherit',
           marginTop: '8px',
           textAlign: 'center',
           color: '#111827',
+          lineHeight: isAr ? 1.35 : 1.25,
         }}
       >
         {nama}

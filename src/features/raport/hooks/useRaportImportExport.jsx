@@ -4,6 +4,8 @@ import { logAudit } from '@utils/auditLogger'
 import { BULAN, STORAGE_BUCKET } from '@utils/reports/raportConstants'
 import { buildWaLines, escapeCsvCell, calcAvg } from '@utils/reports/raportHelpers'
 import { RAPORT_TYPES, getClassLevel, getGradePredicate } from '@utils/reports/raportTypeRegistry'
+import { buildRaportPDFHtml } from '@features/raport/utils/raportPrintHtml'
+import { preloadRaportFonts } from '@features/raport/utils/raportFonts'
 
 // Helper for persistent caching keys
 const getCacheKey = (studentId, rType, month, year, semester, acadYear) => {
@@ -96,63 +98,6 @@ const convertImagesToBase64 = async (origEl, cloneEl) => {
         }
     }))
 }
-
-/**
- * Serialisasi cardEl ke HTML string self-contained untuk Browserless.
- * Mengambil semua CSS rule aktif di halaman agar font, warna, dan layout
- * dirender persis sama seperti di browser preview.
- */
-const buildHTMLString = (cardEl, pageSize = 'f4') => {
-    // Kumpulkan semua CSS rules dari semua stylesheet aktif
-    const allCss = Array.from(document.styleSheets).flatMap(sheet => {
-        try {
-            return Array.from(sheet.cssRules).map(r => r.cssText)
-        } catch {
-            // Cross-origin stylesheet, skip
-            return []
-        }
-    }).join('\n')
-
-    const cardHTML = cardEl.outerHTML
-    const pageW = pageSize === 'f4' ? '215mm' : '210mm'
-    const pageH = pageSize === 'f4' ? '330mm' : '297mm'
-
-    return `<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: ${pageW};
-      min-height: ${pageH};
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-    .raport-card {
-      width: ${pageW} !important;
-      min-width: ${pageW} !important;
-      min-height: ${pageH} !important;
-      box-shadow: none !important;
-      margin: 0 !important;
-      box-sizing: border-box !important;
-    }
-    /* Semua CSS dari aplikasi */
-    ${allCss}
-  </style>
-</head>
-<body>
-  ${cardHTML}
-</body>
-</html>`
-}
-
 
 // Helper to check if a public URL exists (e.g. not deleted from Supabase)
 const checkUrlExists = async (url) => {
@@ -440,17 +385,7 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef,
         if (!cardEl) throw new Error('Gagal render raport card')
 
         // Tunggu font & gambar siap
-        if (document.fonts) {
-            try {
-                await Promise.all([
-                    document.fonts.load('400 16px "Traditional Arabic"'),
-                    document.fonts.load('700 16px "Traditional Arabic"'),
-                    document.fonts.load('400 16px Cairo'),
-                    document.fonts.load('700 16px Cairo'),
-                ])
-            } catch (e) { console.warn('Font load warning:', e) }
-        }
-        await document.fonts.ready
+        await preloadRaportFonts()
 
         // Preload semua img di dalam cardEl
         const cardImgs = cardEl.querySelectorAll('img')
@@ -465,7 +400,7 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef,
             // Buat clone untuk modifikasi image ke base64 agar tidak merusak DOM asli/preview
             const cardCloneForHTML = cardEl.cloneNode(true)
             await convertImagesToBase64(cardEl, cardCloneForHTML)
-            const htmlContent = buildHTMLString(cardCloneForHTML, pageSize)
+            const htmlContent = buildRaportPDFHtml(cardCloneForHTML, pageSize)
 
             const { data: edgeData, error: edgeError } = await supabase.functions.invoke(
                 'generate-raport-pdf',
@@ -531,7 +466,6 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef,
 
         const overrideStyle = document.createElement('style')
         overrideStyle.textContent = `
-            @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=block');
             .divider-gradient { background: linear-gradient(90deg, #1a5c35, #c8a400, #1a5c35) !important; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
             .raport-card table:not(.raport-header-table) td,

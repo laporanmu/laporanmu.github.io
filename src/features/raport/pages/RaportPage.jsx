@@ -43,6 +43,7 @@ import {
 import { translitToAr, translitClassToAr, loadTranslitData } from '@utils/reports/translitData'
 import { RadarChart, SparklineTrend } from '@features/raport/components/RaportCharts'
 import RaportPrintCard from '@features/raport/components/RaportPrintCard'
+import { buildRaportPrintDocumentHtml } from '@features/raport/utils/raportPrintHtml'
 import RaportLayoutSettings, { loadLayoutConfig } from '@features/raport/components/RaportLayoutSettings'
 import StudentRow, { ExtraInput, ExtraTextarea } from '@features/raport/components/RaportRecordRow'
 import { ShortcutModalContent, WaBlastConfirmContent, WaBlastProgressContent, ZipBlastProgressContent } from '@features/raport/components/RaportModals'
@@ -1465,99 +1466,17 @@ export default function RaportPage() {
         const html = [...cards].map(c => c.outerHTML).join('')
         const titleStr = stuList.length === 1 ? `Raport ${stuList[0].name}_${selectedClass?.name}_${bulanObj?.id_str} ${selectedYear}` : `Raport Kelas ${selectedClass?.name}_${bulanObj?.id_str} ${selectedYear}`
         const win = window.open('', '_blank'); if (!win) { addToast('Popup diblokir browser.', 'error'); setPrintQueue([]); setPrintRenderedCount(0); return }
-        win.document.write(`<!DOCTYPE html><html><head>
-    <meta charset="utf-8">
-    <title>${titleStr}</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Outfit:wght@700;900&family=Cairo:wght@400;600;700;900&display=block" rel="stylesheet">
-    <style>
-        @page { size: ${pageSize === 'f4' ? '215mm 330mm' : 'A4'}; margin: 0; }
-        
-        /* CSS variables biar konsisten */
-        :root {
-            --color-primary: #4f46e5;
-            --color-text: #0f172a;
-            --color-border: #e2e8f0;
-        }
-        
-        body { 
-            margin: 0; padding: 0; 
-            font-family: 'Inter', sans-serif; 
-            -webkit-print-color-adjust: exact !important; 
-            print-color-adjust: exact !important; 
-            background: white; 
-        }
-        * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-        
-        [style*="Traditional Arabic"], [dir="rtl"], .font-arabic, h1[style*="Traditional Arabic"], h2[style*="Traditional Arabic"], .school-name-ar, .school-subtitle-ar, [style*="rtl"] {
-            letter-spacing: normal !important;
-        }
-        
-        .raport-card { 
-            page-break-after: always; 
-            position: relative; 
-            overflow: hidden; 
-            background: white !important; 
-            width: ${pageSize === 'f4' ? '215mm' : '210mm'} !important;
-            min-width: ${pageSize === 'f4' ? '215mm' : '210mm'} !important;
-            height: ${pageSize === 'f4' ? '330mm' : '297mm'} !important;
-            min-height: ${pageSize === 'f4' ? '330mm' : '297mm'} !important;
-            padding: ${pageSize === 'f4' ? '8mm 10mm 8mm 20mm' : '4mm 10mm 4mm 20mm'} !important;
-            box-sizing: border-box !important;
-        }
-        .raport-print-metadata {
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
-        }
-        .raport-signature-row {
-            display: flex !important;
-            flex-direction: row !important;
-            justify-content: space-between !important;
-            gap: 10px !important;
-        }
-        .raport-signature-block {
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: center !important;
-            text-align: center !important;
-            flex: 1 !important;
-            min-width: 0 !important;
-        }
-        .raport-signature-label,
-        .raport-signature-name {
-            width: 100% !important;
-            text-align: center !important;
-        }
-        .raport-signature-label {
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-        }
-        .raport-signature-image {
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            width: 100% !important;
-        }
-        img { mix-blend-mode: multiply; max-width: 100%; height: auto; }
-        
-        @media print {
-            body { background: white; }
-            .raport-card { box-shadow: none !important; border: none !important; margin: 0 auto !important; padding: ${pageSize === 'f4' ? '8mm 10mm 8mm 20mm' : '4mm 10mm 4mm 20mm'} !important; width: ${pageSize === 'f4' ? '215mm' : '210mm'} !important; min-width: ${pageSize === 'f4' ? '215mm' : '210mm'} !important; height: ${pageSize === 'f4' ? '330mm' : '297mm'} !important; min-height: ${pageSize === 'f4' ? '330mm' : '297mm'} !important; }
-        }
-    </style>
-</head><body>${html}</body></html>`)
+        win.document.write(buildRaportPrintDocumentHtml(html, pageSize, titleStr))
         win.document.close();
         win.focus();
         if (win.document.fonts && win.document.fonts.ready) {
             win.document.fonts.ready.then(async () => {
                 // Paksa load font Arab secara eksplisit
                 await Promise.all([
+                    win.document.fonts.load('400 16px "Noto Naskh Arabic"'),
+                    win.document.fonts.load('700 16px "Noto Naskh Arabic"'),
                     win.document.fonts.load('400 16px "Traditional Arabic"'),
                     win.document.fonts.load('700 16px "Traditional Arabic"'),
-                    win.document.fonts.load('700 16px Cairo'),
                 ]);
                 setTimeout(() => {
                     win.print();
@@ -1603,23 +1522,19 @@ export default function RaportPage() {
             const cards = printContainerRef.current?.querySelectorAll('.raport-card')
             if ((!cards || cards.length < stuIds.length) && attempt < 30) { setTimeout(() => tryExport(attempt + 1), 200); return }
             const html = [...(cards?.length ? cards : document.querySelectorAll('.raport-card'))].map(c => c.outerHTML).join('')
+            const title = `Raport ${entry.class_name} ${BULAN.find(b => b.id === entry.month)?.id_str} ${entry.year}`
             const win = window.open('', '_blank'); if (!win) { addToast('Popup diblokir.', 'error'); return }
-            win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Raport ${entry.class_name} ${BULAN.find(b => b.id === entry.month)?.id_str} ${entry.year}</title>
-                <link rel="preconnect" href="https://fonts.googleapis.com">
-                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Outfit:wght@700;900&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
-                <style>
-                    @page{size:${pageSize === 'f4' ? '215mm 330mm' : 'A4'};margin:0}body{margin:0;padding:0;font-family:'Inter',sans-serif;background:white}.raport-card{page-break-after:always;box-sizing:border-box;width:${pageSize === 'f4' ? '215mm' : '210mm'}!important;min-width:${pageSize === 'f4' ? '215mm' : '210mm'}!important;height:${pageSize === 'f4' ? '330mm' : '297mm'}!important;min-height:${pageSize === 'f4' ? '330mm' : '297mm'}!important;padding:${pageSize === 'f4' ? '8mm 10mm 8mm 20mm' : '4mm 10mm 4mm 20mm'}!important;margin:0 auto!important}.raport-print-metadata{left:0!important;right:0!important;bottom:0!important}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}[style*="Traditional Arabic"],[dir="rtl"],.font-arabic,h1[style*="Traditional Arabic"],h2[style*="Traditional Arabic"],.school-name-ar,.school-subtitle-ar,[style*="rtl"]{letter-spacing:normal!important}
-                </style></head><body>${html}</body></html>`)
+            win.document.write(buildRaportPrintDocumentHtml(html, pageSize, title))
             win.document.close();
             win.focus();
             if (win.document.fonts && win.document.fonts.ready) {
                 win.document.fonts.ready.then(async () => {
                     // Paksa load font Arab secara eksplisit
                     await Promise.all([
+                        win.document.fonts.load('400 16px "Noto Naskh Arabic"'),
+                        win.document.fonts.load('700 16px "Noto Naskh Arabic"'),
                         win.document.fonts.load('400 16px "Traditional Arabic"'),
                         win.document.fonts.load('700 16px "Traditional Arabic"'),
-                        win.document.fonts.load('700 16px Cairo'),
                     ]);
                     setTimeout(() => {
                         win.print();
