@@ -41,7 +41,7 @@ export function FeatureFlagsProvider({ children }) {
                 .from('feature_flags')
                 .select('key, enabled')
             if (error) throw error
-            // Convert array → { 'module.absensi': true, 'nav.raport': false, ... }
+            // Konversi Array ➔ { 'module.absensi': true, 'nav.raport': false, ... }
             const map = {}
                 ; (data || []).forEach(f => { map[f.key] = f.enabled })
             setFlags(map)
@@ -59,7 +59,7 @@ export function FeatureFlagsProvider({ children }) {
         }
         fetchFlags()
 
-        // Realtime subscription — update flags instantly when changed in admin panel
+        // Subscription Realtime — Update Flags Secara Instan Saat Diubah Di Admin Panel
         const channel = supabase
             .channel('feature_flags_changes')
             .on('postgres_changes', {
@@ -73,8 +73,8 @@ export function FeatureFlagsProvider({ children }) {
             })
             .subscribe()
 
-        // Polling fallback setiap 5 detik — jalan terus sebagai backup realtime
-        const pollInterval = setInterval(fetchFlags, 5000)
+        // Polling Fallback Setiap 60 Detik — Berjalan Terus Sebagai Backup Realtime
+        const pollInterval = setInterval(fetchFlags, 60000)
 
         return () => {
             supabase.removeChannel(channel)
@@ -91,14 +91,14 @@ export function FeatureFlagsProvider({ children }) {
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 
-/** Semua flags sekaligus */
+/** Ambil Semua Flags Sekaligus */
 export function useFeatureFlags() {
     return useContext(FeatureFlagsContext)
 }
 
-/** Cek satu flag: useFlag('module.absensi') → true/false */
+/** Periksa Satu Flag: useFlag('module.absensi') ➔ true/false */
 export function useFlag(key) {
     const { flags, loading } = useContext(FeatureFlagsContext)
     return { enabled: flags[key] ?? true, loading }
-    // default true — kalau flag belum load, anggap aktif (fail open)
+    // Default true — Jika Flag Belum Load, Anggap Aktif (Fail Open)
 }

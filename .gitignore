@@ -37,3 +37,12 @@ src/assets/*.xlsx
 
 # Visualizer stats
 stats.html
+
+# Fonts
+src/assets/*.ttf
+src/assets/*.otf
+src/assets/*.woff
+src/assets/*.woff2
+
+# Generated font
+src/assets/fonts/NotoNaskhArabic-Regular.ttf

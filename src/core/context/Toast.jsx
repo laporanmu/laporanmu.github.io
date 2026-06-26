@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useRef } from 'react'
+import { createContext, useContext, useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
     faCheckCircle, faExclamationTriangle, faXmarkCircle,
@@ -8,6 +8,7 @@ import { useLanguage } from './Language'
 
 const ToastContext = createContext({})
 
+// ─── Konfigurasi Tampilan Per Tipe Toast (Ikon, Warna Background, Warna Border) ───
 const TOAST_TYPES = {
     success: { icon: faCheckCircle, bg: 'bg-emerald-600', border: 'border-emerald-400/30' },
     error: { icon: faXmarkCircle, bg: 'bg-red-600', border: 'border-red-400/30' },
@@ -20,16 +21,50 @@ const TOAST_TYPES = {
 
 export function ToastProvider({ children }) {
     const [toasts, setToasts] = useState([])
+    // Simpan ID Timer setTimeout Per Toast Di useRef (Bukan useState) Karena Timer Ini Bukan
+    // Bagian Dari Tampilan Yang Perlu Memicu Re-Render — Hanya Dibutuhkan Untuk Dibatalkan
+    // (clearTimeout) Saat Toast Ditutup Manual Atau Saat Undo Dipilih
     const timerRefs = useRef({})
+    // [FIX] Ref terpisah untuk melacak timer exit (300ms animasi fade-out) —
+    // agar bisa di-clear juga saat unmount, mencegah setState dipanggil setelah unmount
+    const exitTimerRefs = useRef({})
     const { t } = useLanguage()
 
+    // [FIX] Cleanup semua timer yang masih berjalan saat ToastProvider unmount.
+    // Tanpa ini, setTimeout di removeToast (exit animation 300ms) dan auto-dismiss timer
+    // bisa masih berjalan dan memanggil setToasts setelah component sudah unmount —
+    // yang di React 18 tidak crash tapi tetap membuang resource dan bisa menimbulkan
+    // warning di test environment.
+    useEffect(() => {
+        return () => {
+            Object.values(timerRefs.current).forEach(clearTimeout)
+            Object.values(exitTimerRefs.current).forEach(clearTimeout)
+        }
+    }, [])
+
+    // Hapus Toast Dalam Dua Tahap: Tandai "exiting" Dulu Untuk Memicu Animasi Keluar (Class
+    // toast-exit Di CSS), Baru Setelah 300ms (Durasi Animasi) Benar-Benar Dihapus Dari Array.
+    // Tanpa Tahap Ini, Toast Akan Hilang Mendadak Tanpa Animasi Fade-Out.
+    // clearTimeout Dipanggil Untuk Membatalkan Timer Auto-Dismiss Jika removeToast Dipicu Manual
+    // (Misalnya Klik Tombol Close) Sebelum Timer Itu Habis, Dan Entry timerRefs.current[id]
+    // Dibersihkan Agar Tidak Menumpuk Selamanya Di Memory Selama Toast Terus Bermunculan
+    // Sepanjang Sesi Penggunaan App.
     const removeToast = useCallback((id) => {
-        setToasts(prev => prev.map(t => t.id === id ? { ...t, exiting: true } : t))
-        setTimeout(() => {
-            setToasts(prev => prev.filter(t => t.id !== id))
+        clearTimeout(timerRefs.current[id])
+        delete timerRefs.current[id]
+
+        // [FIX] Rename 'toast' agar tidak shadow 't' dari useLanguage() di scope luar —
+        // sebelumnya: prev.map(t => ...) dan prev.filter(t => ...) yang membingungkan
+        setToasts(prev => prev.map(toast => toast.id === id ? { ...toast, exiting: true } : toast))
+
+        // [FIX] Simpan exit timer ke exitTimerRefs agar bisa di-clear saat unmount
+        exitTimerRefs.current[id] = setTimeout(() => {
+            setToasts(prev => prev.filter(toast => toast.id !== id))
+            delete exitTimerRefs.current[id]
         }, 300)
     }, [])
 
+    // Tampilkan Toast Biasa Yang Hilang Otomatis Setelah `duration` Milidetik
     const addToast = useCallback((message, type = 'info', duration = 4000) => {
         const id = Date.now() + Math.random()
         setToasts(prev => [...prev, { id, message, type }])
@@ -41,6 +76,10 @@ export function ToastProvider({ children }) {
         return id
     }, [removeToast])
 
+    // Tampilkan Toast Dengan Tombol "Batalkan" Dan Progress Bar Visual — Dipakai Untuk Aksi Yang
+    // Bisa Diurungkan (Misalnya Hapus Data). Berbeda Dari addToast, Fungsi Ini Mengembalikan
+    // { id, cancel } Sehingga Pemanggil Bisa Membatalkan Timer Secara Manual Dari Luar Jika Perlu
+    // (Misalnya Saat Aksi Undo Sudah Pasti Tidak Mungkin Dipakai Lagi)
     const addUndoToast = useCallback((message, onUndo, undoDuration = 5000) => {
         const id = Date.now() + Math.random()
 
@@ -58,24 +97,32 @@ export function ToastProvider({ children }) {
         }, undoDuration)
 
         const cancel = () => {
-            clearTimeout(timerRefs.current[id])
             removeToast(id)
         }
 
         return { id, cancel }
     }, [removeToast])
 
+    // Dipanggil Saat Tombol "Batalkan" Diklik: Tutup Toast (removeToast Otomatis Membatalkan
+    // Timer Auto-Dismiss-Nya), Lalu Jalankan Callback onUndo Yang Diberikan Pemanggil Toast Ini
     const handleUndo = useCallback((toast) => {
-        clearTimeout(timerRefs.current[toast.id])
         removeToast(toast.id)
         toast.onUndo?.()
     }, [removeToast])
 
+    // [FIX] useMemo pada value — tanpa ini object baru dibuat setiap render ToastProvider
+    // (dipicu setiap kali ada toast masuk/keluar), menyebabkan semua consumer useToast()
+    // ikut re-render meski addToast/addUndoToast/removeToast tidak berubah
+    const contextValue = useMemo(
+        () => ({ addToast, addUndoToast, removeToast }),
+        [addToast, addUndoToast, removeToast]
+    )
+
     return (
-        <ToastContext.Provider value={{ addToast, addUndoToast, removeToast }}>
+        <ToastContext.Provider value={contextValue}>
             {children}
 
-            {/* Toast Container */}
+            {/* Container Toast — Posisi Fixed Di Pojok Kanan Atas, Menumpuk Vertikal */}
             <div className="fixed top-4 right-4 left-4 sm:left-auto z-[99999] flex flex-col gap-2 sm:max-w-sm">
                 {toasts.map(toast => {
                     const config = TOAST_TYPES[toast.type] || TOAST_TYPES.info
@@ -87,7 +134,7 @@ export function ToastProvider({ children }) {
                             className={`${config.bg} ${config.border} ${toast.exiting ? 'toast-exit' : 'toast-enter'}
                                 text-white px-3 py-2.5 sm:px-4 rounded-xl shadow-xl flex items-center gap-3 border relative overflow-hidden`}
                         >
-                            {/* Progress bar untuk undo toast */}
+                            {/* Progress Bar Yang Menyusut Mengikuti Sisa Waktu Sebelum Toast Undo Otomatis Tertutup */}
                             {isUndo && (
                                 <div
                                     className="absolute bottom-0 left-0 h-0.5 bg-white/40 rounded-full"
@@ -101,7 +148,7 @@ export function ToastProvider({ children }) {
                             <FontAwesomeIcon icon={config.icon} className="text-base sm:text-lg shrink-0" />
                             <span className="flex-1 text-[11px] sm:text-sm font-semibold">{toast.message}</span>
 
-                            {/* Undo button */}
+                            {/* Tombol Batalkan — Hanya Tampil Untuk Toast Bertipe Undo */}
                             {isUndo && (
                                 <button
                                     onClick={() => handleUndo(toast)}
@@ -123,7 +170,7 @@ export function ToastProvider({ children }) {
                 })}
             </div>
 
-            {/* CSS untuk progress bar animation */}
+            {/* Keyframe Animasi "shrink" Untuk Progress Bar Toast Undo Di Atas — Lebar Menyusut Dari 100% Ke 0% */}
             <style>{`
                 @keyframes shrink {
                     from { width: 100%; }
@@ -134,6 +181,7 @@ export function ToastProvider({ children }) {
     )
 }
 
+// ─── Hook ─────────────────────────────────────────────────────────────────────
 export function useToast() {
     const context = useContext(ToastContext)
     if (!context) throw new Error('useToast must be used within ToastProvider')

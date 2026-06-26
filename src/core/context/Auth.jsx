@@ -5,7 +5,7 @@ import { useLanguage } from './Language'
 
 const AuthContext = createContext({})
 
-// ─── Role Hierarchy: developer > admin > guru = satpam > viewer ───────────────
+// ─── Hierarki Peran: Developer > Admin > Guru = Satpam > Viewer ───────────────
 const DEMO_USERS = {
     developer: { id: 'demo-dev', email: 'dev@laporanmu.id', role: 'developer', name: 'Developer' },
     admin: { id: 'demo-admin', email: 'admin@laporanmu.id', role: 'admin', name: 'Administrator' },
@@ -21,31 +21,29 @@ export function AuthProvider({ children }) {
 
     useEffect(() => {
         if (isDemoMode) {
-            // Check localStorage or sessionStorage for demo session
+            // Periksa LocalStorage Atau SessionStorage Untuk Sesi Demo
             const demoSession = localStorage.getItem('laporanmu_demo_session') || sessionStorage.getItem('laporanmu_demo_session')
             if (demoSession) {
-                const parsed = JSON.parse(demoSession)
-                setUser(parsed)
-                setProfile(parsed)
+                try {
+                    const parsed = JSON.parse(demoSession)
+                    setUser(parsed)
+                    setProfile(parsed)
+                } catch (e) {
+                    console.error('Error parsing demo session:', e)
+                    localStorage.removeItem('laporanmu_demo_session')
+                    sessionStorage.removeItem('laporanmu_demo_session')
+                }
             }
             setLoading(false)
             return
         }
 
-        // Real Supabase auth
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        // Cukup Gunakan onAuthStateChange Karena Supabase Akan Otomatis Mentrigger
+        // State Inisialisasi Di Awal Dan Pembaruan Di Masa Mendatang.
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
             setUser(session?.user ?? null)
             if (session?.user) {
-                fetchProfile(session.user.id)
-            } else {
-                setLoading(false)
-            }
-        })
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setUser(session?.user ?? null)
-            if (session?.user) {
-                fetchProfile(session.user.id)
+                await fetchProfile(session.user.id)
             } else {
                 setProfile(null)
                 setLoading(false)
@@ -65,12 +63,12 @@ export function AuthProvider({ children }) {
         setLoading(false)
     }
 
-    /** Patch profile state langsung tanpa fetch ulang — untuk update instan di UI (navbar, dll) */
+    /** Patch State Profil Secara Langsung Tanpa Fetch Ulang — Untuk Pembaruan Instan Di UI (Navbar, Dll) */
     function updateProfile(patch) {
         setProfile(prev => prev ? { ...prev, ...patch } : prev)
     }
 
-    /** Fetch ulang profile dari Supabase — untuk hard sync setelah perubahan */
+    /** Fetch Ulang Profil Dari Supabase — Untuk Sinkronisasi Keras Setelah Perubahan */
     async function refreshProfile() {
         if (!user?.id || isDemoMode) return
         const { data } = await supabase
@@ -83,7 +81,7 @@ export function AuthProvider({ children }) {
 
     async function signIn(email, password, rememberMe = false) {
         if (isDemoMode) {
-            // Demo login
+            // Masuk Mode Demo
             const demoUser = Object.values(DEMO_USERS).find(u => u.email === email)
             if (demoUser && password === 'demo123') {
                 setUser(demoUser)
@@ -95,9 +93,9 @@ export function AuthProvider({ children }) {
             return { error: { message: 'Email atau password salah' } }
         }
 
-        // For real Supabase auth, session persistence is configured at client level,
-        // but passing rememberMe here is a good placeholder if we want to implement 
-        // custom token storage logic later.
+        // Untuk Autentikasi Supabase Riil, Persistensi Sesi Dikonfigurasi Di Level Client,
+        // Tetapi Melewatkan rememberMe Di Sini Adalah Penampung Yang Baik Jika Kita Ingin Mengimplementasikan
+        // Logika Penyimpanan Token Kustom Nanti.
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         return { error }
     }
@@ -115,14 +113,14 @@ export function AuthProvider({ children }) {
         await supabase.auth.signOut()
     }
 
-    // ─── Role Helpers ─────────────────────────────────────────────────────────
-    // Hierarchy order: developer(4) > admin(3) > guru=satpam(2) > viewer(1)
+    // ─── Helper Role ─────────────────────────────────────────────────────────
+    // Urutan Hierarki: Developer(4) > Admin(3) > Guru=Satpam(2) > Viewer(1)
     const ROLE_LEVEL = { developer: 4, admin: 3, guru: 2, satpam: 2, viewer: 1 }
 
-    /** Check if current user has one of the given roles */
+    /** Periksa Apakah Pengguna Saat Ini Memiliki Salah Satu Peran Yang Diberikan */
     const hasRole = (...roles) => roles.includes(profile?.role?.toLowerCase())
 
-    /** Check if current user's level is >= the given role's level */
+    /** Periksa Apakah Level Pengguna Saat Ini >= Level Peran Yang Diberikan */
     const isAtLeast = (minRole) => {
         const userLevel = ROLE_LEVEL[profile?.role?.toLowerCase()] ?? 0
         const minLevel = ROLE_LEVEL[minRole?.toLowerCase()] ?? 99
@@ -155,11 +153,11 @@ export function AuthProvider({ children }) {
         signOut,
         isDemoMode,
 
-        // Profile helpers
+        // Helper Profil
         updateProfile,
         refreshProfile,
 
-        // Permission helpers
+        // Helper Izin
         hasRole,
         isAtLeast,
     }

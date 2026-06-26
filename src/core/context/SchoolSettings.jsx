@@ -1,9 +1,9 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { supabase } from '@lib/supabase'
 
-// ─── Default values (fallback jika belum ada di DB) ───────────────────────────
+// ─── Default Values (Fallback Jika Belum Ada Di DB) ───────────────────────────
 export const DEFAULT_SETTINGS = {
-    // Identitas sekolah
+    // Identitas Sekolah
     school_name_id: 'Muhammadiyah Boarding School (MBS) Tanggul',
     school_name_ar: 'معهد محمدية الإسلامي تانجول',
     school_subtitle_ar: 'المجلس التعليمي للمرحلتين الابتدائية والمتوسطة التابع للرئاسة الفرعية للجمعية المحمدية',
@@ -12,13 +12,13 @@ export const DEFAULT_SETTINGS = {
     app_domain: 'laporanmu.my.id',
     logo_url: '',
 
-    // Kepala sekolah / direktur
+    // Kepala Sekolah / Direktur
     headmaster_title_id: 'Pengasuh\nMuhammadiyah Boarding School Tanggul',
     headmaster_name_id: 'Ir. Muhammad Ali Maksum',
     headmaster_title_ar: 'مدير المعهد\nمعهد محمدية تانجول',
     headmaster_name_ar: 'المهندس محمد علي معصوم',
 
-    // Warna raport
+    // Warna Raport
     report_color_primary: '#1a5c35',
     report_color_secondary: '#c8a400',
 
@@ -37,7 +37,7 @@ export function SchoolSettingsProvider({ children }) {
     const [settings, setSettings] = useState(DEFAULT_SETTINGS)
     const [loading, setLoading] = useState(true)
 
-    // Fetch saat mount
+    // Fetch Saat Mount
     useEffect(() => {
         const load = async () => {
             try {
@@ -47,26 +47,26 @@ export function SchoolSettingsProvider({ children }) {
                     .eq('id', 1)
                     .maybeSingle()
                 if (!error && data) {
-                    // Auto-upgrade legacy title to new multi-line format
+                    // Naikkan Otomatis Judul Lama Ke Format Baru Multi-Baris
                     if (data.headmaster_title_id === 'Direktur MBS Tanggul') {
                         data.headmaster_title_id = 'Pengasuh\nMuhammadiyah Boarding School Tanggul'
                     }
                     if (data.headmaster_title_ar === 'مدير معهد محمدية الإسلامي تانجول') {
                         data.headmaster_title_ar = 'مدير المعهد\nمعهد محمدية تانجول'
                     }
-                    // Auto-upgrade name/title if it matches old default
+                    // Naikkan Otomatis Nama/Judul Jika Cocok Dengan Default Lama
                     if (data.headmaster_name_id === 'KH. Muhammad Ali Maksum, Lc') {
                         data.headmaster_name_id = 'Ir. Muhammad Ali Maksum'
                         data.headmaster_name_ar = 'المهندس محمد علي معصوم'
                     }
-                    // Auto-fix legacy logo path
+                    // Perbaiki Otomatis Path Logo Lama
                     if (data.logo_url === '/src/assets/mbs.png') {
                         data.logo_url = ''
                     }
                     setSettings(prev => ({ ...prev, ...data }))
                 }
             } catch {
-                // Silent fail — pakai default
+                // Silent Fail — Pakai Default
             } finally {
                 setLoading(false)
             }
@@ -74,7 +74,7 @@ export function SchoolSettingsProvider({ children }) {
         load()
     }, [])
 
-    // Save ke Supabase (upsert row id=1)
+    /** Simpan Ke Supabase (Upsert Row Id=1) */
     const saveSettings = useCallback(async (updates) => {
         try {
             const { error } = await supabase
