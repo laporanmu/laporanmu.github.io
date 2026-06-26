@@ -73,18 +73,21 @@ const RaportPrintCard = memo(({
     const rtObj = RAPORT_TYPES[reportType] || RAPORT_TYPES.bulanan
     const criteria = rtObj.getCriteria(selectedClass)
 
-    // Pondok Lisan: hitung total & rata-rata
+    // Pondok Lisan & Mapel Pondok: hitung total & rata-rata
     const isLisan = reportType === 'pondok_lisan'
+    const isMapelPondok = reportType === 'pondok_mapel'
+    const isSemesterExam = isLisan || isMapelPondok
     const isA4 = pageSize === 'a4'
-    const lisanFilledScores = isLisan
+    const kkmScore = 50
+    const semesterFilledScores = isSemesterExam
         ? criteria.map(k => sc[k.key]).filter(v => v !== '' && v !== null && v !== undefined && !isNaN(Number(v)))
         : []
-    const lisanTotal = lisanFilledScores.reduce((s, v) => s + Number(v), 0)
-    const lisanAvg = lisanFilledScores.length > 0 ? Math.round(lisanTotal / lisanFilledScores.length) : 0
-    const rp = isLisan ? '1px' : (isA4 ? '1.5px' : '2px') // row padding: kompak untuk lisan & A4/F4
+    const semesterTotal = semesterFilledScores.reduce((s, v) => s + Number(v), 0)
+    const semesterAvg = semesterFilledScores.length > 0 ? Math.round(semesterTotal / semesterFilledScores.length) : 0
+    const rp = isSemesterExam ? '1px' : (isA4 ? '1.5px' : '2px') // row padding: kompak untuk ujian semester
     const rowPadding = isAr
-        ? (isLisan ? (isA4 ? '1px 0' : '2px 0') : (isA4 ? '2.5px 0' : '4px 0'))
-        : (isLisan ? (isA4 ? '2px 0' : '4px 0') : (isA4 ? '4px 0' : '7px 0'))
+        ? (isSemesterExam ? (isA4 ? '1px 0' : '2px 0') : (isA4 ? '2.5px 0' : '4px 0'))
+        : (isSemesterExam ? (isA4 ? '2px 0' : '4px 0') : (isA4 ? '4px 0' : '7px 0'))
     const secPadding = isAr
         ? (isA4 ? '3px 7px' : '6px 7px')
         : (isA4 ? '5px 7px' : '9.5px 7px')
@@ -99,10 +102,10 @@ const RaportPrintCard = memo(({
     const subtitleArFontSize = (() => {
         const text = settings.school_subtitle_ar || ''
         const len = text.length
-        if (len > 70) return isLisan ? '10.5pt' : '12.5pt'
-        if (len > 50) return isLisan ? '11pt' : '13pt'
-        if (len > 30) return isLisan ? '11.5pt' : '13.5pt'
-        return isLisan ? '12pt' : '14pt'
+        if (len > 70) return isSemesterExam ? '10.5pt' : '12.5pt'
+        if (len > 50) return isSemesterExam ? '11pt' : '13pt'
+        if (len > 30) return isSemesterExam ? '11.5pt' : '13.5pt'
+        return isSemesterExam ? '12pt' : '14pt'
     })()
 
     // Dimensi kertas: A4 (210x297) vs F4/Folio (215x330)
@@ -267,6 +270,12 @@ const RaportPrintCard = memo(({
         if (reportType === 'bulanan') {
             return L.reportTitle
         }
+        if (isLisan) {
+            return isAr ? 'نتيجة الإختبار الشفهي' : 'Hasil Ujian Lisan'
+        }
+        if (isMapelPondok) {
+            return isAr ? 'نتيجة الاختبار النهائي' : 'Hasil Ujian Akhir'
+        }
         return isAr ? rtObj.arName : rtObj.name
     }
 
@@ -274,10 +283,18 @@ const RaportPrintCard = memo(({
         if (reportType === 'bulanan') {
             return isAr ? `${L.month} ${bulanObj?.ar || ''}` : `${L.month} ${bulanObj?.id_str || ''}`
         }
+        const semAr = selectedSemester === 2 ? 'الثاني' : 'الأول'
+        const semId = selectedSemester === 2 ? 'Genap' : 'Ganjil'
+        if (isLisan) {
+            return isAr ? `لآخر السنة للفصل الدراسي ${semAr}` : `Akhir Tahun Semester ${semId}`
+        }
+        if (isMapelPondok) {
+            return isAr ? `للفصل الدراسي ${semAr}` : `Semester ${semId}`
+        }
         if (isAr) {
             return `الفصل الدراسي ${toArabicNum(selectedSemester)} (${selectedSemester === 1 ? 'الأول' : 'الثاني'})`
         }
-        return `Semester ${selectedSemester} (${selectedSemester === 1 ? 'Ganjil' : 'Genap'})`
+        return `Semester ${selectedSemester} (${semId})`
     }
 
     const getGradingScale = () => {
@@ -361,6 +378,7 @@ const RaportPrintCard = memo(({
                     left: auto !important;
                     right: auto !important;
                     bottom: auto !important;
+                    margin-top: ${isA4 ? '6mm' : '8mm'} !important;
                 }
                 @media print {
                     @page {
@@ -393,13 +411,13 @@ const RaportPrintCard = memo(({
                         margin: 0 0 10px 0 !important;
                     }
                     .raport-logo-box {
-                        width: ${isLisan ? '60pt' : '68pt'} !important;
+                        width: ${isSemesterExam ? '60pt' : '68pt'} !important;
                         vertical-align: middle !important;
                         text-align: center !important;
                     }
                     .raport-logo-box img {
-                        max-width: ${isLisan ? '60pt' : '68pt'} !important;
-                        max-height: ${isLisan ? '60pt' : '68pt'} !important;
+                        max-width: ${isSemesterExam ? '60pt' : '68pt'} !important;
+                        max-height: ${isSemesterExam ? '60pt' : '68pt'} !important;
                         object-fit: contain !important;
                         display: inline-block !important;
                     }
@@ -408,7 +426,7 @@ const RaportPrintCard = memo(({
                         vertical-align: middle !important;
                     }
                     .school-name-ar {
-                        font-size: ${isLisan ? '26pt' : '30pt'} !important;
+                        font-size: ${isSemesterExam ? '26pt' : '30pt'} !important;
                         line-height: 1.05 !important;
                     }
                     .school-subtitle-ar {
@@ -417,7 +435,7 @@ const RaportPrintCard = memo(({
                         white-space: nowrap !important;
                     }
                     .school-name-id {
-                        font-size: ${isLisan ? '13pt' : '15pt'} !important;
+                        font-size: ${isSemesterExam ? '13pt' : '15pt'} !important;
                         color: #111 !important;
                         font-weight: 800 !important;
                     }
@@ -433,18 +451,18 @@ const RaportPrintCard = memo(({
             `}</style>
             <div className="raport-card-body">
             {/* Header Sekolah */}
-            <div style={{ marginBottom: isLisan ? (isA4 ? 4 : 6) : (isA4 ? 6 : 12) }}>
+            <div style={{ marginBottom: isSemesterExam ? (isA4 ? 4 : 6) : (isA4 ? 6 : 12) }}>
                 <table className="raport-header-table" style={{ width: '100%', borderCollapse: 'collapse', border: 'none', margin: '0 0 10px 0', padding: 0 }}>
                     <tbody>
                         <tr>
                             {/* Logo Kiri (Unit/Sekolah) */}
                             <td className="raport-logo-box" style={{
-                                width: isLisan ? '60pt' : '68pt',
+                                width: isSemesterExam ? '60pt' : '68pt',
                                 padding: 0,
                                 verticalAlign: 'middle',
                                 textAlign: 'center'
                             }}>
-                                <img crossOrigin="anonymous" src={unitLogo || settings.logo_url || mbsLogo} alt="Logo sekolah" style={{ maxWidth: isLisan ? '60pt' : '68pt', maxHeight: isLisan ? '60pt' : '68pt', objectFit: 'contain', display: 'block', margin: '0 auto' }} />
+                                <img crossOrigin="anonymous" src={unitLogo || settings.logo_url || mbsLogo} alt="Logo sekolah" style={{ maxWidth: isSemesterExam ? '60pt' : '68pt', maxHeight: isSemesterExam ? '60pt' : '68pt', objectFit: 'contain', display: 'block', margin: '0 auto' }} />
                             </td>
                             {/* Tengah (Nama Sekolah) */}
                             <td className="raport-header-center" style={{
@@ -458,13 +476,13 @@ const RaportPrintCard = memo(({
                                     </div>
                                 )}
                                 <div className="school-name-ar" style={{
-                                    fontSize: isLisan ? '26pt' : '30pt', fontWeight: 900, color: settings.report_color_primary || '#1a5c35',
+                                    fontSize: isSemesterExam ? '26pt' : '30pt', fontWeight: 900, color: settings.report_color_primary || '#1a5c35',
                                     direction: 'rtl', fontFamily: arFont, letterSpacing: 'normal',
                                     lineHeight: 1.05, marginBottom: 4,
                                     textShadow: '0.4px 0 0 currentColor, -0.4px 0 0 currentColor'
                                 }}>{settings.school_name_ar || ''}</div>
                                 <div className="school-name-id" style={{
-                                    fontSize: isLisan ? '13pt' : '15pt',
+                                    fontSize: isSemesterExam ? '13pt' : '15pt',
                                     fontWeight: 800,
                                     letterSpacing: 0.8,
                                     color: '#111',
@@ -488,12 +506,12 @@ const RaportPrintCard = memo(({
                             </td>
                             {/* Logo Kanan (Pondok/Lembaga) */}
                             <td className="raport-logo-box" style={{
-                                width: isLisan ? '60pt' : '68pt',
+                                width: isSemesterExam ? '60pt' : '68pt',
                                 padding: 0,
                                 verticalAlign: 'middle',
                                 textAlign: 'center'
                             }}>
-                                <img crossOrigin="anonymous" src={settings.logo_url || mbsLogo} alt="Logo pondok" style={{ maxWidth: isLisan ? '60pt' : '68pt', maxHeight: isLisan ? '60pt' : '68pt', objectFit: 'contain', display: 'block', margin: '0 auto' }} />
+                                <img crossOrigin="anonymous" src={settings.logo_url || mbsLogo} alt="Logo pondok" style={{ maxWidth: isSemesterExam ? '60pt' : '68pt', maxHeight: isSemesterExam ? '60pt' : '68pt', objectFit: 'contain', display: 'block', margin: '0 auto' }} />
                             </td>
                         </tr>
                     </tbody>
@@ -505,19 +523,19 @@ const RaportPrintCard = memo(({
             {/* Judul Laporan */}
             <div style={{
                 textAlign: 'center',
-                margin: isLisan
+                margin: isSemesterExam
                     ? (isA4 ? '2px 0 2px' : '2px 0 4px')
                     : (isA4 ? (isAr ? '4px 0 4px' : '6px 0 8px') : (isAr ? '6px 0 6px' : '12px 0 16px')),
                 fontFamily: isAr ? arFont : 'inherit'
             }}>
-                <div style={{ fontSize: isAr ? '28pt' : (isLisan ? '14pt' : '18pt'), fontWeight: 900, direction: isAr ? 'rtl' : 'ltr', lineHeight: isAr ? 1.15 : 1.3 }}>{getReportTitle()}</div>
-                <div style={{ fontSize: isAr ? '22pt' : (isLisan ? '12pt' : '14pt'), fontWeight: 700, direction: isAr ? 'rtl' : 'ltr', marginTop: isAr ? 4 : 10, lineHeight: isAr ? 1.15 : 1.3 }}>{getPeriodTitle()}</div>
+                <div style={{ fontSize: isAr ? '28pt' : (isSemesterExam ? '14pt' : '18pt'), fontWeight: 900, direction: isAr ? 'rtl' : 'ltr', lineHeight: isAr ? 1.15 : 1.3 }}>{getReportTitle()}</div>
+                <div style={{ fontSize: isAr ? '22pt' : (isSemesterExam ? '12pt' : '14pt'), fontWeight: 700, direction: isAr ? 'rtl' : 'ltr', marginTop: isAr ? 4 : 10, lineHeight: isAr ? 1.15 : 1.3 }}>{getPeriodTitle()}</div>
             </div>
 
             {/* Info Santri & Kelas */}
-            <table style={{ width: '100%', marginBottom: isLisan ? (isA4 ? 4 : 6) : (isA4 ? 6 : 10), fontSize: isAr ? '10.5pt' : '11.5pt', borderCollapse: 'collapse', direction: tableDir }}>
+            <table style={{ width: '100%', marginBottom: isSemesterExam ? (isA4 ? 4 : 6) : (isA4 ? 6 : 10), fontSize: isAr ? '10.5pt' : '11.5pt', borderCollapse: 'collapse', direction: tableDir }}>
                 <tbody>
-                    {isLisan ? (<>
+                    {isSemesterExam ? (<>
                         {/* Baris 1: Nama | Kelas */}
                         <tr style={{ borderBottom: '1px solid #ccc' }}>
                             <td style={{ verticalAlign: 'middle', padding: rowPadding, width: '20%' }}>
@@ -593,28 +611,49 @@ const RaportPrintCard = memo(({
                 </tbody>
             </table>
 
-            {/* Label Section Ujian Lisan */}
+            {/* Label Section Ujian */}
             {isLisan && (
                 <div style={{ textAlign: isAr ? 'right' : 'left', direction: isAr ? 'rtl' : 'ltr', fontFamily: arFont, fontSize: isAr ? '13pt' : '11pt', fontWeight: 700, marginBottom: 2 }}>
                     {isAr ? 'الاختبار الشفهي' : 'Ujian Lisan'}
                 </div>
             )}
+            {isMapelPondok && (
+                <div style={{ textAlign: isAr ? 'right' : 'left', direction: isAr ? 'rtl' : 'ltr', fontFamily: arFont, fontSize: isAr ? '13pt' : '11pt', fontWeight: 700, marginBottom: 2 }}>
+                    {isAr ? 'الاختبار للدراسة الإسلامية' : 'Ujian Mapel Pondok'}
+                </div>
+            )}
 
             {/* Tabel Nilai */}
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10.5pt', marginBottom: isLisan ? (isA4 ? 3 : 4) : (isA4 ? 6 : 12) }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10.5pt', marginBottom: isSemesterExam ? (isA4 ? 3 : 4) : (isA4 ? 6 : 12) }}>
                 <thead>
                     <tr style={{ background: '#f0f4f8' }}>
-                        {isAr ? <>
+                        {isAr ? (
+                            isMapelPondok ? <>
+                                <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 8px`, width: `${lc.gradeColWidth}%`, fontFamily: arFont, textAlign: 'center', fontWeight: 800, color: '#000', fontSize: '16pt', lineHeight: 1.1 }}>{L.grade}</th>
+                                <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 6px`, width: `${lc.scoreColWidth}%`, fontFamily: arFont, textAlign: 'center', fontWeight: 800, color: '#000', fontSize: '16pt', lineHeight: 1.1 }}>{L.score}</th>
+                                <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 6px`, width: '8%', fontFamily: arFont, textAlign: 'center', fontWeight: 800, color: '#000', fontSize: '16pt', lineHeight: 1.1 }}>الحد الأدنى</th>
+                                <th colSpan={2} style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 10px`, fontFamily: arFont, textAlign: 'center', fontWeight: 800, color: '#000', fontSize: '16pt', lineHeight: 1.1 }}>{L.subject}</th>
+                                <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 6px`, width: `${lc.numColWidth}%`, fontFamily: arFont, textAlign: 'center', fontWeight: 800, color: '#000', fontSize: '16pt', lineHeight: 1.1 }}>{L.num}</th>
+                            </> : <>
                             <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 8px`, width: `${lc.gradeColWidth}%`, fontFamily: arFont, textAlign: 'center', fontWeight: 800, color: '#000', fontSize: isLisan ? '16pt' : '14.5pt', lineHeight: 1.1 }}>{L.grade}</th>
                             <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 6px`, width: `${lc.scoreColWidth}%`, fontFamily: arFont, textAlign: 'center', fontWeight: 800, color: '#000', fontSize: isLisan ? '16pt' : '14.5pt', lineHeight: 1.1 }}>{L.score}</th>
                             <th colSpan={2} style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 10px`, fontFamily: arFont, textAlign: 'center', fontWeight: 800, color: '#000', fontSize: isLisan ? '16pt' : '14.5pt', lineHeight: 1.1 }}>{L.subject}</th>
-                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 6px`, width: `${lc.numColWidth}%`, fontFamily: arFont, textAlign: 'center', fontWeight: 800, color: '#000', fontSize: isLisan ? '16pt' : '14.5pt', lineHeight: 1.1 }}>{L.num}</th>
-                        </> : <>
-                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 6px`, width: `${lc.numColWidth}%`, textAlign: 'center', fontWeight: 800, color: '#000', textTransform: 'uppercase' }}>{L.num}</th>
-                            <th colSpan={2} style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 10px`, textAlign: 'center', fontWeight: 800, color: '#000', textTransform: 'uppercase' }}>{L.subject}</th>
-                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 6px`, width: `${lc.scoreColWidth}%`, textAlign: 'center', fontWeight: 800, color: '#000', textTransform: 'uppercase' }}>{L.score}</th>
-                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 8px`, width: `${lc.gradeColWidth}%`, textAlign: 'center', fontWeight: 800, color: '#000', textTransform: 'uppercase' }}>{L.grade}</th>
-                        </>}
+                            <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 6px`, width: `${lc.numColWidth}%`, fontFamily: arFont, textAlign: 'center', fontWeight: 800, color: '#000', fontSize: isSemesterExam ? '16pt' : '14.5pt', lineHeight: 1.1 }}>{L.num}</th>
+                            </>
+                        ) : (
+                            isMapelPondok ? <>
+                                <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 6px`, width: `${lc.numColWidth}%`, textAlign: 'center', fontWeight: 800, color: '#000', textTransform: 'uppercase' }}>{L.num}</th>
+                                <th colSpan={2} style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 10px`, textAlign: 'center', fontWeight: 800, color: '#000', textTransform: 'uppercase' }}>{L.subject}</th>
+                                <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 6px`, width: '8%', textAlign: 'center', fontWeight: 800, color: '#000', textTransform: 'uppercase' }}>KKM</th>
+                                <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 6px`, width: `${lc.scoreColWidth}%`, textAlign: 'center', fontWeight: 800, color: '#000', textTransform: 'uppercase' }}>{L.score}</th>
+                                <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 8px`, width: `${lc.gradeColWidth}%`, textAlign: 'center', fontWeight: 800, color: '#000', textTransform: 'uppercase' }}>{L.grade}</th>
+                            </> : <>
+                                <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 6px`, width: `${lc.numColWidth}%`, textAlign: 'center', fontWeight: 800, color: '#000', textTransform: 'uppercase' }}>{L.num}</th>
+                                <th colSpan={2} style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 10px`, textAlign: 'center', fontWeight: 800, color: '#000', textTransform: 'uppercase' }}>{L.subject}</th>
+                                <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 6px`, width: `${lc.scoreColWidth}%`, textAlign: 'center', fontWeight: 800, color: '#000', textTransform: 'uppercase' }}>{L.score}</th>
+                                <th style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 8px`, width: `${lc.gradeColWidth}%`, textAlign: 'center', fontWeight: 800, color: '#000', textTransform: 'uppercase' }}>{L.grade}</th>
+                            </>
+                        )}
                     </tr>
                 </thead>
                 <tbody>
@@ -624,13 +663,16 @@ const RaportPrintCard = memo(({
                         const g = hasVal ? getGradeObj(val) : null
                         const numRows = isAr ? [...Array(criteria.length).keys()].map(n => toArabicNum(n + 1)) : [...Array(criteria.length).keys()].map(n => n + 1)
                         return (
-                            <tr key={k.key} style={isLisan && isAr ? { height: '20pt' } : undefined}>
+                            <tr key={k.key} style={isSemesterExam && isAr ? { height: '20pt' } : undefined}>
                                 {isAr ? <>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 8px`, textAlign: 'center', fontWeight: 700, color: '#000', fontFamily: arFont, fontSize: isLisan ? '16pt' : '13.5pt', lineHeight: 1.1 }}>{hasVal ? gradeLabel(val) : '—'}</td>
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 6px`, textAlign: 'center', fontWeight: 700, fontFamily: arFont, fontSize: isLisan ? '16pt' : '13.5pt', lineHeight: 1.1 }}>{displayVal(val)}</td>
-                                    {/* Kolom subject: lisan+Arab = hanya Arabic (colSpan=2), mode lain = 2 kolom */}
-                                    {(isLisan && isAr) ? (
-                                        <td colSpan={2} style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 10px`, textAlign: 'right', fontFamily: arFont, fontSize: isLisan ? '16pt' : `${lc.arMainFontSize}pt`, lineHeight: 1.1 }}>{k.ar || k.id}</td>
+                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 8px`, textAlign: 'center', fontWeight: 700, color: '#000', fontFamily: arFont, fontSize: isSemesterExam ? '16pt' : '13.5pt', lineHeight: 1.1 }}>{hasVal ? gradeLabel(val) : '—'}</td>
+                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 6px`, textAlign: 'center', fontWeight: 700, fontFamily: arFont, fontSize: isSemesterExam ? '16pt' : '13.5pt', lineHeight: 1.1 }}>{displayVal(val)}</td>
+                                    {isMapelPondok && (
+                                        <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 6px`, textAlign: 'center', fontWeight: 700, fontFamily: arFont, fontSize: '16pt', lineHeight: 1.1 }}>{displayVal(kkmScore)}</td>
+                                    )}
+                                    {/* Kolom subject: ujian semester + Arab = hanya Arabic (colSpan=2) */}
+                                    {(isSemesterExam && isAr) ? (
+                                        <td colSpan={2} style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 10px`, textAlign: 'right', fontFamily: arFont, fontSize: isSemesterExam ? '16pt' : `${lc.arMainFontSize}pt`, lineHeight: 1.1 }}>{k.ar || k.id}</td>
                                     ) : k.ar ? (
                                         <>
                                             <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 10px`, textAlign: 'right', fontFamily: arFont, fontSize: isLisan ? '16pt' : `${lc.arMainFontSize}pt`, width: `${lc.subjectArWidth}%`, lineHeight: 1.1 }}>{k.ar}</td>
@@ -639,16 +681,19 @@ const RaportPrintCard = memo(({
                                     ) : (
                                         <td colSpan={2} style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 10px`, textAlign: 'right', color: '#444', fontSize: '10.5pt', fontFamily: 'inherit', lineHeight: 1.2 }}>{k.id}</td>
                                     )}
-                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 6px`, textAlign: 'center', fontFamily: arFont, fontSize: isLisan ? '16pt' : `${lc.arValueFontSize}pt`, lineHeight: 1.1 }}>{numRows[i]}</td>
+                                    <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 6px`, textAlign: 'center', fontFamily: arFont, fontSize: isSemesterExam ? '16pt' : `${lc.arValueFontSize}pt`, lineHeight: 1.1 }}>{numRows[i]}</td>
                                 </> : <>
                                     <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 6px`, textAlign: 'center', width: `${lc.numColWidth}%` }}>{numRows[i]}</td>
                                     {k.ar ? (
                                         <>
                                             <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 10px`, textAlign: 'left', color: '#444', width: `${lc.subjectIdWidth}%` }}>{k.id}</td>
-                                            <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 10px`, textAlign: 'right', direction: 'rtl', fontFamily: arFont, fontSize: isLisan ? '16pt' : `${lc.arMainFontSize}pt`, width: `${lc.subjectArWidth}%`, lineHeight: 1.1 }}>{k.ar}</td>
+                                            <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 10px`, textAlign: 'right', direction: 'rtl', fontFamily: arFont, fontSize: isSemesterExam ? '16pt' : `${lc.arMainFontSize}pt`, width: `${lc.subjectArWidth}%`, lineHeight: 1.1 }}>{k.ar}</td>
                                         </>
                                     ) : (
                                         <td colSpan={2} style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 10px`, textAlign: 'left', color: '#444', fontSize: '11pt' }}>{k.id}</td>
+                                    )}
+                                    {isMapelPondok && (
+                                        <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 6px`, textAlign: 'center', fontWeight: 700, width: '8%' }}>{kkmScore}</td>
                                     )}
                                     <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 6px`, textAlign: 'center', fontWeight: 700, width: `${lc.scoreColWidth}%` }}>{displayVal(val)}</td>
                                     <td style={{ verticalAlign: 'middle', border: '1px solid #999', padding: `${rp} 8px`, textAlign: 'center', fontWeight: 700, color: '#000', width: `${lc.gradeColWidth}%` }}>{hasVal ? gradeLabel(val) : '—'}</td>
@@ -659,33 +704,33 @@ const RaportPrintCard = memo(({
                 </tbody>
             </table>
 
-            {/* Total & Rata-rata (Pondok Lisan) — full-width, sesuai Excel */}
-            {isLisan && lisanFilledScores.length > 0 && (
+            {/* Total & Rata-rata (Ujian Lisan / Mapel Pondok) */}
+            {isSemesterExam && semesterFilledScores.length > 0 && (
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10.5pt', direction: tableDir, marginBottom: 6, marginTop: -1 }}>
                     <tbody>
                         <tr>
                             {isAr ? <>
-                                <td style={{ border: '1px solid #999', padding: '4px 16px', textAlign: 'center', fontWeight: 700, fontFamily: arFont, fontSize: '12pt', background: '#f0f4f8', width: '25%', lineHeight: 1.15 }}>{toArabicNum(lisanTotal)}</td>
+                                <td style={{ border: '1px solid #999', padding: '4px 16px', textAlign: 'center', fontWeight: 700, fontFamily: arFont, fontSize: '12pt', background: '#f0f4f8', width: '25%', lineHeight: 1.15 }}>{toArabicNum(semesterTotal)}</td>
                                 <td style={{ border: '1px solid #999', padding: '4px 14px', textAlign: 'right', fontFamily: arFont, fontSize: '12pt', fontWeight: 700, lineHeight: 1.15 }}>المجموع الإجمالي</td>
                             </> : <>
                                 <td style={{ border: '1px solid #999', padding: '4px 14px', textAlign: 'left', fontWeight: 700 }}>Jumlah Total</td>
-                                <td style={{ border: '1px solid #999', padding: '4px 16px', textAlign: 'center', fontWeight: 700, background: '#f0f4f8', width: '25%' }}>{lisanTotal}</td>
+                                <td style={{ border: '1px solid #999', padding: '4px 16px', textAlign: 'center', fontWeight: 700, background: '#f0f4f8', width: '25%' }}>{semesterTotal}</td>
                             </>}
                         </tr>
                         <tr>
                             {isAr ? <>
-                                <td style={{ border: '1px solid #999', padding: '4px 16px', textAlign: 'center', fontWeight: 700, fontFamily: arFont, fontSize: '12pt', background: '#f0f4f8', width: '25%', lineHeight: 1.15 }}>{toArabicNum(lisanAvg)}</td>
+                                <td style={{ border: '1px solid #999', padding: '4px 16px', textAlign: 'center', fontWeight: 700, fontFamily: arFont, fontSize: '12pt', background: '#f0f4f8', width: '25%', lineHeight: 1.15 }}>{toArabicNum(semesterAvg)}</td>
                                 <td style={{ border: '1px solid #999', padding: '4px 14px', textAlign: 'right', fontFamily: arFont, fontSize: '12pt', fontWeight: 700, lineHeight: 1.15 }}>المعدل</td>
                             </> : <>
                                 <td style={{ border: '1px solid #999', padding: '4px 14px', textAlign: 'left', fontWeight: 700 }}>Nilai Rata-Rata</td>
-                                <td style={{ border: '1px solid #999', padding: '4px 16px', textAlign: 'center', fontWeight: 700, background: '#f0f4f8', width: '25%' }}>{lisanAvg}</td>
+                                <td style={{ border: '1px solid #999', padding: '4px 16px', textAlign: 'center', fontWeight: 700, background: '#f0f4f8', width: '25%' }}>{semesterAvg}</td>
                             </>}
                         </tr>
                     </tbody>
                 </table>
             )}
-            {/* Data Tambahan (Fisik, Hafalan, Kehadiran) */}
-            {(rtObj.hasFisik || rtObj.hasHafalan || rtObj.hasAttendance) && (
+            {/* Data Tambahan (Fisik, Hafalan, Kehadiran) — hanya raport bulanan */}
+            {(rtObj.hasFisik || rtObj.hasHafalan || rtObj.hasAttendance) && !isSemesterExam && (
                 <div style={{ display: 'flex', gap: 14, marginBottom: isA4 ? 8 : 14, flexDirection: isAr ? 'row-reverse' : 'row', alignItems: 'stretch' }}>
                     {/* BB / TB */}
                     {rtObj.hasFisik && (
@@ -785,14 +830,14 @@ const RaportPrintCard = memo(({
             )}
 
             {/* Skala Penilaian & Catatan */}
-            <div style={{ display: 'flex', gap: 16, marginTop: isLisan ? (isA4 ? 4 : 6) : (isA4 ? 6 : 10), alignItems: 'flex-start', flexDirection: isAr ? 'row-reverse' : 'row' }}>
+            <div style={{ display: 'flex', gap: 16, marginTop: isSemesterExam ? (isA4 ? 4 : 6) : (isA4 ? 6 : 10), alignItems: 'flex-start', flexDirection: isAr ? 'row-reverse' : 'row' }}>
                 {/* Wrapper skala — dua tabel sejajar kalau lisan SMP */}
                 <div style={{ flexShrink: 0, display: 'flex', gap: 16, flexDirection: isAr ? 'row-reverse' : 'row', alignItems: 'flex-start' }}>
                     {/* Skala Utama */}
                     <table style={{ borderCollapse: 'collapse', fontSize: '9pt', direction: isAr ? 'rtl' : 'ltr' }}>
                         <thead>
                             <tr>
-                                <th colSpan={2} style={{ border: '1px solid #999', padding: isA4 ? '2px 16px' : '3px 16px', background: '#f0f4f8', fontFamily: isAr ? arFont : 'inherit', textAlign: 'center', fontWeight: 800, color: '#000', fontSize: isAr ? (isLisan ? '16pt' : '14.5pt') : '10.5pt', textTransform: isAr ? 'none' : 'uppercase', lineHeight: isAr ? 1.15 : 'normal' }}>
+                                <th colSpan={2} style={{ border: '1px solid #999', padding: isA4 ? '2px 16px' : '3px 16px', background: '#f0f4f8', fontFamily: isAr ? arFont : 'inherit', textAlign: 'center', fontWeight: 800, color: '#000', fontSize: isAr ? (isSemesterExam ? '16pt' : '14.5pt') : '10.5pt', textTransform: isAr ? 'none' : 'uppercase', lineHeight: isAr ? 1.15 : 'normal' }}>
                                     {isAr ? 'نظام التقدير' : L.gradeScale}
                                 </th>
                             </tr>
@@ -830,7 +875,7 @@ const RaportPrintCard = memo(({
                         </table>
                     )}
                 </div>
-                {rtObj.hasCatatan && ex.catatan && (
+                {rtObj.hasCatatan && ex.catatan && !isSemesterExam && (
                     <div style={{
                         flex: 1, alignSelf: 'stretch', border: '1px solid #ccc', borderRadius: 4, padding: isA4 ? '6px 10px' : '8px 12px',
                         display: 'flex', flexDirection: 'column'
@@ -863,14 +908,14 @@ const RaportPrintCard = memo(({
                 {(isAr ? [
                     {
                         key: 'pengasuh',
-                        label: settings.headmaster_title_ar || 'مدير المعهد\nمعهد محمدية تانجول',
+                        label: isSemesterExam ? 'رئيس المدرسة' : (settings.headmaster_title_ar || 'مدير المعهد\nمعهد محمدية تانجول'),
                         nama: signatures?.pengasuh?.nama ?? settings.headmaster_name_ar ?? 'Ir. Muhammad Ali Maksum',
                         signatureUrl: signatures?.pengasuh?.url ?? null,
                         mode: signMode
                     },
                     {
                         key: 'wali_kelas',
-                        label: isLisan ? 'رائد الفصل' : L.musyrif,
+                        label: isSemesterExam ? 'رائد الفصل' : L.musyrif,
                         nama: signatures?.wali_kelas?.nama ?? displayMusyrif ?? '......................',
                         signatureUrl: signatures?.wali_kelas?.url ?? null,
                         mode: signMode
@@ -892,14 +937,14 @@ const RaportPrintCard = memo(({
                     },
                     {
                         key: 'wali_kelas',
-                        label: isLisan ? 'Wali Kelas' : L.musyrif,
+                        label: isSemesterExam ? 'Wali Kelas' : L.musyrif,
                         nama: signatures?.wali_kelas?.nama ?? displayMusyrif ?? '......................',
                         signatureUrl: signatures?.wali_kelas?.url ?? null,
                         mode: signMode
                     },
                     {
                         key: 'pengasuh',
-                        label: settings.headmaster_title_id || 'Pengasuh\nMuhammadiyah Boarding School Tanggul',
+                        label: isSemesterExam ? 'Kepala Sekolah' : (settings.headmaster_title_id || 'Pengasuh\nMuhammadiyah Boarding School Tanggul'),
                         nama: signatures?.pengasuh?.nama ?? settings.headmaster_name_id ?? 'Ir. Muhammad Ali Maksum',
                         signatureUrl: signatures?.pengasuh?.url ?? null,
                         mode: signMode
@@ -918,7 +963,7 @@ const RaportPrintCard = memo(({
 
             {/* Metadata Cetak di Footer dengan QR Code Verifikasi */}
             <div className="raport-print-metadata" style={{
-                marginTop: isA4 ? 8 : 12,
+                marginTop: isA4 ? '6mm' : '8mm',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',

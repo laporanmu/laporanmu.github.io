@@ -60,7 +60,7 @@ export const getRaportPrintBaseCss = (pageSize = 'f4') => {
       left: auto !important;
       right: auto !important;
       bottom: auto !important;
-      margin-top: 8px;
+      margin-top: 6mm;
     }
     .school-name-ar,
     .school-subtitle-ar,
