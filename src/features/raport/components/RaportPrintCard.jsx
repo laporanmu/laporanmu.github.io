@@ -93,7 +93,7 @@ const RaportPrintCard = memo(({
     const skalaPadding = isAr
         ? (isA4 ? '1px 14px' : '2px 14px')
         : (isA4 ? '3.5px 14px' : '5.5px 14px')
-    const arFont = "'Traditional Arabic', 'Arial Unicode MS', serif"
+    const arFont = "'Noto Naskh Arabic', 'Arial Unicode MS', serif"
 
     const subtitleArFontSize = (() => {
         const text = settings.school_subtitle_ar || ''
@@ -371,10 +371,10 @@ const RaportPrintCard = memo(({
                     }
                     .school-address {
                         font-size: ${isTanggul ? '8.1pt' : '8.5pt'} !important;
-                        font-family: ${isTanggul ? "'Segoe Print', 'Segoe Script', 'Monotype Corsiva', cursive, sans-serif" : 'inherit'} !important;
+                        font-family: ${isTanggul ? "Inter, 'Segoe Print', 'Segoe Script', 'Monotype Corsiva', cursive, sans-serif" : 'inherit'} !important;
                         color: #333 !important;
                         line-height: 1.35 !important;
-                        font-weight: 600 !important;
+                        font-weight: 500 !important;
                     }
                     .divider-gradient { background: ${settings.report_color_primary || '#1a5c35'} !important; }
                 }
@@ -420,7 +420,7 @@ const RaportPrintCard = memo(({
                                 {isTanggul ? (
                                     <div className="school-address" style={{
                                         fontSize: '8.2pt',
-                                        color: '#555',
+                                        color: '#222',
                                         marginTop: 4,
                                         lineHeight: 1.35,
                                         fontWeight: 500,
