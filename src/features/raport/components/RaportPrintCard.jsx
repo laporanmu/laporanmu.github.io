@@ -5,7 +5,7 @@ import { RAPORT_TYPES, getClassLevel, getGradePredicate } from '@features/raport
 import mbsLogo from '@assets/images/logos/logo-mbs.png'
 import smpLogo from '@assets/images/logos/logo-smp.png'
 import smaLogo from '@assets/images/logos/logo-sma.jpg'
-import SignatureBlock from '@/components/SignatureBlock'
+import SignatureBlock from './SignatureBlock'
 
 const printCardAreEqual = (prev, next) => {
     if (prev.lang !== next.lang) return false
@@ -313,6 +313,36 @@ const RaportPrintCard = memo(({
         }}>
             {/* Gaya Cetak Dinamis */}
             <style>{`
+                .raport-signature-row {
+                    display: flex !important;
+                    flex-direction: row !important;
+                    justify-content: space-between !important;
+                    gap: 10px !important;
+                }
+                .raport-signature-block {
+                    display: flex !important;
+                    flex-direction: column !important;
+                    align-items: center !important;
+                    text-align: center !important;
+                    flex: 1 !important;
+                    min-width: 0 !important;
+                }
+                .raport-signature-label,
+                .raport-signature-name {
+                    width: 100% !important;
+                    text-align: center !important;
+                }
+                .raport-signature-label {
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                }
+                .raport-signature-image {
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    width: 100% !important;
+                }
                 @media print {
                     @page {
                         size: ${pageSize === 'f4' ? '215mm 330mm' : 'A4'};
@@ -803,7 +833,7 @@ const RaportPrintCard = memo(({
             </div>
 
             {/* Tanda Tangan */}
-            <div style={{ display: 'flex', marginTop: isLisan ? (isA4 ? 6 : 8) : (isA4 ? 12 : 36), flexDirection: 'row', justifyContent: 'space-between', direction: isAr ? 'rtl' : 'ltr', gap: 10 }}>
+            <div className="raport-signature-row" style={{ display: 'flex', marginTop: isLisan ? (isA4 ? 6 : 8) : (isA4 ? 12 : 36), flexDirection: 'row', justifyContent: 'space-between', direction: isAr ? 'rtl' : 'ltr', gap: 10 }}>
                 {(isAr ? [
                     {
                         key: 'pengasuh',

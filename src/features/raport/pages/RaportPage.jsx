@@ -1511,6 +1511,36 @@ export default function RaportPage() {
             right: 0 !important;
             bottom: 0 !important;
         }
+        .raport-signature-row {
+            display: flex !important;
+            flex-direction: row !important;
+            justify-content: space-between !important;
+            gap: 10px !important;
+        }
+        .raport-signature-block {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            text-align: center !important;
+            flex: 1 !important;
+            min-width: 0 !important;
+        }
+        .raport-signature-label,
+        .raport-signature-name {
+            width: 100% !important;
+            text-align: center !important;
+        }
+        .raport-signature-label {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        .raport-signature-image {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 100% !important;
+        }
         img { mix-blend-mode: multiply; max-width: 100%; height: auto; }
         
         @media print {
