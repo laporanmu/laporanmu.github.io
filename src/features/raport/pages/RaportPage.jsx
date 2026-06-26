@@ -1470,7 +1470,7 @@ export default function RaportPage() {
     <title>${titleStr}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Outfit:wght@700;900&family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;900&display=block" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Outfit:wght@700;900&family=Cairo:wght@400;600;700;900&display=block" rel="stylesheet">
     <style>
         @page { size: ${pageSize === 'f4' ? '215mm 330mm' : 'A4'}; margin: 0; }
         
@@ -1490,7 +1490,7 @@ export default function RaportPage() {
         }
         * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         
-        [style*="Traditional Arabic"], [dir="rtl"], .font-arabic, h1[style*="Amiri"], h2[style*="Amiri"], .school-name-ar, .school-subtitle-ar, [style*="rtl"] {
+        [style*="Traditional Arabic"], [dir="rtl"], .font-arabic, h1[style*="Traditional Arabic"], h2[style*="Traditional Arabic"], .school-name-ar, .school-subtitle-ar, [style*="rtl"] {
             letter-spacing: normal !important;
         }
         
@@ -1525,8 +1525,8 @@ export default function RaportPage() {
             win.document.fonts.ready.then(async () => {
                 // Paksa load font Arab secara eksplisit
                 await Promise.all([
-                    win.document.fonts.load('400 16px Amiri'),
-                    win.document.fonts.load('700 16px Amiri'),
+                    win.document.fonts.load('400 16px "Traditional Arabic"'),
+                    win.document.fonts.load('700 16px "Traditional Arabic"'),
                     win.document.fonts.load('700 16px Cairo'),
                 ]);
                 setTimeout(() => {
@@ -1577,9 +1577,9 @@ export default function RaportPage() {
             win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Raport ${entry.class_name} ${BULAN.find(b => b.id === entry.month)?.id_str} ${entry.year}</title>
                 <link rel="preconnect" href="https://fonts.googleapis.com">
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Outfit:wght@700;900&family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Outfit:wght@700;900&family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
                 <style>
-                    @page{size:${pageSize === 'f4' ? '215mm 330mm' : 'A4'};margin:0}body{margin:0;padding:0;font-family:'Inter',sans-serif;background:white}.raport-card{page-break-after:always;box-sizing:border-box;width:${pageSize === 'f4' ? '215mm' : '210mm'}!important;min-width:${pageSize === 'f4' ? '215mm' : '210mm'}!important;height:${pageSize === 'f4' ? '330mm' : '297mm'}!important;min-height:${pageSize === 'f4' ? '330mm' : '297mm'}!important;padding:${pageSize === 'f4' ? '8mm 10mm 8mm 20mm' : '4mm 10mm 4mm 20mm'}!important;margin:0 auto!important}.raport-print-metadata{left:0!important;right:0!important;bottom:0!important}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}[style*="Traditional Arabic"],[dir="rtl"],.font-arabic,h1[style*="Amiri"],h2[style*="Amiri"],.school-name-ar,.school-subtitle-ar,[style*="rtl"]{letter-spacing:normal!important}
+                    @page{size:${pageSize === 'f4' ? '215mm 330mm' : 'A4'};margin:0}body{margin:0;padding:0;font-family:'Inter',sans-serif;background:white}.raport-card{page-break-after:always;box-sizing:border-box;width:${pageSize === 'f4' ? '215mm' : '210mm'}!important;min-width:${pageSize === 'f4' ? '215mm' : '210mm'}!important;height:${pageSize === 'f4' ? '330mm' : '297mm'}!important;min-height:${pageSize === 'f4' ? '330mm' : '297mm'}!important;padding:${pageSize === 'f4' ? '8mm 10mm 8mm 20mm' : '4mm 10mm 4mm 20mm'}!important;margin:0 auto!important}.raport-print-metadata{left:0!important;right:0!important;bottom:0!important}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}[style*="Traditional Arabic"],[dir="rtl"],.font-arabic,h1[style*="Traditional Arabic"],h2[style*="Traditional Arabic"],.school-name-ar,.school-subtitle-ar,[style*="rtl"]{letter-spacing:normal!important}
                 </style></head><body>${html}</body></html>`)
             win.document.close();
             win.focus();
@@ -1587,8 +1587,8 @@ export default function RaportPage() {
                 win.document.fonts.ready.then(async () => {
                     // Paksa load font Arab secara eksplisit
                     await Promise.all([
-                        win.document.fonts.load('400 16px Amiri'),
-                        win.document.fonts.load('700 16px Amiri'),
+                        win.document.fonts.load('400 16px "Traditional Arabic"'),
+                        win.document.fonts.load('700 16px "Traditional Arabic"'),
                         win.document.fonts.load('700 16px Cairo'),
                     ]);
                     setTimeout(() => {

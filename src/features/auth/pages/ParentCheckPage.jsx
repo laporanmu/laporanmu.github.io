@@ -296,12 +296,9 @@ export default function ParentCheckPage() {
 
     // handlePrintRaport — IDENTIK dengan RaportPage generatePDFBlob
     //
-    // PENTING: Jangan tambahkan font pre-loading (Google Fonts / Noto Naskh).
-    // RaportPage tidak melakukan font pre-loading sama sekali dan Arabic-nya benar
-    // karena 'Traditional Arabic' adalah Windows system font — sudah ada di browser
+    // PENTING: 'Traditional Arabic' adalah Windows system font — sudah ada di browser
     // cache lokal, html2canvas langsung pakai tanpa perlu fetch dari internet.
-    // Semua tambahan (Google Fonts link, document.fonts.load, cloneNode+patch) yang
-    // kita coba sebelumnya justru merusak karena mengganggu timing html2canvas.
+    // 'Traditional Arabic' di-load secara eksplisit untuk memastikan font tersedia sebelum render.
     const handlePrintRaport = async (r) => {
         setPdfLoading(r.id)
         try {
@@ -314,10 +311,10 @@ export default function ParentCheckPage() {
             if (document.fonts) {
                 try {
                     await Promise.all([
-                        document.fonts.load('400 16px Amiri'),
-                        document.fonts.load('700 16px Amiri'),
-                        document.fonts.load('400 32px Amiri'),
-                        document.fonts.load('700 32px Amiri'),
+                        document.fonts.load('400 16px "Traditional Arabic"'),
+                        document.fonts.load('700 16px "Traditional Arabic"'),
+                        document.fonts.load('400 32px "Traditional Arabic"'),
+                        document.fonts.load('700 32px "Traditional Arabic"'),
                         document.fonts.load('400 16px Cairo'),
                         document.fonts.load('700 16px Cairo'),
                         document.fonts.load('400 16px "Traditional Arabic"'),

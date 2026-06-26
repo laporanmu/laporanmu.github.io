@@ -124,7 +124,7 @@ const buildHTMLString = (cardEl, pageSize = 'f4') => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     html, body {
@@ -443,8 +443,8 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef,
         if (document.fonts) {
             try {
                 await Promise.all([
-                    document.fonts.load('400 16px Amiri'),
-                    document.fonts.load('700 16px Amiri'),
+                    document.fonts.load('400 16px "Traditional Arabic"'),
+                    document.fonts.load('700 16px "Traditional Arabic"'),
                     document.fonts.load('400 16px Cairo'),
                     document.fonts.load('700 16px Cairo'),
                 ])
@@ -531,7 +531,7 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef,
 
         const overrideStyle = document.createElement('style')
         overrideStyle.textContent = `
-            @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;700&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=block');
             .divider-gradient { background: linear-gradient(90deg, #1a5c35, #c8a400, #1a5c35) !important; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
             .raport-card table:not(.raport-header-table) td,
