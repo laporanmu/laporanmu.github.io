@@ -296,9 +296,7 @@ export default function ParentCheckPage() {
 
     // handlePrintRaport — IDENTIK dengan RaportPage generatePDFBlob
     //
-    // PENTING: 'Traditional Arabic' adalah Windows system font — sudah ada di browser
-    // cache lokal, html2canvas langsung pakai tanpa perlu fetch dari internet.
-    // 'Traditional Arabic' di-load secara eksplisit untuk memastikan font tersedia sebelum render.
+    // 'Amiri' di-load secara eksplisit untuk memastikan font tersedia sebelum render.
     const handlePrintRaport = async (r) => {
         setPdfLoading(r.id)
         try {
@@ -307,21 +305,21 @@ export default function ParentCheckPage() {
                 import('jspdf')
             ])
 
-            // Preload Arabic fonts
-            if (document.fonts) {
-                try {
-                    await Promise.all([
-                        document.fonts.load('400 16px "Traditional Arabic"'),
-                        document.fonts.load('700 16px "Traditional Arabic"'),
-                        document.fonts.load('400 32px "Traditional Arabic"'),
-                        document.fonts.load('700 32px "Traditional Arabic"'),
-                        document.fonts.load('400 16px Cairo'),
-                        document.fonts.load('700 16px Cairo'),
-                        document.fonts.load('400 16px "Traditional Arabic"'),
-                        document.fonts.load('700 16px "Traditional Arabic"'),
-                    ])
-                } catch (e) { console.warn('Font load warning:', e) }
-            }
+// Preload Arabic fonts
+             if (document.fonts) {
+                 try {
+                     await Promise.all([
+                         document.fonts.load('400 16px Amiri'),
+                         document.fonts.load('700 16px Amiri'),
+                         document.fonts.load('400 32px Amiri'),
+                         document.fonts.load('700 32px Amiri'),
+                         document.fonts.load('400 16px Cairo'),
+                         document.fonts.load('700 16px Cairo'),
+                         document.fonts.load('400 16px Amiri'),
+                         document.fonts.load('700 16px Amiri'),
+                     ])
+                 } catch (e) { console.warn('Font load warning:', e) }
+             }
             await document.fonts.ready
 
             // Set data → trigger JSX render

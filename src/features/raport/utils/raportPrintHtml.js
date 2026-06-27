@@ -64,8 +64,7 @@ export const getRaportPrintBaseCss = (pageSize = 'f4') => {
     }
     .school-name-ar,
     .school-subtitle-ar,
-    [style*="Noto Naskh Arabic"],
-    [style*="Traditional Arabic"] {
+    [style*="Amiri"] {
       font-family: ${RAPORT_AR_FONT} !important;
       letter-spacing: normal !important;
     }

@@ -1469,16 +1469,14 @@ export default function RaportPage() {
         win.document.write(buildRaportPrintDocumentHtml(html, pageSize, titleStr))
         win.document.close();
         win.focus();
-        if (win.document.fonts && win.document.fonts.ready) {
-            win.document.fonts.ready.then(async () => {
-                // Paksa load font Arab secara eksplisit
-                await Promise.all([
-                    win.document.fonts.load('400 16px "Noto Naskh Arabic"'),
-                    win.document.fonts.load('700 16px "Noto Naskh Arabic"'),
-                    win.document.fonts.load('400 16px "Traditional Arabic"'),
-                    win.document.fonts.load('700 16px "Traditional Arabic"'),
-                ]);
-                setTimeout(() => {
+if (win.document.fonts && win.document.fonts.ready) {
+                 win.document.fonts.ready.then(async () => {
+                     // Paksa load font Arab secara eksplisit
+await Promise.all([
+                     win.document.fonts.load('400 16px Amiri'),
+                     win.document.fonts.load('700 16px Amiri'),
+                 ]);
+                     setTimeout(() => {
                     win.print();
                     setPrintQueue([]);
                     setPrintRenderedCount(0);
@@ -1530,12 +1528,10 @@ export default function RaportPage() {
             if (win.document.fonts && win.document.fonts.ready) {
                 win.document.fonts.ready.then(async () => {
                     // Paksa load font Arab secara eksplisit
-                    await Promise.all([
-                        win.document.fonts.load('400 16px "Noto Naskh Arabic"'),
-                        win.document.fonts.load('700 16px "Noto Naskh Arabic"'),
-                        win.document.fonts.load('400 16px "Traditional Arabic"'),
-                        win.document.fonts.load('700 16px "Traditional Arabic"'),
-                    ]);
+await Promise.all([
+                         win.document.fonts.load('400 16px Amiri'),
+                         win.document.fonts.load('700 16px Amiri'),
+                     ]);
                     setTimeout(() => {
                         win.print();
                         setPrintQueue([]);
