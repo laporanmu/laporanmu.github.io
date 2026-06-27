@@ -50,7 +50,7 @@ export const buildWaLines = ({
 
     const periodStr = rtObj.periodType === 'monthly'
         ? `Bulanan ${bulanObj?.id_str || ''} ${selectedYear}`
-        : `Semester ${selectedSemester === 1 ? '1 (Ganjil)' : '2 (Genap)'} T.A ${selectedYear}`
+        : `Semester ${Number(selectedSemester) === 1 ? '1 (Ganjil)' : '2 (Genap)'} T.A ${selectedYear}`
 
     const header = [
         `Assalamu'alaikum Wr. Wb.`,

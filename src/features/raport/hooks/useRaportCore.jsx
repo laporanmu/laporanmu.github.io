@@ -66,6 +66,29 @@ export function useRaportCore() {
         return mo >= 7 ? `${yr}/${yr + 1}` : `${yr - 1}/${yr}`
     })
 
+    // Fetch active academic year and semester from DB on mount
+    useEffect(() => {
+        const fetchActivePeriod = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('academic_years')
+                    .select('name, semester')
+                    .eq('is_active', true)
+                    .maybeSingle()
+                if (!error && data) {
+                    if (data.name) setAcademicYear(data.name)
+                    if (data.semester) {
+                        const semNum = data.semester.toUpperCase() === 'GENAP' ? 2 : 1
+                        setSelectedSemester(semNum)
+                    }
+                }
+            } catch (err) {
+                console.error('Gagal memuat tahun akademik aktif:', err)
+            }
+        }
+        fetchActivePeriod()
+    }, [])
+
     // ── Setup state
     const [selectedClassId, setSelectedClassId] = useState('')
     const [homeroomTeacherName, setHomeroomTeacherName] = useState('')
@@ -296,11 +319,14 @@ export function useRaportCore() {
     }, [transliterateToArab])
 
     // ── Load students ──
-    const loadStudents = useCallback(async (overrideClassId, overrideMonth, overrideYear, overrideLang) => {
+    const loadStudents = useCallback(async (overrideClassId, overrideMonth, overrideYear, overrideLang, overrideReportType, overrideSemester, overrideAcademicYear) => {
         const classId = overrideClassId ?? selectedClassId
         const month = overrideMonth ?? selectedMonth
         const year = overrideYear ?? selectedYear
         const useLang = overrideLang ?? lang
+        const useReportType = overrideReportType ?? reportType
+        const useSemester = Number(overrideSemester ?? selectedSemester)
+        const useAcademicYear = overrideAcademicYear ?? academicYear
         if (!classId) return
         setLoading(true)
         const minTime = new Promise(resolve => setTimeout(resolve, 350))
@@ -309,13 +335,13 @@ export function useRaportCore() {
             if (stuErr) throw stuErr
             const ids = (stuData || []).map(s => s.id)
             
-            const rtObj = RAPORT_TYPES[reportType] || RAPORT_TYPES.bulanan
+            const rtObj = RAPORT_TYPES[useReportType] || RAPORT_TYPES.bulanan
             const classObj = classesList.find(c => c.id === classId)
             const criteria = rtObj.getCriteria(classObj)
 
             let repData = [], prevRepData = []
 
-            if (reportType === 'bulanan') {
+            if (useReportType === 'bulanan') {
                 const prevM = month === 1 ? 12 : month - 1
                 const prevY = month === 1 ? year - 1 : year
                 
@@ -326,25 +352,25 @@ export function useRaportCore() {
                 repData = res1.data || []
                 prevRepData = res2.data || []
             } else {
-                const prevSemester = selectedSemester === 2 ? 1 : 2
-                const prevAcademicYear = selectedSemester === 2 ? academicYear : (() => {
-                    const parts = academicYear.split('/')
+                const prevSemester = useSemester === 2 ? 1 : 2
+                const prevAcademicYear = useSemester === 2 ? useAcademicYear : (() => {
+                    const parts = useAcademicYear.split('/')
                     if (parts.length === 2) {
                         return `${Number(parts[0]) - 1}/${Number(parts[1]) - 1}`
                     }
-                    return academicYear
+                    return useAcademicYear
                 })()
 
                 const [res1, res2] = await Promise.all([
-                    supabase.from('student_semester_reports').select('*').in('student_id', ids).eq('report_type', reportType).eq('semester', selectedSemester).eq('academic_year', academicYear),
-                    supabase.from('student_semester_reports').select('*').in('student_id', ids).eq('report_type', reportType).eq('semester', prevSemester).eq('academic_year', prevAcademicYear),
+                    supabase.from('student_semester_reports').select('*').in('student_id', ids).eq('report_type', useReportType).eq('semester', useSemester).eq('academic_year', useAcademicYear),
+                    supabase.from('student_semester_reports').select('*').in('student_id', ids).eq('report_type', useReportType).eq('semester', prevSemester).eq('academic_year', prevAcademicYear),
                 ])
                 repData = res1.data || []
                 prevRepData = res2.data || []
             }
 
             setTimeout(() => {
-                if (reportType === 'bulanan') {
+                if (useReportType === 'bulanan') {
                     const trendMonths = []
                     for (let i = 5; i >= 0; i--) {
                         let m = month - i, y = year
@@ -367,7 +393,7 @@ export function useRaportCore() {
                 } else {
                     supabase.from('student_semester_reports')
                         .select('student_id,semester,academic_year,scores')
-                        .eq('report_type', reportType)
+                        .eq('report_type', useReportType)
                         .in('student_id', ids)
                         .order('academic_year').order('semester')
                         .then(({ data: trendData }) => {
@@ -383,7 +409,7 @@ export function useRaportCore() {
 
             const prevScoreMap = {}
             for (const r of (prevRepData || [])) {
-                if (reportType === 'bulanan') {
+                if (useReportType === 'bulanan') {
                     prevScoreMap[r.student_id] = { nilai_akhlak: r.nilai_akhlak, nilai_ibadah: r.nilai_ibadah, nilai_kebersihan: r.nilai_kebersihan, nilai_quran: r.nilai_quran, nilai_bahasa: r.nilai_bahasa }
                 } else {
                     const scObj = {}
@@ -401,7 +427,7 @@ export function useRaportCore() {
             for (const s of (stuData || [])) {
                 const rep = repData?.find(r => r.student_id === s.id)
                 
-                if (reportType === 'bulanan') {
+                if (useReportType === 'bulanan') {
                     initScores[s.id] = { nilai_akhlak: rep?.nilai_akhlak ?? '', nilai_ibadah: rep?.nilai_ibadah ?? '', nilai_kebersihan: rep?.nilai_kebersihan ?? '', nilai_quran: rep?.nilai_quran ?? '', nilai_bahasa: rep?.nilai_bahasa ?? '' }
                     initExtras[s.id] = { berat_badan: rep?.berat_badan ?? '', tinggi_badan: rep?.tinggi_badan ?? '', ziyadah: rep?.ziyadah ?? '', murojaah: rep?.murojaah ?? '', hari_sakit: rep?.hari_sakit ?? '', hari_izin: rep?.hari_izin ?? '', hari_alpa: rep?.hari_alpa ?? '', hari_pulang: rep?.hari_pulang ?? '', catatan: rep?.catatan ?? '' }
                 } else {
@@ -441,7 +467,7 @@ export function useRaportCore() {
             setStudents(finalStudents); setScoresRaw(initScores); setExtras(initExtras); setExistingReportIds(initExisting)
             setSavedIds(initSavedIds)
             try {
-                const session = { classId, month, year, useLang, reportType, selectedSemester, academicYear, className: classesList.find(c => c.id === classId)?.name || '' }
+                const session = { classId, month, year, useLang, reportType: useReportType, selectedSemester: useSemester, academicYear: useAcademicYear, className: classesList.find(c => c.id === classId)?.name || '' }
                 localStorage.setItem('raport_last_session', JSON.stringify(session))
                 setLastSession(session)
             } catch { }

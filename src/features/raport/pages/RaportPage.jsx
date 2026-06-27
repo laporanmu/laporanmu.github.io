@@ -1658,7 +1658,10 @@ await Promise.all([
                         <button
                             onClick={async () => {
                                 setSelectedClassId(lastSession.classId); setSelectedMonth(lastSession.month); setSelectedYear(lastSession.year); setLang(lastSession.useLang)
-                                const ok = await loadStudents(lastSession.classId, lastSession.month, lastSession.year, lastSession.useLang)
+                                if (lastSession.reportType) setReportType(lastSession.reportType)
+                                if (lastSession.selectedSemester) setSelectedSemester(Number(lastSession.selectedSemester))
+                                if (lastSession.academicYear) setAcademicYear(lastSession.academicYear)
+                                const ok = await loadStudents(lastSession.classId, lastSession.month, lastSession.year, lastSession.useLang, lastSession.reportType, lastSession.selectedSemester, lastSession.academicYear)
                                 if (ok) setStep(2)
                             }}
                             className="h-8 px-4 rounded-xl bg-indigo-600 text-white text-[9px] font-black hover:bg-indigo-700 transition-all shadow-md shadow-indigo-500/20"
@@ -1911,8 +1914,8 @@ await Promise.all([
                                         value={selectedSemester}
                                         onChange={val => setSelectedSemester(Number(val))}
                                         options={[
-                                            { id: 1, label: 'Semester 1 (Ganjil)' },
-                                            { id: 2, label: 'Semester 2 (Genap)' }
+                                            { id: 1, name: 'Semester 1 (Ganjil)' },
+                                            { id: 2, name: 'Semester 2 (Genap)' }
                                         ]}
                                         placeholder="Pilih Semester"
                                     />
@@ -1925,7 +1928,7 @@ await Promise.all([
                                         options={Array.from({ length: 3 }).map((_, i) => {
                                             const startYear = now.getFullYear() - 1 + i
                                             const val = `${startYear}/${startYear + 1}`
-                                            return { id: val, label: val }
+                                            return { id: val, name: val }
                                         })}
                                         placeholder="Pilih Tahun Ajaran"
                                     />
@@ -2937,8 +2940,8 @@ await Promise.all([
     const printClass = archivePreview ? archivePreview.className : selectedClass?.name
     const printLang = archivePreview ? archivePreview.lang : lang
     const printReportType = archivePreview ? (archivePreview.entry?.report_type || 'bulanan') : reportType
-    const printSemester = archivePreview ? (archivePreview.entry?.semester || 1) : selectedSemester
-    const printAcademicYear = archivePreview ? (archivePreview.entry?.academic_year || '') : academicYear
+    const printSemester = archivePreview ? (archivePreview.entry?.semester || selectedSemester) : selectedSemester
+    const printAcademicYear = archivePreview ? (archivePreview.entry?.academic_year || academicYear) : academicYear
     const printSelectedClass = archivePreview ? selectedClass : selectedClass // Wait, if archivePreview, we don't have the full selectedClass object but className/level is enough. Let's pass printClass string or reconstructed object if needed. Wait, in RaportPrintCard, selectedClass is used to get ClassLevel (getClassLevel(classObj)). getClassLevel handles either string or object! So printSelectedClass can be: archivePreview ? archivePreview.className : selectedClass. Let's do that!
     const printSelectedClassResolved = archivePreview ? archivePreview.className : selectedClass
 
@@ -2963,8 +2966,8 @@ await Promise.all([
     const fsClass = isArchiveMode ? archivePreview.className : selectedClass?.name
     const fsCatatanArab = isArchiveMode ? null : catatanArabMap[fsStudent?.id]
     const fsReportType = isArchiveMode ? (archivePreview.entry?.report_type || 'bulanan') : reportType
-    const fsSemester = isArchiveMode ? (archivePreview.entry?.semester || 1) : selectedSemester
-    const fsAcademicYear = isArchiveMode ? (archivePreview.entry?.academic_year || '') : academicYear
+    const fsSemester = isArchiveMode ? (archivePreview.entry?.semester || selectedSemester) : selectedSemester
+    const fsAcademicYear = isArchiveMode ? (archivePreview.entry?.academic_year || academicYear) : academicYear
     const fsSelectedClass = isArchiveMode ? archivePreview.className : selectedClass
 
 

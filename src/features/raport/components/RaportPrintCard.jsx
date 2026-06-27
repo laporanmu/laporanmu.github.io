@@ -69,6 +69,7 @@ const RaportPrintCard = memo(({
         subjectIdWidth: 34.5,
         ...layoutConfig,
     }
+    const semNum = Number(selectedSemester)
     const sc = scores || {}, ex = extra || {}, L = LABEL[lang], isAr = lang === 'ar'
     const rtObj = RAPORT_TYPES[reportType] || RAPORT_TYPES.bulanan
     const criteria = rtObj.getCriteria(selectedClass)
@@ -235,7 +236,7 @@ const RaportPrintCard = memo(({
         const cleanClass = getShortClassName(className);
         const monthName = reportType === 'bulanan'
             ? (bulanObj?.id_str || 'BULAN').toUpperCase()
-            : `SEM${selectedSemester}`;
+            : `SEM${semNum}`;
         const periodStr = reportType === 'bulanan'
             ? `${monthName}${tahun}`
             : `${academicYear.replace('/', '')}`;
@@ -283,8 +284,8 @@ const RaportPrintCard = memo(({
         if (reportType === 'bulanan') {
             return isAr ? `${L.month} ${bulanObj?.ar || ''}` : `${L.month} ${bulanObj?.id_str || ''}`
         }
-        const semAr = selectedSemester === 2 ? 'الثاني' : 'الأول'
-        const semId = selectedSemester === 2 ? 'Genap' : 'Ganjil'
+        const semAr = semNum === 2 ? 'الثاني' : 'الأول'
+        const semId = semNum === 2 ? 'Genap' : 'Ganjil'
         if (isLisan) {
             return isAr ? `لآخر السنة للفصل الدراسي ${semAr}` : `Akhir Tahun Semester ${semId}`
         }
@@ -292,9 +293,9 @@ const RaportPrintCard = memo(({
             return isAr ? `للفصل الدراسي ${semAr}` : `Semester ${semId}`
         }
         if (isAr) {
-            return `الفصل الدراسي ${toArabicNum(selectedSemester)} (${selectedSemester === 1 ? 'الأول' : 'الثاني'})`
+            return `الفصل الدراسي ${toArabicNum(semNum)} (${semNum === 1 ? 'الأول' : 'الثاني'})`
         }
-        return `Semester ${selectedSemester} (${semId})`
+        return `Semester ${semNum} (${semId})`
     }
 
     const getGradingScale = () => {

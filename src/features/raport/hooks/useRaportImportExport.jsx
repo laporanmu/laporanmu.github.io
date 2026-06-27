@@ -936,7 +936,7 @@ export function useRaportImportExport(core, { printContainerRef, silentPrintRef,
             if (rtObj.periodType === 'monthly') {
                 query = query.eq('month', selectedMonth).eq('year', selectedYear)
             } else {
-                query = query.eq('semester', selectedSemester).eq('year', selectedYear)
+                query = query.eq('report_type', reportType).eq('semester', selectedSemester).eq('academic_year', academicYear)
             }
             const { data: allRep, error: repErr } = await query
             if (repErr) throw repErr
